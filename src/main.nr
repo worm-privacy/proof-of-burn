@@ -9,6 +9,28 @@ global MAX_TRIE_NODE_LENGTH: u32 = 600;
 global MAX_LAYER_COUNT: u32 = 9;
 global PREFIX_SECURITY: u32 = 20;
 
+fn compress_to_fields<let B: u32, let C: u32>(inp: [u8; B * C]) -> [Field; C] {
+    let mut ret = [0; C];
+    for i in 0..C {
+        let mut bytes = [0; B];
+        for j in 0..B {
+            bytes[j] = inp[B * i + j];
+        }
+        ret[i] = Field::from_be_bytes(bytes);
+    }
+    ret
+}
+
+fn cheap_commit<let B: u32, let C: u32>(layer: [u8; B * C], salt: Field) -> Field {
+    let mut fields = compress_to_fields::<B, C>(layer);
+    let mut fields_with_salt: [Field; C + 1] = [0; C + 1];
+    for i in 0..C {
+        fields_with_salt[i] = fields[i];
+    }
+    fields_with_salt[C] = salt;
+    hash::hash_to_field(fields)
+}
+
 fn main(
     leaf_prefix: [u8; MAX_TRIE_NODE_LENGTH],
     leaf_prefix_len: u32,
@@ -17,11 +39,11 @@ fn main(
     secret: Field,
     address: [u8; 20],
     balance: pub u128,
-    
     num_layers: u32,
-) -> pub ([u8; 32], Field) {
-    let hashed_secret: [u8; 32] = hash::hash_to_field([secret]).to_be_bytes();
+) -> pub (Field, Field) {
     let nullifier = hash::hash_to_field([secret, 123]);
+
+    let hashed_secret: [u8; 32] = hash::hash_to_field([secret]).to_be_bytes();
     for i in 0..20 {
         println(hashed_secret[i] == address[i]);
     }
@@ -55,6 +77,7 @@ fn main(
         }
     }
 
-    // Return state-root and nullifier
-    (last_keccak, nullifier)
+    last_keccak[0] = 0;
+
+    (Field::from_be_bytes(last_keccak), nullifier)
 }

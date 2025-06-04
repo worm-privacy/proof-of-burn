@@ -4,17 +4,39 @@ pub fn contains<let S: u32, let N: u32>(
     array: [u8; N],
     array_size: u32,
 ) -> bool {
+    let mut powers_of_256: [Field; N] = [0; N];
+    powers_of_256[0] = 1;
+    for i in 1..N {
+        powers_of_256[i] = powers_of_256[i - 1] * 256;
+    }
+
     let mut found = false;
-    for i in 0..N - S + 1 {
-        let mut equals = true;
-        for j in 0..S {
-            equals = equals & (array[i + j] == sub_array[j]);
-        }
-        if i + S <= array_size {
+
+    let mut target = 0;
+    for i in 0..S {
+        target = target + sub_array[i] as Field * powers_of_256[i];
+    }
+
+    let mut vals: [Field; N + 1] = [0; N + 1];
+    vals[0] = 0;
+    for i in 0..N {
+        vals[i + 1] = vals[i] + (array[i] as Field) * powers_of_256[i];
+        if i + 1 >= S & i < array_size {
+            let val = vals[i + 1] - vals[i + 1 - S];
+            let equals = val == target * powers_of_256[i + 1 - S];
             found = found | equals;
         }
     }
+
     found
+}
+
+#[test]
+fn test_contains() {
+    assert(contains([5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7, 8], 9));
+    assert(contains([5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7, 8], 8));
+    assert(!contains([5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7, 8], 7));
+    assert(!contains([5, 6, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8], 9));
 }
 
 // Decompose a u128 into big-endian bytes
