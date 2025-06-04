@@ -5,8 +5,9 @@ use rlp::account_rlp;
 use std::hash;
 use utils::{concat, contains};
 
+global MAX_LEAF_PREFIX_LENGTH: u32 = 64;
 global MAX_TRIE_NODE_LENGTH: u32 = 600;
-global MAX_LAYER_COUNT: u32 = 9;
+global MAX_LAYER_COUNT: u32 = 11;
 global PREFIX_SECURITY: u32 = 20;
 
 fn compress_to_fields<let B: u32, let C: u32>(inp: [u8; B * C]) -> [Field; C] {
@@ -32,7 +33,7 @@ fn cheap_commit<let B: u32, let C: u32>(layer: [u8; B * C], salt: Field) -> Fiel
 }
 
 fn main(
-    leaf_prefix: [u8; MAX_TRIE_NODE_LENGTH],
+    leaf_prefix: [u8; MAX_LEAF_PREFIX_LENGTH],
     leaf_prefix_len: u32,
     layers: [[u8; MAX_TRIE_NODE_LENGTH]; MAX_LAYER_COUNT],
     layer_lens: [u32; MAX_LAYER_COUNT],

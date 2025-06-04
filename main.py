@@ -1,7 +1,8 @@
 import web3
 
+MAX_LEAF_PREFIX_LENGTH = 64
 MAX_LEN = 600
-MAX_LAYERS = 9
+MAX_LAYERS = 11
 
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("https://rpc.payload.de/"))
 addr = "0x000000000000000000000000000000000000dEaD"
@@ -21,7 +22,7 @@ balance = proof.balance
 
 leaf_prefix = list(prefix)
 leaf_prefex_size = len(leaf_prefix)
-leaf_prefix = leaf_prefix + [0] * (MAX_LEN - leaf_prefex_size)
+leaf_prefix = leaf_prefix + [0] * (MAX_LEAF_PREFIX_LENGTH - leaf_prefex_size)
 
 layers = extracted_layers
 num_layers = len(layers)
