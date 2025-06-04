@@ -11,12 +11,13 @@ global PREFIX_SECURITY: u32 = 20;
 
 fn main(
     leaf_prefix: [u8; MAX_TRIE_NODE_LENGTH],
-    leaf_prefix_size: u32,
+    leaf_prefix_len: u32,
+    layers: [[u8; MAX_TRIE_NODE_LENGTH]; MAX_LAYER_COUNT],
+    layer_lens: [u32; MAX_LAYER_COUNT],
     secret: Field,
     address: [u8; 20],
     balance: pub u128,
-    layers: [[u8; MAX_TRIE_NODE_LENGTH]; MAX_LAYER_COUNT],
-    layer_sizes: [u32; MAX_LAYER_COUNT],
+    
     num_layers: u32,
 ) -> pub ([u8; 32], Field) {
     let hashed_secret: [u8; 32] = hash::hash_to_field([secret]).to_be_bytes();
@@ -27,7 +28,7 @@ fn main(
     let address_hash = keccak256::keccak256(address, 20);
     // The leaf prefix should end with the last `PREFIX_SECURITY` bytes of address hash
     for i in 0..PREFIX_SECURITY {
-        assert_eq(leaf_prefix[leaf_prefix_size - 1 - i], address_hash[32 - 1 - i]);
+        assert_eq(leaf_prefix[leaf_prefix_len - 1 - i], address_hash[32 - 1 - i]);
     }
     let burn_rlp = account_rlp(balance);
     let mut prefix2 = [0; 2];
@@ -35,25 +36,25 @@ fn main(
     prefix2[1] = burn_rlp.1 as u8;
 
     let leaf = concat(
-        concat((leaf_prefix, leaf_prefix_size), (prefix2, 2)),
+        concat((leaf_prefix, leaf_prefix_len), (prefix2, 2)),
         burn_rlp,
     );
 
-    let leaf_keccak = keccak256(leaf.0, leaf.1);
+    // Check if keccak(leaf) is within layer[0]
+    assert(contains(keccak256(leaf.0, leaf.1), layers[0], layer_lens[0]));
 
-    assert(contains(leaf_keccak, layers[0], layer_sizes[0]));
-
+    // Go through layers and check if `keccak(layer[i])` is within `layer[i+1]`
     let mut last_keccak = [0; 32];
     for i in 0..MAX_LAYER_COUNT - 1 {
         if i < num_layers {
-            let keccakLayer = keccak256::keccak256(layers[i], layer_sizes[i]);
+            let keccakLayer = keccak256::keccak256(layers[i], layer_lens[i]);
             last_keccak = keccakLayer;
             if i + 1 < num_layers {
-                assert(contains(keccakLayer, layers[i + 1], layer_sizes[i + 1]));
+                assert(contains(keccakLayer, layers[i + 1], layer_lens[i + 1]));
             }
         }
     }
-    
 
+    // Return state-root and nullifier
     (last_keccak, nullifier)
 }

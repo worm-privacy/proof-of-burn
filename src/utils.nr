@@ -1,3 +1,4 @@
+// Returns true when `array` contains a `sub_array`
 pub fn contains<let S: u32, let N: u32>(
     sub_array: [u8; S],
     array: [u8; N],
@@ -16,6 +17,7 @@ pub fn contains<let S: u32, let N: u32>(
     found
 }
 
+// Decompose a u128 into big-endian bytes
 pub fn u128_to_be(mut num: u128) -> ([u8; 16], u32) {
     let mut cnt = 0;
     let mut bytes: [u8; 16] = [0; 16];
@@ -36,6 +38,7 @@ pub fn u128_to_be(mut num: u128) -> ([u8; 16], u32) {
     (rev_bytes, cnt)
 }
 
+// Concat two dynamic arrays
 pub fn concat<let M: u32, let N: u32>(a: ([u8; M], u32), b: ([u8; N], u32)) -> ([u8; M + N], u32) {
     assert(a.1 <= M);
     assert(b.1 <= N);

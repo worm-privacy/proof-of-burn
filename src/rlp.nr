@@ -1,5 +1,6 @@
 use super::utils::{concat, u128_to_be};
 
+// Rlp of a single integer below 2^128
 fn int_rlp(num: u128) -> ([u8; 17], u32) {
     let mut ret: [u8; 17] = [0; 17];
     if num == 0 {
@@ -18,6 +19,7 @@ fn int_rlp(num: u128) -> ([u8; 17], u32) {
     }
 }
 
+// Rlp of an account with empty code/storage and nonce 0 with the given balance
 pub fn account_rlp(balance: u128) -> ([u8; 86], u32) {
     let nonce_rlp = ([0x80], 1);
     let balance_rlp = int_rlp(balance);

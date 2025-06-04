@@ -42,13 +42,15 @@ def layer_to_str(layer):
 
 out = f"""
 leaf_prefix = {layer_to_str(leaf_prefix)}
-leaf_prefix_size = "{leaf_prefex_size}"
-balance = "{balance}"
-address = {layer_to_str(web3.Web3.to_bytes(hexstr=addr))}
+leaf_prefix_len = "{leaf_prefex_size}"
+
 layers = [{', '.join([layer_to_str(l) for l in layers])}]
-layer_sizes = [{', '.join(['"' + str(sz) + '"' for sz in layer_sizes])}]
+layer_lens = [{', '.join(['"' + str(sz) + '"' for sz in layer_sizes])}]
 num_layers = "{num_layers}"
+
 secret = "0"
+address = {layer_to_str(web3.Web3.to_bytes(hexstr=addr))}
+balance = "{balance}"
 """
 
 print(out)
