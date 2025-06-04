@@ -1,7 +1,7 @@
 import web3
 
-MAX_LEN = 768
-MAX_LAYERS = 10
+MAX_LEN = 600
+MAX_LAYERS = 9
 
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("https://rpc.payload.de/"))
 addr = "0x000000000000000000000000000000000000dEaD"
@@ -39,6 +39,21 @@ def layer_to_str(layer):
     inner = ", ".join(['"' + str(p) + '"' for p in layer])
     return f"[{inner}]"
 
+
+out = {
+    "leaf_prefix": list(leaf_prefix),
+    "leaf_prefix_len": str(leaf_prefex_size),
+    "layers": layers,
+    "layer_lens": layer_sizes,
+    "num_layers": str(num_layers),
+    "secret": "0",
+    "address": list(web3.Web3.to_bytes(hexstr=addr)),
+    "balance": str(balance),
+}
+import io, json
+
+with io.open("front/inp.json", "w") as f:
+    json.dump(out, f, indent=2)
 
 out = f"""
 leaf_prefix = {layer_to_str(leaf_prefix)}

@@ -5,8 +5,8 @@ use rlp::account_rlp;
 use std::hash;
 use utils::{concat, contains};
 
-global MAX_TRIE_NODE_LENGTH: u32 = 768;
-global MAX_LAYER_COUNT: u32 = 10;
+global MAX_TRIE_NODE_LENGTH: u32 = 600;
+global MAX_LAYER_COUNT: u32 = 9;
 global PREFIX_SECURITY: u32 = 20;
 
 fn main(
