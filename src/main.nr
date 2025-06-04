@@ -2,6 +2,7 @@ pub mod utils;
 mod rlp;
 use keccak256::keccak256;
 use rlp::account_rlp;
+use std::hash;
 use utils::{concat, contains};
 
 global MAX_TRIE_NODE_LENGTH: u32 = 768;
@@ -11,12 +12,18 @@ global PREFIX_SECURITY: u32 = 20;
 fn main(
     leaf_prefix: [u8; MAX_TRIE_NODE_LENGTH],
     leaf_prefix_size: u32,
+    secret: Field,
     address: [u8; 20],
-    balance: u128,
+    balance: pub u128,
     layers: [[u8; MAX_TRIE_NODE_LENGTH]; MAX_LAYER_COUNT],
     layer_sizes: [u32; MAX_LAYER_COUNT],
     num_layers: u32,
-) -> pub [u8; 32] {
+) -> pub ([u8; 32], Field) {
+    let hashed_secret: [u8; 32] = hash::hash_to_field([secret]).to_be_bytes();
+    let nullifier = hash::hash_to_field([secret, 123]);
+    for i in 0..20 {
+        println(hashed_secret[i] == address[i]);
+    }
     let address_hash = keccak256::keccak256(address, 20);
     // The leaf prefix should end with the last `PREFIX_SECURITY` bytes of address hash
     for i in 0..PREFIX_SECURITY {
@@ -46,6 +53,7 @@ fn main(
             }
         }
     }
+    
 
-    last_keccak
+    (last_keccak, nullifier)
 }

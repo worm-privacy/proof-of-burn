@@ -48,7 +48,7 @@ address = {layer_to_str(web3.Web3.to_bytes(hexstr=addr))}
 layers = [{', '.join([layer_to_str(l) for l in layers])}]
 layer_sizes = [{', '.join(['"' + str(sz) + '"' for sz in layer_sizes])}]
 num_layers = "{num_layers}"
-// HASH: {state_root.hex()}
+secret = "0"
 """
 
 print(out)
