@@ -1,5 +1,4 @@
-mod utils;
-use utils::{concat, u128_to_bytes};
+use super::utils::{concat, u128_to_be};
 
 fn int_rlp(num: u128) -> ([u8; 17], u32) {
     let mut ret: [u8; 17] = [0; 17];
@@ -10,7 +9,7 @@ fn int_rlp(num: u128) -> ([u8; 17], u32) {
         ret[0] = num as u8;
         (ret, 1)
     } else {
-        let (bytes, byte_count) = u128_to_bytes(num);
+        let (bytes, byte_count) = u128_to_be(num);
         ret[0] = 0x80 + byte_count as u8;
         for i in 0..16 {
             ret[1 + i] = bytes[i]
