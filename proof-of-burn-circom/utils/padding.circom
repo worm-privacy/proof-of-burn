@@ -10,6 +10,10 @@ template Divide() {
 
     out <-- a \ b;
     rem <-- a % b;
+    component lessThan = LessThan(32);
+    lessThan.in[0] <== rem;
+    lessThan.in[1] <== b;
+    lessThan.out === 1;
     out * b + rem === a;
 }
 
