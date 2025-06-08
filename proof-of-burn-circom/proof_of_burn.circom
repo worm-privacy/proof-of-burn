@@ -115,19 +115,54 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     
     signal input layerBits[maxNumLayers][maxBlocks * 136 * 8];
     signal input layerBitsLens[maxNumLayers];
+    signal input numLayers;
+
+    var lastLayerBits[maxBlocks * 136 * 8];
+    var lastLayerBitsLen;
 
     component keccaks[maxNumLayers];
+    signal isValidLayer[maxNumLayers + 1];
+    isValidLayer[0] <== 1;
+    component lastLayerCheckers[maxNumLayers];
+    component substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][256];
+    
     for(var i = 0; i < maxNumLayers; i++) {
+        lastLayerCheckers[i] = IsEqual();
+        lastLayerCheckers[i].in[0] <== i;
+        lastLayerCheckers[i].in[1] <== numLayers - 1;
+
         keccaks[i] = KeccakBits(maxBlocks);
         keccaks[i].inBits <== layerBits[i];
         keccaks[i].inBitsLen <== layerBitsLens[i];
         layerKeccaks[i] <== keccaks[i].out;
+
+        if(i > 0) {
+            substringCheckers[i-1] = substringCheck(maxBlocks, 136 * 8, 256);
+            substringCheckers[i-1].subInput <== layerKeccaks[i];
+            substringCheckers[i-1].numBlocks <== maxBlocks; // FIX
+            substringCheckers[i-1].mainInput <== layerBits[i - 1];
+            log(substringCheckers[i-1].out);
+        }
+
+        for(var j = 0; j < 256; j++) {
+            lastLayerBits[j] += lastLayerCheckers[i].out * layerBits[i][j];
+        }
+        lastLayerBitsLen += lastLayerCheckers[i].out * layerBitsLens[i];
     }
 
     for(var i = 0; i < 256; i++) {
         layerKeccaks[0][i] === stateRoot[i];
     }
+
+    signal input balance;
+    component rlpBurn = Rlp();
+    rlpBurn.balance <== balance;
+
+    log(lastLayerBitsLen);
+    for(var i = 0; i < 4*136*8; i++) {
+        log(lastLayerBits[i]);
+    }
 }
 
-component main = ProofOfBurn(10, 4);
+component main = ProofOfBurn(12, 4);
