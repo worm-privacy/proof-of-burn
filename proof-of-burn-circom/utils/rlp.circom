@@ -46,9 +46,11 @@ template RlpBalanceWithNonce0(N) {
     }
 }
 
-template Rlp() {
-    signal input balance; 
-    signal output rlp_encoded[92];
+template LeafCalculator() {
+    signal input term[64];
+    signal input term_len;
+    signal input balance;
+    signal output rlp_encoded[1272];
     signal output rlp_encoded_len;
 
     var storageAndCodeHashRlpLen = 66;
@@ -129,13 +131,41 @@ template Rlp() {
     concat.b <== storageAndCodeHashRlpEncoded;
     concat.bLen <== storageAndCodeHashRlpLen;
 
+    signal account_rlp[92];
+    signal account_rlp_len;
+    signal term_rlp[67];
+    signal term_rlp_len;
 
-    rlp_encoded[0] <== 0xb8; 
-    rlp_encoded[1] <== concat.outLen + 2;
-    rlp_encoded[2] <== 0xf8; 
-    rlp_encoded[3] <== concat.outLen;
+    account_rlp[0] <== 0xb8; 
+    account_rlp[1] <== concat.outLen + 2;
+    account_rlp[2] <== 0xf8; 
+    account_rlp[3] <== concat.outLen;
     for(var i = 0; i < 88; i++) {
-        rlp_encoded[i+4] <== concat.out[i];
+        account_rlp[i+4] <== concat.out[i];
     }
-    rlp_encoded_len <== 4 + concat.outLen;
+    account_rlp_len <== 4 + concat.outLen;
+
+    term_rlp[0] <== 0xf7 + 1;
+    term_rlp[1] <== (term_len + 1) + account_rlp_len;
+    term_rlp[2] <== 0x80 + term_len;
+    for(var i = 0; i < 64; i++) {
+        term_rlp[i+3] <== term[i];
+    }
+    term_rlp_len <== term_len + 3;
+
+    component leafCalc = Concat(67, 92);
+    leafCalc.a <== term_rlp;
+    leafCalc.aLen <== term_rlp_len;
+    leafCalc.b <== account_rlp;
+    leafCalc.bLen <== account_rlp_len;
+
+    rlp_encoded_len <== leafCalc.outLen * 8;
+    component decomp[159];
+    for(var i = 0; i < 159; i++) {
+        decomp[i] = BitDecompose(8);
+        decomp[i].num <== leafCalc.out[i];
+        for(var j = 0; j < 8; j++) {
+            rlp_encoded[i*8+j] <== decomp[i].bits[j];
+        }
+    }
 }

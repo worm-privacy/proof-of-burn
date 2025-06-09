@@ -2,11 +2,10 @@ pragma circom 2.1.5;
 
 include "./utils/keccak/keccak.circom";
 include "./utils/substring_finder.circom";
-include "./utils/hasher.circom";
-include "./utils/padding.circom";
-include "./utils/hashbytes.circom";
 include "./utils/concat.circom";
+include "./utils/hasher.circom";
 include "./utils/rlp.circom";
+
 
 template BitPad(maxBlocks, blockSize) {
     var maxBits = maxBlocks * blockSize;
@@ -16,7 +15,7 @@ template BitPad(maxBlocks, blockSize) {
     signal output out[maxBits];
     signal output num_blocks;
 
-    component div = Divide();
+    component div = Divide(32);
     div.a <== ind + 1;
     div.b <== blockSize;
     num_blocks <== div.out + 1;
@@ -81,44 +80,124 @@ template KeccakBits(maxBlocks) {
     out <== keccak.out;
 }
 
-template LeafHasher() {
-    signal input balance;
-    signal output hash[32 * 8];
+template EntropyToAddressHash() {
+    signal input entropy;
+    signal output addressHashBytes[32];
 
+    component burnHasher = Hasher();
+    burnHasher.left <== entropy;
+    burnHasher.right <== 0;
+    component encBurnToBits = Num2Bits_strict();
+    encBurnToBits.in <== burnHasher.hash;
+    component addressHash = KeccakBits(1);
+    for(var i = 0; i < 20; i++) {
+        for(var j = 0; j < 8; j++) {
+            addressHash.inBits[8*(19-i)+j] <== encBurnToBits.out[8*i + j];
+        }
+    }
+    for(var i = 160; i < 8 * 136; i++) {
+        addressHash.inBits[i] <== 0;
+    }
+    addressHash.inBitsLen <== 160;
+    for(var i = 0; i < 32; i++) {
+        var bt = 0;
+        for(var j = 0; j < 8; j++) {
+            bt += addressHash.out[i*8 + j] * (2 ** j);
+        }
+        addressHashBytes[i] <== bt;
+    }
+}
+
+template EncryptBalance() {
+    signal input balance;
+    signal input entropy;
+    signal output encryptedBalance[256];
+
+    component hasher = Hasher();
+    hasher.left <== balance;
+    hasher.right <== entropy;
+    component encToBits = Num2Bits_strict();
+    encToBits.in <== hasher.hash;
+    for(var i = 0; i < 254; i++) {
+        encryptedBalance[i] <== encToBits.out[i];
+    }
+    encryptedBalance[254] <== 0;
+    encryptedBalance[255] <== 0;
+}
+
+template EntropyToNullifier() {
+    signal input entropy;
+    signal output nullifier[256];
+
+    component hasher = Hasher();
+    hasher.left <== entropy;
+    hasher.right <== 1;
+    component encToBits = Num2Bits_strict();
+    encToBits.in <== hasher.hash;
+    for(var i = 0; i < 254; i++) {
+        nullifier[i] <== encToBits.out[i];
+    }
+    nullifier[254] <== 0;
+    nullifier[255] <== 0;
 }
 
 template ProofOfBurn(maxNumLayers, maxBlocks) {
+    signal input entropy;
     signal input blockRoot[256];
-    signal input nullifier[256];
-    signal input encryptedBalance[256];
+    signal input balance;
+    signal input layerBits[maxNumLayers][maxBlocks * 136 * 8];
+    signal input layerBitsLens[maxNumLayers];
+    signal input numLayers;
+    signal input blockHeader[5 * 136 * 8];
+    signal input blockHeaderLen;
+    signal input term[64];
+    signal input termLen;
+    
     signal output commitment;
+
+    // Calculate encrypted-balance
+    signal encryptedBalance[256];
+    component balanceEnc = EncryptBalance();
+    balanceEnc.entropy <== entropy;
+    balanceEnc.balance <== balance;
+    encryptedBalance <== balanceEnc.encryptedBalance;
+
+    // Calculate nullifier
+    signal nullifier[256];
+    component entToNul = EntropyToNullifier();
+    entToNul.entropy <== entropy;
+    nullifier <== entToNul.nullifier;
+
+    // Calculate burn-address
+    component entropyToAddressHash = EntropyToAddressHash();
+    entropyToAddressHash.entropy <== entropy;
+
+    // Calculate public commitment
     component inpsHasher = InputsHasher();
     inpsHasher.blockRoot <== blockRoot;
     inpsHasher.nullifier <== nullifier;
     inpsHasher.encryptedBalance <== encryptedBalance;
     commitment <== inpsHasher.commitment;
 
-    signal input blockHeader[5 * 136 * 8];
-    signal input blockHeaderLen;
-
+    // Fetch stateRoot from block header
+    signal stateRoot[256];
     component headerKeccak = KeccakBits(5);
     headerKeccak.inBits <== blockHeader;
     headerKeccak.inBitsLen <== blockHeaderLen;
-    for(var i =0;i<256;i++) {
+    for(var i = 0; i < 256; i++) {
         blockRoot[i] === headerKeccak.out[i];
     }
-
-    signal stateRoot[256];
-    for(var i =0;i<256;i++) {
+    for(var i =0; i < 256; i++) {
         stateRoot[i] <== blockHeader[91*8 + i];
     }
     
-    signal input layerBits[maxNumLayers][maxBlocks * 136 * 8];
-    signal input layerBitsLens[maxNumLayers];
-    signal input numLayers;
-
-    var lastLayerBits[maxBlocks * 136 * 8];
-    var lastLayerBitsLen;
+    component lastLayerBitsSelectors[maxBlocks * 136 * 8];
+    for(var j = 0; j < maxBlocks*136*8; j++) {
+        lastLayerBitsSelectors[j] = Selector(maxNumLayers);
+        lastLayerBitsSelectors[j].select <== numLayers - 1;
+    }
+    component lastLayerLenSelector = Selector(maxNumLayers);
+    lastLayerLenSelector.select <== numLayers - 1;
 
     component keccaks[maxNumLayers];
     signal isValidLayer[maxNumLayers + 1];
@@ -144,25 +223,33 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
             substringCheckers[i-1].mainInput <== layerBits[i - 1];
             log(substringCheckers[i-1].out);
         }
-
-        for(var j = 0; j < 256; j++) {
-            lastLayerBits[j] += lastLayerCheckers[i].out * layerBits[i][j];
+        
+        for(var j = 0; j < 4*136*8; j++) {
+            lastLayerBitsSelectors[j].vals[i] <== layerBits[i][j];
         }
-        lastLayerBitsLen += lastLayerCheckers[i].out * layerBitsLens[i];
+        lastLayerLenSelector.vals[i] <== layerBitsLens[i];
     }
 
     for(var i = 0; i < 256; i++) {
         layerKeccaks[0][i] === stateRoot[i];
     }
 
-    signal input balance;
-    component rlpBurn = Rlp();
+    
+    component rlpBurn = LeafCalculator();
+    rlpBurn.term <== term;
+    rlpBurn.term_len <== termLen;
     rlpBurn.balance <== balance;
+    component termShift = Shift(64, 64);
+    termShift.in <== term;
+    termShift.count <== 64 - termLen;
+    for(var i = 64 - 20; i < 64; i++) {
+        termShift.out[i] === entropyToAddressHash.addressHashBytes[i-32];
+    }
 
-    log(lastLayerBitsLen);
-    for(var i = 0; i < 4*136*8; i++) {
-        log(lastLayerBits[i]);
+    rlpBurn.rlp_encoded_len === lastLayerLenSelector.out;
+    for(var i = 0; i < 159 * 8; i++) {
+        rlpBurn.rlp_encoded[i] === lastLayerBitsSelectors[i].out;
     }
 }
 
-component main = ProofOfBurn(12, 4);
+component main = ProofOfBurn(4, 4);

@@ -1,17 +1,49 @@
-# a=[1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0]
 import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
+from mimc7 import mimc7, Field
 
 MAX_HEADER_BITS = 5 * 136 * 8
-MAX_NUM_LAYERS = 12
+MAX_NUM_LAYERS = 4
 
-w3 = web3.Web3(provider=web3.Web3.HTTPProvider("https://rpc.payload.de/"))
-addr = "0x000000000000000000000000000000000000dEaD"
+
+w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
+
+
+def burn(entropy):
+    account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
+    private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
+    nonce = w3.eth.get_transaction_count(account_1)
+    hashed = w3.to_bytes(mimc7(Field(entropy), Field(0)).val)
+    addr = list(hashed[len(hashed)-20:])
+    burn_addr = w3.to_checksum_address(bytes(addr))
+    tx = {
+        "nonce": nonce,
+        "to": burn_addr,
+        "value": w3.to_wei(1, "ether"),
+        "gas": 2000000,
+        "gasPrice": w3.to_wei(50, "gwei"),
+    }
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+    assert w3.eth.wait_for_transaction_receipt(tx_hash).status == 1
+    return burn_addr
+
+entropy = 123
+addr = burn(entropy)
+
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
 block = w3.eth.get_block(blknum)
+
+
+addr_hash = w3.keccak(hexstr=addr)
+leaf = proof.accountProof[-1]
+(term, account_rlp) = tuple(rlp.decode(leaf))
+MAX_TERM_LEN = 64
+term_len = len(term)
+term = list(term) + [0] * (MAX_TERM_LEN - term_len)
 
 hashes = [
     block.parentHash.hex(),
@@ -81,18 +113,23 @@ num_layers = len(layers)
 while len(layers) < MAX_NUM_LAYERS:
     layers.append([0] * (4 * 136 * 8))
     layer_lens.append(0)
+import io
+with io.open("details.json", 'w') as f:
+    json.dump({
+        "addr": addr,
+        "addrHash": w3.keccak(hexstr=addr).hex()
+    }, f)
 print(
     json.dumps(
         {
+            "entropy": str(entropy),
             "balance": str(proof.balance),
+            "term": term,
+            "termLen": term_len,
             "numLayers": num_layers,
             "layerBits": layers,
             "layerBitsLens": layer_lens,
             "blockRoot": block_root,
-            "nullifier": [0] * 31 * 8 + [0, 1, 0, 1, 0, 1, 1, 1],
-            "encryptedBalance": [0] * 30 * 8
-            + [1, 0, 0, 0, 0, 0, 0, 0]
-            + [1, 0, 0, 1, 1, 0, 1, 0],
             "blockHeader": header_bits,
             "blockHeaderLen": header_bits_len,
         },
