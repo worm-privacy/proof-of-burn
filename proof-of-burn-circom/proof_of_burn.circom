@@ -142,18 +142,18 @@ template EntropyToNullifier() {
 }
 
 template ProofOfBurn(maxNumLayers, maxBlocks) {
-    signal input entropy;
-    signal input blockRoot[256];
-    signal input balance;
-    signal input layerBits[maxNumLayers][maxBlocks * 136 * 8];
-    signal input layerBitsLens[maxNumLayers];
-    signal input numLayers;
-    signal input blockHeader[5 * 136 * 8];
-    signal input blockHeaderLen;
-    signal input term[64];
-    signal input termLen;
+    signal input entropy; // Secret field-number, from which the burn-address and nullifier is derived
+    signal input blockRoot[256]; // Accesible by blockhash() in Solidity
+    signal input balance; // Balance of the burn-address
+    signal input layerBits[maxNumLayers][maxBlocks * 136 * 8]; // MPT nodes in bits
+    signal input layerBitsLens[maxNumLayers]; // Bit length of MPT nodes
+    signal input numLayers; // Number of MPT nodes
+    signal input blockHeader[5 * 136 * 8]; // Block header bits which should be hashed into blockRoot
+    signal input blockHeaderLen; // Length of block header in bits
+    signal input term[64]; // Leaf-node's key terminal
+    signal input termLen; // Length of leaf-node's key terminal
     
-    signal output commitment;
+    signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
 
     // Calculate encrypted-balance
     signal encryptedBalance[256];
@@ -187,7 +187,7 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     for(var i = 0; i < 256; i++) {
         blockRoot[i] === headerKeccak.out[i];
     }
-    for(var i =0; i < 256; i++) {
+    for(var i = 0; i < 256; i++) {
         stateRoot[i] <== blockHeader[91*8 + i];
     }
     
@@ -202,14 +202,15 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     component keccaks[maxNumLayers];
     signal isValidLayer[maxNumLayers + 1];
     isValidLayer[0] <== 1;
-    component lastLayerCheckers[maxNumLayers];
+    component existingLayer[maxNumLayers];
     component substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][256];
     
     for(var i = 0; i < maxNumLayers; i++) {
-        lastLayerCheckers[i] = IsEqual();
-        lastLayerCheckers[i].in[0] <== i;
-        lastLayerCheckers[i].in[1] <== numLayers - 1;
+        // Layer exists if: i < numLayers
+        existingLayer[i] = LessThan(16);
+        existingLayer[i].in[0] <== i;
+        existingLayer[i].in[1] <== numLayers;
 
         keccaks[i] = KeccakBits(maxBlocks);
         keccaks[i].inBits <== layerBits[i];
@@ -217,11 +218,12 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
         layerKeccaks[i] <== keccaks[i].out;
 
         if(i > 0) {
-            substringCheckers[i-1] = substringCheck(maxBlocks, 136 * 8, 256);
+            substringCheckers[i-1] = SubstringCheck(maxBlocks * 136 * 8, 256);
             substringCheckers[i-1].subInput <== layerKeccaks[i];
-            substringCheckers[i-1].numBlocks <== maxBlocks; // FIX
+            substringCheckers[i-1].mainLen <== layerBitsLens[i - 1];
             substringCheckers[i-1].mainInput <== layerBits[i - 1];
-            log(substringCheckers[i-1].out);
+            
+            substringCheckers[i-1].out === existingLayer[i-1].out;
         }
         
         for(var j = 0; j < 4*136*8; j++) {
