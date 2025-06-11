@@ -17,10 +17,19 @@ template Divide(N) {
 
     out <-- a \ b;
     rem <-- a % b;
-    component lessThan = LessThan(N);
-    lessThan.in[0] <== rem;
-    lessThan.in[1] <== b;
-    lessThan.out === 1;
+
+    // Check if `rem` and `b` are at most N-bits long and `rem < b`
+    component remLessThanB = LessThan(N);
+    remLessThanB.in[0] <== rem;
+    remLessThanB.in[1] <== b;
+    remLessThanB.out === 1;
+
+    // Check if `out` and `a` are at most N-bits long and `out < a`
+    component outLessThanA = LessThan(N);
+    outLessThanA.in[0] <== out;
+    outLessThanA.in[1] <== a;
+    outLessThanA.out === 1;
+
     out * b + rem === a;
 }
 
