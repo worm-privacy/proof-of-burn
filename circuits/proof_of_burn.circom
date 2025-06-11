@@ -164,7 +164,6 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         blockHeader[j] * (1 - blockHeader[j]) === 0;
     }
 
-
     // Calculate encrypted-balance
     signal encryptedBalance[256];
     component balanceEnc = EncryptBalance();
@@ -204,6 +203,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     inpsHasher.encryptedBalance <== encryptedBalance;
     commitment <== inpsHasher.commitment;
     
+    // Fetch the last layer bits and len
     component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
     for(var j = 0; j < maxNodeBlocks*136*8; j++) {
         lastLayerBitsSelectors[j] = Selector(maxNumLayers);
@@ -212,13 +212,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     component lastLayerLenSelector = Selector(maxNumLayers);
     lastLayerLenSelector.select <== numLayers - 1;
 
+    // Calculate keccaks of all layers and check if the keccak of each
+    // layer is substring of the upper layer
     component keccaks[maxNumLayers];
     signal isValidLayer[maxNumLayers + 1];
     isValidLayer[0] <== 1;
     component existingLayer[maxNumLayers];
     component substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][256];
-    
     for(var i = 0; i < maxNumLayers; i++) {
         // Layer exists if: i < numLayers
         existingLayer[i] = LessThan(16);
@@ -245,19 +246,22 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         lastLayerLenSelector.vals[i] <== layerBitsLens[i];
     }
 
+    // Keccak of the top layer should be equal with the claimed state-root
     for(var i = 0; i < 256; i++) {
         layerKeccaks[0][i] === stateRoot[i];
     }
 
+    // Calculate leaf-layer through address-hash and its balance
     component termer = LeafKey(32);
     termer.addressHashNibbles <== entropyToAddressHash.addressHashNibbles;
     termer.addressHashNibblesLen <== 64 - numLeafAddressNibbles;
-    
     component rlpBurn = LeafCalculator();
     rlpBurn.term <== termer.out;
     rlpBurn.term_len <== termer.outLen;
     rlpBurn.balance <== balance;
     rlpBurn.outLen === lastLayerLenSelector.out;
+
+    // Make sure the calculated leaf-layer is equal with the last-layer
     for(var i = 0; i < 128 * 8; i++) {
         rlpBurn.out[i] === lastLayerBitsSelectors[i].out;
     }
