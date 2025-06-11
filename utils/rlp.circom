@@ -17,11 +17,15 @@ template ByteDecompose(N) {
     signal output bytes[N];
     var pow = 1;
     var total = 0;
-    component bd[N];
+    component byteCheckers[N];
     for (var i = 0; i < N; i++) {
         bytes[i] <-- (num >> (8 * i)) & 0xFF;
         total += pow * bytes[i];
         pow = pow * 256; 
+
+        // Make sure the bytes[i] is actually a byte
+        byteCheckers[i] = Num2Bits(8);
+        byteCheckers[i].in <== bytes[i];
     }
 
     total === num; 
