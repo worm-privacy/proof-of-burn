@@ -8,8 +8,9 @@ template Selector (n) {
     signal output out;
 
     // Limit select (0<=select<n)
-    component range_check = RangeCheck(n);
-    range_check.inp <== select;
+    component range_check = LessThan(16);
+    range_check.in[0] <== select;
+    range_check.in[1] <== n;
     range_check.out === 1;
 
     component eq_checkers[n];

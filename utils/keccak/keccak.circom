@@ -169,3 +169,51 @@ template Keccak(nBlocksIn) {
         out[i] <== squeeze.out[i];
     }
 }
+
+
+template BitPad(maxBlocks, blockSize) {
+    var maxBits = maxBlocks * blockSize;
+    signal input in[maxBits];
+    signal input ind;
+
+    signal output out[maxBits];
+    signal output num_blocks;
+
+    component div = Divide(32);
+    div.a <== ind + 1;
+    div.b <== blockSize;
+    num_blocks <== div.out + 1;
+
+    signal eqs[maxBits+1];
+    eqs[0] <== 1;
+    component eqcomps[maxBits];
+    for(var i = 0; i < maxBits; i++) {
+        eqcomps[i] = IsEqual();
+        eqcomps[i].in[0] <== i;
+        eqcomps[i].in[1] <== ind;
+        eqs[i+1] <== eqs[i] * (1 - eqcomps[i].out);
+    }
+
+    component isLast[maxBits];
+    for(var i = 0; i < maxBits; i++) {
+        isLast[i] = IsEqual();
+        isLast[i].in[0] <== i;
+        isLast[i].in[1] <== num_blocks * blockSize - 1;
+        out[i] <== in[i] * eqs[i+1] + eqcomps[i].out + isLast[i].out;
+    }
+}
+
+
+template KeccakBits(maxBlocks) {
+    signal input inBits[maxBlocks * 136 * 8];
+    signal input inBitsLen;
+    signal output out[256];
+
+    component padder = BitPad(maxBlocks, 136 * 8);
+    padder.in <== inBits;
+    padder.ind <== inBitsLen;
+    component keccak = Keccak(maxBlocks);
+    keccak.in <== padder.out;
+    keccak.blocks <== padder.num_blocks;
+    out <== keccak.out;
+}

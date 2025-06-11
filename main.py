@@ -41,6 +41,14 @@ block = w3.eth.get_block(blknum)
 addr_hash = w3.keccak(hexstr=addr)
 leaf = proof.accountProof[-1]
 (term, account_rlp) = tuple(rlp.decode(leaf))
+if term[0] & 0xf0 == 0x20:
+    addr_term_len = 2*len(term) - 2
+elif term[0] & 0xf0 == 0x30:
+    addr_term_len = 2*len(term) - 1
+else:
+    raise Exception("Invalid")
+#print(term.hex(), addr_term_len)
+#exit(0)
 MAX_TERM_LEN = 64
 term_len = len(term)
 term = list(term) + [0] * (MAX_TERM_LEN - term_len)
@@ -122,10 +130,9 @@ with io.open("details.json", 'w') as f:
 print(
     json.dumps(
         {
+            "numLeafAddressNibbles": str(addr_term_len),
             "entropy": str(entropy),
             "balance": str(proof.balance),
-            "term": term,
-            "termLen": term_len,
             "numLayers": num_layers,
             "layerBits": layers,
             "layerBitsLens": layer_lens,

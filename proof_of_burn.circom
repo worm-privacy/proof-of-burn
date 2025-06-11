@@ -7,37 +7,6 @@ include "./utils/hasher.circom";
 include "./utils/rlp.circom";
 
 
-template BitPad(maxBlocks, blockSize) {
-    var maxBits = maxBlocks * blockSize;
-    signal input in[maxBits];
-    signal input ind;
-
-    signal output out[maxBits];
-    signal output num_blocks;
-
-    component div = Divide(32);
-    div.a <== ind + 1;
-    div.b <== blockSize;
-    num_blocks <== div.out + 1;
-
-    signal eqs[maxBits+1];
-    eqs[0] <== 1;
-    component eqcomps[maxBits];
-    for(var i = 0; i < maxBits; i++) {
-        eqcomps[i] = IsEqual();
-        eqcomps[i].in[0] <== i;
-        eqcomps[i].in[1] <== ind;
-        eqs[i+1] <== eqs[i] * (1 - eqcomps[i].out);
-    }
-
-    component isLast[maxBits];
-    for(var i = 0; i < maxBits; i++) {
-        isLast[i] = IsEqual();
-        isLast[i].in[0] <== i;
-        isLast[i].in[1] <== num_blocks * blockSize - 1;
-        out[i] <== in[i] * eqs[i+1] + eqcomps[i].out + isLast[i].out;
-    }
-}
 
 template InputsHasher() {
     signal input blockRoot[256];
@@ -66,20 +35,6 @@ template InputsHasher() {
     commitment <== bitsToNum.out;
 }
 
-template KeccakBits(maxBlocks) {
-    signal input inBits[maxBlocks * 136 * 8];
-    signal input inBitsLen;
-    signal output out[256];
-
-    component padder = BitPad(maxBlocks, 136 * 8);
-    padder.in <== inBits;
-    padder.ind <== inBitsLen;
-    component keccak = Keccak(maxBlocks);
-    keccak.in <== padder.out;
-    keccak.blocks <== padder.num_blocks;
-    out <== keccak.out;
-}
-
 template EntropyToAddressHash() {
     signal input entropy;
     signal output addressHashNibbles[64];
@@ -104,7 +59,7 @@ template EntropyToAddressHash() {
         var lower = 0;
         for(var j = 0; j < 4; j++) {
             lower += addressHash.out[i*8 + j] * (2 ** j);
-            higher += addressHash.out[i*8 + j + 4] * (2 ** (4 + j));
+            higher += addressHash.out[i*8 + j + 4] * (2 ** j);
         }
         addressHashNibbles[2 * i] <== higher;
         addressHashNibbles[2 * i + 1] <== lower;
@@ -160,10 +115,34 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
     signal input numLayers; // Number of MPT nodes
     signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
-    signal input term[64]; // Leaf-node's key terminal
-    signal input termLen; // Length of leaf-node's key terminal
+    signal input numLeafAddressNibbles;
     
     signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
+
+    component layerLenCheckers[maxNumLayers];
+    for(var i = 0; i < maxNumLayers; i++) {
+        // Check layer lens are less than maximum length
+        layerLenCheckers[i] = LessThan(16);
+        layerLenCheckers[i].in[0] <== layerBitsLens[i];
+        layerLenCheckers[i].in[1] <== maxNodeBlocks * 136 * 8;
+        layerLenCheckers[i].out === 1;
+
+        // Check layer bits are binary
+        for(var j = 0; j < maxNodeBlocks * 136 * 8; j++) {
+            layerBits[i][j] * (1 - layerBits[i][j]) === 0;
+        }
+    }
+    // Check block-header len is less than maximum length
+    component blockHeaderLenChecker = LessThan(16);
+    blockHeaderLenChecker.in[0] <== blockHeaderLen;
+    blockHeaderLenChecker.in[1] <== maxHeaderBlocks * 136 * 8;
+    blockHeaderLenChecker.out === 1;
+
+    // Check block-header bits are binary
+    for(var j = 0; j < maxHeaderBlocks * 136 * 8; j++) {
+        blockHeader[j] * (1 - blockHeader[j]) === 0;
+    }
+
 
     // Calculate encrypted-balance
     signal encryptedBalance[256];
@@ -183,6 +162,18 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
     entropyToAddressHash.entropy <== entropy;
     component addressHash = NibblesToBytes(32);
     addressHash.nibbles <== entropyToAddressHash.addressHashNibbles;
+
+    component termer = TermCalc(64);
+    termer.address <== entropyToAddressHash.addressHashNibbles;
+    termer.count <== 64 - numLeafAddressNibbles;
+    component termBytes = NibblesToBytes(33);
+    termBytes.nibbles <== termer.out;
+    signal termBytesLen;
+    component halver = Divide(16);
+    halver.a <== termer.outLen;
+    halver.b <== 2;
+    halver.rem === 0;
+    termBytesLen <== halver.out;
 
     // Fetch stateRoot and stateRoot from block-header
     signal blockRoot[256];
@@ -251,20 +242,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
 
     
     component rlpBurn = LeafCalculator();
-    rlpBurn.term <== term;
-    rlpBurn.term_len <== termLen;
+    rlpBurn.term <== termBytes.bytes;
+    rlpBurn.term_len <== termBytesLen;
     rlpBurn.balance <== balance;
-    component termShift = Shift(64, 64);
-    termShift.in <== term;
-    termShift.count <== 64 - termLen;
-    for(var i = 64 - 20; i < 64; i++) {
-        termShift.out[i] === addressHash.bytes[i-32];
-    }
-
     rlpBurn.rlp_encoded_len === lastLayerLenSelector.out;
-    for(var i = 0; i < 159 * 8; i++) {
+    for(var i = 0; i < 128 * 8; i++) {
         rlpBurn.rlp_encoded[i] === lastLayerBitsSelectors[i].out;
     }
 }
 
-component main = ProofOfBurn(12, 4, 5);
+component main = ProofOfBurn(4, 4, 5);

@@ -16,95 +16,6 @@ template Divide(N) {
     out * b + rem === a;
 }
 
-template IsZero() {
-    signal input in;
-    signal output out;
-
-    signal inv;
-
-    inv <-- in!=0 ? 1/in : 0;
-
-    out <== -in*inv +1;
-    in*out === 0;
-}
-
-template LessEqThan(n) {
-    signal input in[2];
-    signal output out;
-
-    component lt = LessThan(n);
-
-    lt.in[0] <== in[0];
-    lt.in[1] <== in[1]+1;
-    lt.out ==> out;
-}
-
-template LessThan(n) {
-    assert(n <= 252);
-    signal input in[2];
-    signal output out;
-
-    component n2b = BitDecompose(n+1);
-
-    n2b.num <== in[0]+ (1<<n) - in[1];
-
-    out <== 1-n2b.bits[n];
-}
-
-// N is the number of bits the input  have.
-// The MSF is the sign bit.
-template GreaterEqThan(n) {
-    signal input in[2];
-    signal output out;
-
-    component lt = LessThan(n);
-
-    lt.in[0] <== in[1];
-    lt.in[1] <== in[0]+1;
-    lt.out ==> out;
-}
-
-template IsEqual() {
-    signal input in[2];
-    signal output out;
-
-    component isz = IsZero();
-
-    in[1] - in[0] ==> isz.in;
-
-    isz.out ==> out;
-}
-
-template RangeCheck(n) {
-    signal input inp;
-    signal output out;
-
-    signal select_conds[n+1];
-    select_conds[0] <== 1;
-    for(var i = 0; i < n; i++) {
-        select_conds[i+1] <== select_conds[i] * (inp - i);
-    }
-    
-    component isz = IsZero();
-    isz.in <== select_conds[n];
-    out <== isz.out;
-}
-
-template BitDecompose(N) {
-    signal input num;
-    signal output bits[N];
-    var pow = 1;
-    var i = 0;
-    var total = 0;
-    for(i=0; i<N; i++) {
-        bits[i] <-- (num >> i) & 1;
-        bits[i] * (bits[i] - 1) === 0;
-        total += pow * bits[i];
-        pow = pow * 2;
-    }
-    total === num;
-}
-
 template ByteDecompose(N) { 
     signal input num;
     signal output bytes[N];
@@ -113,8 +24,6 @@ template ByteDecompose(N) {
     component bd[N];
     for (var i = 0; i < N; i++) {
         bytes[i] <-- (num >> (8 * i)) & 0xFF;
-        bd[i] = BitDecompose(8);
-        bd[i].num <==  bytes[i];
         total += pow * bytes[i];
         pow = pow * 256; 
     }
@@ -203,25 +112,29 @@ template ShiftLeft(n) {
     }
 }
 
-template TermCalc() {
-    signal input address[32];
+template TermCalc(N) {
+    signal input address[N];
     signal input count;
-    signal output out[34];
+    signal output out[N+2];
     signal output outLen;
 
     component div = Divide(16);
     div.a <== count;
     div.b <== 2;
 
-    component shifted = ShiftLeft(32);
+    component shifted = ShiftLeft(N);
     shifted.in <== address;
     shifted.count <== count;
-    signal temp[31];
-    for(var i = 0; i < 32; i++) {
-        temp[i] <== div.rem * shifted.out[i+1];
-        out[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
+    signal temp[N - 1];
+    for(var i = 0; i < N; i++) {
+        if(i == N - 1) {
+            out[i+2] <== (1 - div.rem) * shifted.out[i];
+        } else {
+            temp[i] <== div.rem * shifted.out[i+1];
+            out[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
+        }
     }
     out[0] <== 2 + div.rem;
     out[1] <== div.rem * shifted.out[0];
-    outLen <== 34 - count + div.rem;
+    outLen <== N + 2 - count - div.rem;
 }

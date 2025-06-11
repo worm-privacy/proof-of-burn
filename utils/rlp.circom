@@ -1,14 +1,9 @@
 pragma circom 2.1.5;
 
+include "../circomlib/circuits/comparators.circom";
+include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
 include "./concat.circom";
-
-template Mux() {
-    signal input c[2];
-    signal input s;
-    signal output out;
-    out <== c[0] + s * (c[1] - c[0]);
-}
 
 template RlpBalanceWithNonce0(N) {
     signal input num;
@@ -34,7 +29,7 @@ template RlpBalanceWithNonce0(N) {
 
     outLen <== (1 - isSingleByte.out) + length.len + isZero.out + 1;
 
-    component firstRlpByteSelector = Mux();
+    component firstRlpByteSelector = Mux1();
     firstRlpByteSelector.c[0] <== 0x80 + length.len;
     firstRlpByteSelector.c[1] <== num;
     firstRlpByteSelector.s <== isSingleByte.out;
@@ -47,10 +42,10 @@ template RlpBalanceWithNonce0(N) {
 }
 
 template LeafCalculator() {
-    signal input term[64];
+    signal input term[33];
     signal input term_len;
     signal input balance;
-    signal output rlp_encoded[1272];
+    signal output rlp_encoded[1024];
     signal output rlp_encoded_len;
 
     var storageAndCodeHashRlpLen = 66;
@@ -133,7 +128,7 @@ template LeafCalculator() {
 
     signal account_rlp[92];
     signal account_rlp_len;
-    signal term_rlp[67];
+    signal term_rlp[36];
     signal term_rlp_len;
 
     account_rlp[0] <== 0xb8; 
@@ -148,24 +143,24 @@ template LeafCalculator() {
     term_rlp[0] <== 0xf7 + 1;
     term_rlp[1] <== (term_len + 1) + account_rlp_len;
     term_rlp[2] <== 0x80 + term_len;
-    for(var i = 0; i < 64; i++) {
+    for(var i = 0; i < 33; i++) {
         term_rlp[i+3] <== term[i];
     }
     term_rlp_len <== term_len + 3;
 
-    component leafCalc = Concat(67, 92);
+    component leafCalc = Concat(36, 92);
     leafCalc.a <== term_rlp;
     leafCalc.aLen <== term_rlp_len;
     leafCalc.b <== account_rlp;
     leafCalc.bLen <== account_rlp_len;
 
     rlp_encoded_len <== leafCalc.outLen * 8;
-    component decomp[159];
-    for(var i = 0; i < 159; i++) {
-        decomp[i] = BitDecompose(8);
-        decomp[i].num <== leafCalc.out[i];
+    component decomp[128];
+    for(var i = 0; i < 128; i++) {
+        decomp[i] = Num2Bits(8);
+        decomp[i].in <== leafCalc.out[i];
         for(var j = 0; j < 8; j++) {
-            rlp_encoded[i*8+j] <== decomp[i].bits[j];
+            rlp_encoded[i*8+j] <== decomp[i].out[j];
         }
     }
 }
