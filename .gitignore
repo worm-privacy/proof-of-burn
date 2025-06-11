@@ -4,3 +4,5 @@ node_modules
 yarn.lock
 yarn-error.log
 inp.json
+*_cpp
+__pycache__
