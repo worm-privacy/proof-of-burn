@@ -15,7 +15,9 @@ Finally it will return the keccak of last layer as the state_root. The account b
     - `cd circom && cargo install --path circom`
 3. Start a Ganache server
     - `ganache -d`
-4. Run the Makefile
+4. Clone this repo and run the Makefile
+    - `git clone --recurse-submodules https://github.com/worm-privacy/proof-of-burn`
+    - `cd proof-of-burn`
     - `make`
 
 After running `make`, the `main.py` script will first initiate a transfer to a burn-address and will then generate an input file for the circuit. Then it will try to generate a witness file through the Circom-generated C program.
