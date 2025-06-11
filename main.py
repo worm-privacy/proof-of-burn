@@ -1,72 +1,138 @@
+import json
 import web3
+import rlp
+from hexbytes.main import HexBytes
+from mimc7 import mimc7, Field
 
-MAX_LEAF_PREFIX_LENGTH = 64
-MAX_LEN = 600
-MAX_LAYERS = 11
+MAX_HEADER_BITS = 5 * 136 * 8
+MAX_NUM_LAYERS = 4
 
-w3 = web3.Web3(provider=web3.Web3.HTTPProvider("https://rpc.payload.de/"))
-addr = "0x000000000000000000000000000000000000dEaD"
+
+w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
+
+
+def burn(entropy):
+    account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
+    private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
+    nonce = w3.eth.get_transaction_count(account_1)
+    hashed = w3.to_bytes(mimc7(Field(entropy), Field(0)).val)
+    addr = list(hashed[len(hashed)-20:])
+    burn_addr = w3.to_checksum_address(bytes(addr))
+    tx = {
+        "nonce": nonce,
+        "to": burn_addr,
+        "value": w3.to_wei(1, "ether"),
+        "gas": 2000000,
+        "gasPrice": w3.to_wei(50, "gwei"),
+    }
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+    assert w3.eth.wait_for_transaction_receipt(tx_hash).status == 1
+    return burn_addr
+
+entropy = 123
+addr = burn(entropy)
 
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
-state_root = w3.eth.get_block(blknum).stateRoot
-addr_hash = web3.Web3.keccak(hexstr=addr)[10:]
+block = w3.eth.get_block(blknum)
+
+
+addr_hash = w3.keccak(hexstr=addr)
 leaf = proof.accountProof[-1]
-prefix = leaf[: leaf.index(addr_hash) + 22]
+(term, account_rlp) = tuple(rlp.decode(leaf))
+MAX_TERM_LEN = 64
+term_len = len(term)
+term = list(term) + [0] * (MAX_TERM_LEN - term_len)
 
-extracted_layers = []
-for layer in list(reversed(proof.accountProof))[1:]:
-    extracted_layers.append(list(layer))
+hashes = [
+    block.parentHash.hex(),
+    block.sha3Uncles.hex(),
+    block.miner,
+    block.stateRoot.hex(),
+    block.transactionsRoot.hex(),
+    block.receiptsRoot.hex(),
+    block.logsBloom.hex(),
+    hex(block.difficulty),
+    hex(block.number),
+    hex(block.gasLimit),
+    hex(block.gasUsed),
+    hex(block.timestamp),
+    block.extraData.hex(),
+    block.mixHash.hex(),
+    block.nonce.hex(),
+]
 
-balance = proof.balance
+optional_headers = [
+    "baseFeePerGas",
+    "withdrawalsRoot",
+    "blobGasUsed",
+    "excessBlobGas",
+    "parentBeaconBlockRoot",
+    "requestsHash",
+]
 
-leaf_prefix = list(prefix)
-leaf_prefex_size = len(leaf_prefix)
-leaf_prefix = leaf_prefix + [0] * (MAX_LEAF_PREFIX_LENGTH - leaf_prefex_size)
+for header in optional_headers:
+    if hasattr(block, header):
+        v = getattr(block, header)
+        if isinstance(v, HexBytes):
+            hashes.append(v.hex())
+        elif isinstance(v, int):
+            hashes.append(hex(v))
+        else:
+            hashes.append(v)
 
-layers = extracted_layers
+hashes = ["0x" if h == "0x0" else h for h in hashes]
+header = rlp.encode([w3.to_bytes(hexstr=h) for h in hashes])
+
+
+def bytes_to_bits(bytes):
+    out = []
+    for byte in bytes:
+        lst = [int(a) for a in list(reversed(bin(byte)[2:]))]
+        for i in range(8):
+            out.append(lst[i] if i < len(lst) else 0)
+    return out
+
+
+header_bits = bytes_to_bits(header)
+header_bits_len = len(header_bits)
+header_bits = header_bits + [0] * (MAX_HEADER_BITS - header_bits_len)
+block_root = bytes_to_bits(block.hash)
+
+layers = []
+layer_lens = []
+for layer_bytes in list(proof.accountProof):
+    layer = bytes_to_bits(list(layer_bytes))
+    layer_len = len(layer)
+    layer += [0] * (4 * 136 * 8 - layer_len)
+    layers.append(layer)
+    layer_lens.append(layer_len)
+
 num_layers = len(layers)
-layer_sizes = [len(l) for l in layers]
+while len(layers) < MAX_NUM_LAYERS:
+    layers.append([0] * (4 * 136 * 8))
+    layer_lens.append(0)
+import io
+with io.open("details.json", 'w') as f:
+    json.dump({
+        "addr": addr,
+        "addrHash": w3.keccak(hexstr=addr).hex()
+    }, f)
+print(
+    json.dumps(
+        {
+            "entropy": str(entropy),
+            "balance": str(proof.balance),
+            "term": term,
+            "termLen": term_len,
+            "numLayers": num_layers,
+            "layerBits": layers,
+            "layerBitsLens": layer_lens,
+            "blockHeader": header_bits,
+            "blockHeaderLen": header_bits_len,
+        },
+    )
+)
 
-for i in range(len(layers)):
-    padded_layer = layers[i] + [0] * (MAX_LEN - len(layers[i]))
-    layers[i] = padded_layer
-
-layer_sizes += [0] * (MAX_LAYERS - len(layers))
-layers += [[0] * MAX_LEN] * (MAX_LAYERS - len(layers))
-
-
-def layer_to_str(layer):
-    inner = ", ".join(['"' + str(p) + '"' for p in layer])
-    return f"[{inner}]"
-
-
-out = {
-    "leaf_prefix": list(leaf_prefix),
-    "leaf_prefix_len": str(leaf_prefex_size),
-    "layers": layers,
-    "layer_lens": layer_sizes,
-    "num_layers": str(num_layers),
-    "secret": "0",
-    "address": list(web3.Web3.to_bytes(hexstr=addr)),
-    "balance": str(balance),
-}
-import io, json
-
-with io.open("front/inp.json", "w") as f:
-    json.dump(out, f, indent=2)
-
-out = f"""
-leaf_prefix = {layer_to_str(leaf_prefix)}
-leaf_prefix_len = "{leaf_prefex_size}"
-
-layers = [{', '.join([layer_to_str(l) for l in layers])}]
-layer_lens = [{', '.join(['"' + str(sz) + '"' for sz in layer_sizes])}]
-num_layers = "{num_layers}"
-
-secret = "0"
-address = {layer_to_str(web3.Web3.to_bytes(hexstr=addr))}
-balance = "{balance}"
-"""
-
-print(out)
+#'0xd5e9b28c27b288e692ca3bc64dfd3bb8dcace6705f1f4f344b9fbd9dfae5247f'

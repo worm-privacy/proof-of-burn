@@ -82,7 +82,7 @@ template KeccakBits(maxBlocks) {
 
 template EntropyToAddressHash() {
     signal input entropy;
-    signal output addressHashBytes[32];
+    signal output addressHashNibbles[64];
 
     component burnHasher = Hasher();
     burnHasher.left <== entropy;
@@ -100,11 +100,22 @@ template EntropyToAddressHash() {
     }
     addressHash.inBitsLen <== 160;
     for(var i = 0; i < 32; i++) {
-        var bt = 0;
-        for(var j = 0; j < 8; j++) {
-            bt += addressHash.out[i*8 + j] * (2 ** j);
+        var higher = 0;
+        var lower = 0;
+        for(var j = 0; j < 4; j++) {
+            lower += addressHash.out[i*8 + j] * (2 ** j);
+            higher += addressHash.out[i*8 + j + 4] * (2 ** (4 + j));
         }
-        addressHashBytes[i] <== bt;
+        addressHashNibbles[2 * i] <== higher;
+        addressHashNibbles[2 * i + 1] <== lower;
+    }
+}
+
+template NibblesToBytes(n) {
+    signal input nibbles[2 * n];
+    signal output bytes[n];
+    for(var i = 0; i < n; i++) {
+        bytes[i] <== nibbles[2 * i] * 16 + nibbles[2 * i + 1];
     }
 }
 
@@ -141,14 +152,13 @@ template EntropyToNullifier() {
     nullifier[255] <== 0;
 }
 
-template ProofOfBurn(maxNumLayers, maxBlocks) {
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
     signal input entropy; // Secret field-number, from which the burn-address and nullifier is derived
-    signal input blockRoot[256]; // Accesible by blockhash() in Solidity
     signal input balance; // Balance of the burn-address
-    signal input layerBits[maxNumLayers][maxBlocks * 136 * 8]; // MPT nodes in bits
+    signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
     signal input layerBitsLens[maxNumLayers]; // Bit length of MPT nodes
     signal input numLayers; // Number of MPT nodes
-    signal input blockHeader[5 * 136 * 8]; // Block header bits which should be hashed into blockRoot
+    signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
     signal input term[64]; // Leaf-node's key terminal
     signal input termLen; // Length of leaf-node's key terminal
@@ -171,6 +181,21 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     // Calculate burn-address
     component entropyToAddressHash = EntropyToAddressHash();
     entropyToAddressHash.entropy <== entropy;
+    component addressHash = NibblesToBytes(32);
+    addressHash.nibbles <== entropyToAddressHash.addressHashNibbles;
+
+    // Fetch stateRoot and stateRoot from block-header
+    signal blockRoot[256];
+    signal stateRoot[256];
+    component headerKeccak = KeccakBits(maxHeaderBlocks);
+    headerKeccak.inBits <== blockHeader;
+    headerKeccak.inBitsLen <== blockHeaderLen;
+    for(var i = 0; i < 256; i++) {
+        blockRoot[i] <== headerKeccak.out[i];
+    }
+    for(var i = 0; i < 256; i++) {
+        stateRoot[i] <== blockHeader[91 * 8 + i];
+    }
 
     // Calculate public commitment
     component inpsHasher = InputsHasher();
@@ -178,21 +203,9 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     inpsHasher.nullifier <== nullifier;
     inpsHasher.encryptedBalance <== encryptedBalance;
     commitment <== inpsHasher.commitment;
-
-    // Fetch stateRoot from block header
-    signal stateRoot[256];
-    component headerKeccak = KeccakBits(5);
-    headerKeccak.inBits <== blockHeader;
-    headerKeccak.inBitsLen <== blockHeaderLen;
-    for(var i = 0; i < 256; i++) {
-        blockRoot[i] === headerKeccak.out[i];
-    }
-    for(var i = 0; i < 256; i++) {
-        stateRoot[i] <== blockHeader[91*8 + i];
-    }
     
-    component lastLayerBitsSelectors[maxBlocks * 136 * 8];
-    for(var j = 0; j < maxBlocks*136*8; j++) {
+    component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
+    for(var j = 0; j < maxNodeBlocks*136*8; j++) {
         lastLayerBitsSelectors[j] = Selector(maxNumLayers);
         lastLayerBitsSelectors[j].select <== numLayers - 1;
     }
@@ -212,13 +225,13 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
         existingLayer[i].in[0] <== i;
         existingLayer[i].in[1] <== numLayers;
 
-        keccaks[i] = KeccakBits(maxBlocks);
+        keccaks[i] = KeccakBits(maxNodeBlocks);
         keccaks[i].inBits <== layerBits[i];
         keccaks[i].inBitsLen <== layerBitsLens[i];
         layerKeccaks[i] <== keccaks[i].out;
 
         if(i > 0) {
-            substringCheckers[i-1] = SubstringCheck(maxBlocks * 136 * 8, 256);
+            substringCheckers[i-1] = SubstringCheck(maxNodeBlocks * 136 * 8, 256);
             substringCheckers[i-1].subInput <== layerKeccaks[i];
             substringCheckers[i-1].mainLen <== layerBitsLens[i - 1];
             substringCheckers[i-1].mainInput <== layerBits[i - 1];
@@ -245,7 +258,7 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     termShift.in <== term;
     termShift.count <== 64 - termLen;
     for(var i = 64 - 20; i < 64; i++) {
-        termShift.out[i] === entropyToAddressHash.addressHashBytes[i-32];
+        termShift.out[i] === addressHash.bytes[i-32];
     }
 
     rlpBurn.rlp_encoded_len === lastLayerLenSelector.out;
@@ -254,4 +267,4 @@ template ProofOfBurn(maxNumLayers, maxBlocks) {
     }
 }
 
-component main = ProofOfBurn(4, 4);
+component main = ProofOfBurn(12, 4, 5);

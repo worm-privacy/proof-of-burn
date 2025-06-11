@@ -181,3 +181,47 @@ template Bits2NumBigendian(n) {
 
     number ==> out;
 }
+
+template ShiftLeft(n) {
+    signal input in[n];
+    signal input count;
+    signal output out[n];
+
+    signal outsum[n][n+1];
+    for(var i = 0; i < n; i++) {
+        outsum[i][0] <== 0;
+    }
+    component eqs[n][n];
+    for(var i = 0; i < n; i++) {
+        for(var j = 0; j < n; j++) {
+            eqs[i][j] = IsEqual();
+            eqs[i][j].in[0] <== i;
+            eqs[i][j].in[1] <== j - count;
+            outsum[i][j+1] <== outsum[i][j] + eqs[i][j].out * in[j];
+        }
+        out[i] <== outsum[i][n];
+    }
+}
+
+template TermCalc() {
+    signal input address[32];
+    signal input count;
+    signal output out[34];
+    signal output outLen;
+
+    component div = Divide(16);
+    div.a <== count;
+    div.b <== 2;
+
+    component shifted = ShiftLeft(32);
+    shifted.in <== address;
+    shifted.count <== count;
+    signal temp[31];
+    for(var i = 0; i < 32; i++) {
+        temp[i] <== div.rem * shifted.out[i+1];
+        out[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
+    }
+    out[0] <== 2 + div.rem;
+    out[1] <== div.rem * shifted.out[0];
+    outLen <== 34 - count + div.rem;
+}

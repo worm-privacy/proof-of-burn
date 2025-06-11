@@ -1,4 +1,4 @@
-# Proof of Burn circuits in Noir 👽
+# Proof-of-Burn circuits in Circom
 
 The circuit calculates the account-rlp of a burn address and then generate the leaf-trie-node accordingly.
 
