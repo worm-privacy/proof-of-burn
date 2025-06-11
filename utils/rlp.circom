@@ -91,9 +91,9 @@ template ReverseArray(N) {
     out <== reversed;
 }
 
-template RlpBalanceWithNonce0(N) {
+template RlpInteger(N) {
     signal input num;
-    signal output out[N + 1];
+    signal output out[N];
     signal output outLen;
 
     component decomp = ByteDecompose(N);
@@ -113,104 +113,125 @@ template RlpBalanceWithNonce0(N) {
     component isZero = IsZero();
     isZero.in <== num;
 
-    outLen <== (1 - isSingleByte.out) + length.len + isZero.out + 1;
+    outLen <== (1 - isSingleByte.out) + length.len + isZero.out;
 
     component firstRlpByteSelector = Mux1();
     firstRlpByteSelector.c[0] <== 0x80 + length.len;
     firstRlpByteSelector.c[1] <== num;
     firstRlpByteSelector.s <== isSingleByte.out;
 
-    out[0] <== 0x80;
-    out[1] <== firstRlpByteSelector.out + isZero.out * 0x80;
+    out[0] <== firstRlpByteSelector.out + isZero.out * 0x80;
     for (var i = 1; i < N; i++) {
-        out[i+1] <== (1 - isSingleByte.out) * reversed.out[i-1];
+        out[i] <== (1 - isSingleByte.out) * reversed.out[i-1];
     }
+}
+
+template RlpEmptyAccount() {
+    signal input balance;
+    signal output out[88];
+    signal output outLen;
+
+    signal nonceAndBalanceRlp[22];
+    signal nonceAndBalanceRlpLen;
+    nonceAndBalanceRlp[0] <== 0x80; // Nonce of a burn-address is always zero
+    component balanceRlp = RlpInteger(21);
+    balanceRlp.num <== balance;
+    for(var i = 0; i < 21; i++) {
+        nonceAndBalanceRlp[i + 1] <== balanceRlp.out[i];
+    }
+    nonceAndBalanceRlpLen <== balanceRlp.outLen + 1;
+
+    // Concatenated RLP of storage-hash and code-hash of an empty account
+    // Storage-hash: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
+    // Code-hash:    0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 
+    var storageAndCodeHashRlpLen = 66;
+    signal storageAndCodeHashRlp[storageAndCodeHashRlpLen];
+    storageAndCodeHashRlp[0] <== 160;
+    storageAndCodeHashRlp[1] <== 86;
+    storageAndCodeHashRlp[2] <== 232;
+    storageAndCodeHashRlp[3] <== 31;
+    storageAndCodeHashRlp[4] <== 23;
+    storageAndCodeHashRlp[5] <== 27;
+    storageAndCodeHashRlp[6] <== 204;
+    storageAndCodeHashRlp[7] <== 85;
+    storageAndCodeHashRlp[8] <== 166;
+    storageAndCodeHashRlp[9] <== 255;
+    storageAndCodeHashRlp[10] <== 131;
+    storageAndCodeHashRlp[11] <== 69;
+    storageAndCodeHashRlp[12] <== 230;
+    storageAndCodeHashRlp[13] <== 146;
+    storageAndCodeHashRlp[14] <== 192;
+    storageAndCodeHashRlp[15] <== 248;
+    storageAndCodeHashRlp[16] <== 110;
+    storageAndCodeHashRlp[17] <== 91;
+    storageAndCodeHashRlp[18] <== 72;
+    storageAndCodeHashRlp[19] <== 224;
+    storageAndCodeHashRlp[20] <== 27;
+    storageAndCodeHashRlp[21] <== 153;
+    storageAndCodeHashRlp[22] <== 108;
+    storageAndCodeHashRlp[23] <== 173;
+    storageAndCodeHashRlp[24] <== 192;
+    storageAndCodeHashRlp[25] <== 1;
+    storageAndCodeHashRlp[26] <== 98;
+    storageAndCodeHashRlp[27] <== 47;
+    storageAndCodeHashRlp[28] <== 181;
+    storageAndCodeHashRlp[29] <== 227;
+    storageAndCodeHashRlp[30] <== 99;
+    storageAndCodeHashRlp[31] <== 180;
+    storageAndCodeHashRlp[32] <== 33;
+    storageAndCodeHashRlp[33] <== 160;
+    storageAndCodeHashRlp[34] <== 197;
+    storageAndCodeHashRlp[35] <== 210;
+    storageAndCodeHashRlp[36] <== 70;
+    storageAndCodeHashRlp[37] <== 1;
+    storageAndCodeHashRlp[38] <== 134;
+    storageAndCodeHashRlp[39] <== 247;
+    storageAndCodeHashRlp[40] <== 35;
+    storageAndCodeHashRlp[41] <== 60;
+    storageAndCodeHashRlp[42] <== 146;
+    storageAndCodeHashRlp[43] <== 126;
+    storageAndCodeHashRlp[44] <== 125;
+    storageAndCodeHashRlp[45] <== 178;
+    storageAndCodeHashRlp[46] <== 220;
+    storageAndCodeHashRlp[47] <== 199;
+    storageAndCodeHashRlp[48] <== 3;
+    storageAndCodeHashRlp[49] <== 192;
+    storageAndCodeHashRlp[50] <== 229;
+    storageAndCodeHashRlp[51] <== 0;
+    storageAndCodeHashRlp[52] <== 182;
+    storageAndCodeHashRlp[53] <== 83;
+    storageAndCodeHashRlp[54] <== 202;
+    storageAndCodeHashRlp[55] <== 130;
+    storageAndCodeHashRlp[56] <== 39;
+    storageAndCodeHashRlp[57] <== 59;
+    storageAndCodeHashRlp[58] <== 123;
+    storageAndCodeHashRlp[59] <== 250;
+    storageAndCodeHashRlp[60] <== 216;
+    storageAndCodeHashRlp[61] <== 4;
+    storageAndCodeHashRlp[62] <== 93;
+    storageAndCodeHashRlp[63] <== 133;
+    storageAndCodeHashRlp[64] <== 164;
+    storageAndCodeHashRlp[65] <== 112;
+
+    component concat = Concat(22, 66);
+    concat.a <== nonceAndBalanceRlp;
+    concat.aLen <== nonceAndBalanceRlpLen;
+    concat.b <== storageAndCodeHashRlp;
+    concat.bLen <== storageAndCodeHashRlpLen;
+
+    out <== concat.out;
+    outLen <== concat.outLen;
 }
 
 template LeafCalculator() {
     signal input term[33];
     signal input term_len;
     signal input balance;
-    signal output rlp_encoded[1024];
-    signal output rlp_encoded_len;
+    signal output out[1024];
+    signal output outLen;
 
-    var storageAndCodeHashRlpLen = 66;
-    signal storageAndCodeHashRlpEncoded[storageAndCodeHashRlpLen];
-    storageAndCodeHashRlpEncoded[0] <== 160;
-    storageAndCodeHashRlpEncoded[1] <== 86;
-    storageAndCodeHashRlpEncoded[2] <== 232;
-    storageAndCodeHashRlpEncoded[3] <== 31;
-    storageAndCodeHashRlpEncoded[4] <== 23;
-    storageAndCodeHashRlpEncoded[5] <== 27;
-    storageAndCodeHashRlpEncoded[6] <== 204;
-    storageAndCodeHashRlpEncoded[7] <== 85;
-    storageAndCodeHashRlpEncoded[8] <== 166;
-    storageAndCodeHashRlpEncoded[9] <== 255;
-    storageAndCodeHashRlpEncoded[10] <== 131;
-    storageAndCodeHashRlpEncoded[11] <== 69;
-    storageAndCodeHashRlpEncoded[12] <== 230;
-    storageAndCodeHashRlpEncoded[13] <== 146;
-    storageAndCodeHashRlpEncoded[14] <== 192;
-    storageAndCodeHashRlpEncoded[15] <== 248;
-    storageAndCodeHashRlpEncoded[16] <== 110;
-    storageAndCodeHashRlpEncoded[17] <== 91;
-    storageAndCodeHashRlpEncoded[18] <== 72;
-    storageAndCodeHashRlpEncoded[19] <== 224;
-    storageAndCodeHashRlpEncoded[20] <== 27;
-    storageAndCodeHashRlpEncoded[21] <== 153;
-    storageAndCodeHashRlpEncoded[22] <== 108;
-    storageAndCodeHashRlpEncoded[23] <== 173;
-    storageAndCodeHashRlpEncoded[24] <== 192;
-    storageAndCodeHashRlpEncoded[25] <== 1;
-    storageAndCodeHashRlpEncoded[26] <== 98;
-    storageAndCodeHashRlpEncoded[27] <== 47;
-    storageAndCodeHashRlpEncoded[28] <== 181;
-    storageAndCodeHashRlpEncoded[29] <== 227;
-    storageAndCodeHashRlpEncoded[30] <== 99;
-    storageAndCodeHashRlpEncoded[31] <== 180;
-    storageAndCodeHashRlpEncoded[32] <== 33;
-    storageAndCodeHashRlpEncoded[33] <== 160;
-    storageAndCodeHashRlpEncoded[34] <== 197;
-    storageAndCodeHashRlpEncoded[35] <== 210;
-    storageAndCodeHashRlpEncoded[36] <== 70;
-    storageAndCodeHashRlpEncoded[37] <== 1;
-    storageAndCodeHashRlpEncoded[38] <== 134;
-    storageAndCodeHashRlpEncoded[39] <== 247;
-    storageAndCodeHashRlpEncoded[40] <== 35;
-    storageAndCodeHashRlpEncoded[41] <== 60;
-    storageAndCodeHashRlpEncoded[42] <== 146;
-    storageAndCodeHashRlpEncoded[43] <== 126;
-    storageAndCodeHashRlpEncoded[44] <== 125;
-    storageAndCodeHashRlpEncoded[45] <== 178;
-    storageAndCodeHashRlpEncoded[46] <== 220;
-    storageAndCodeHashRlpEncoded[47] <== 199;
-    storageAndCodeHashRlpEncoded[48] <== 3;
-    storageAndCodeHashRlpEncoded[49] <== 192;
-    storageAndCodeHashRlpEncoded[50] <== 229;
-    storageAndCodeHashRlpEncoded[51] <== 0;
-    storageAndCodeHashRlpEncoded[52] <== 182;
-    storageAndCodeHashRlpEncoded[53] <== 83;
-    storageAndCodeHashRlpEncoded[54] <== 202;
-    storageAndCodeHashRlpEncoded[55] <== 130;
-    storageAndCodeHashRlpEncoded[56] <== 39;
-    storageAndCodeHashRlpEncoded[57] <== 59;
-    storageAndCodeHashRlpEncoded[58] <== 123;
-    storageAndCodeHashRlpEncoded[59] <== 250;
-    storageAndCodeHashRlpEncoded[60] <== 216;
-    storageAndCodeHashRlpEncoded[61] <== 4;
-    storageAndCodeHashRlpEncoded[62] <== 93;
-    storageAndCodeHashRlpEncoded[63] <== 133;
-    storageAndCodeHashRlpEncoded[64] <== 164;
-    storageAndCodeHashRlpEncoded[65] <== 112;
-
-    component nonceAndBalanceRlp = RlpBalanceWithNonce0(21);
-    nonceAndBalanceRlp.num <== balance;
-
-    component concat = Concat(22, 66);
-    concat.a <== nonceAndBalanceRlp.out;
-    concat.aLen <== nonceAndBalanceRlp.outLen;
-    concat.b <== storageAndCodeHashRlpEncoded;
-    concat.bLen <== storageAndCodeHashRlpLen;
+    component rlpEmptyAccount = RlpEmptyAccount();
+    rlpEmptyAccount.balance <== balance;
 
     signal account_rlp[92];
     signal account_rlp_len;
@@ -218,13 +239,14 @@ template LeafCalculator() {
     signal term_rlp_len;
 
     account_rlp[0] <== 0xb8; 
-    account_rlp[1] <== concat.outLen + 2;
-    account_rlp[2] <== 0xf8; 
-    account_rlp[3] <== concat.outLen;
+    account_rlp[1] <== rlpEmptyAccount.outLen + 2;
+    
+    account_rlp[2] <== 0xf7 + 1; 
+    account_rlp[3] <== rlpEmptyAccount.outLen;
     for(var i = 0; i < 88; i++) {
-        account_rlp[i+4] <== concat.out[i];
+        account_rlp[i+4] <== rlpEmptyAccount.out[i];
     }
-    account_rlp_len <== 4 + concat.outLen;
+    account_rlp_len <== 4 + rlpEmptyAccount.outLen;
 
     term_rlp[0] <== 0xf7 + 1;
     term_rlp[1] <== (term_len + 1) + account_rlp_len;
@@ -240,13 +262,13 @@ template LeafCalculator() {
     leafCalc.b <== account_rlp;
     leafCalc.bLen <== account_rlp_len;
 
-    rlp_encoded_len <== leafCalc.outLen * 8;
+    outLen <== leafCalc.outLen * 8;
     component decomp[128];
     for(var i = 0; i < 128; i++) {
         decomp[i] = Num2Bits(8);
         decomp[i].in <== leafCalc.out[i];
         for(var j = 0; j < 8; j++) {
-            rlp_encoded[i*8+j] <== decomp[i].out[j];
+            out[i*8+j] <== decomp[i].out[j];
         }
     }
 }

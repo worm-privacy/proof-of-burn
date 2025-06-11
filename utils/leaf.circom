@@ -5,9 +5,9 @@ include "./utils.circom";
 // Shifts the `in` array to the left by the given `count` times, filling the end with zeros.
 //
 // Example:
-//   in: [1, 2, 3, 4, 5]
+//   in:    [1, 2, 3, 4, 5]
 //   count: 2
-//   out: [3, 4, 5, 0, 0]
+//   out:   [3, 4, 5, 0, 0]
 template ShiftLeft(n) {
     signal input in[n];
     signal input count;
@@ -29,6 +29,43 @@ template ShiftLeft(n) {
     }
 }
 
+
+// Takes `N` nibbles and shifts them left by `count` with this pattern:
+//
+//   1. If even number of nibbles is remaining: [0x2, 0x0, rest_of_the_nibbles]
+//   2. If odd number of nibbles is remaining:  [0x3, first_nibble, rest_of_the_nibbles]
+//
+// (Read more: https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#specification)
+//
+// Example:
+//   in:     [1, 2, 3, 4]
+//   count:  0
+//   out:    [2, 0, 1, 2, 3, 4]
+//   outLen: 6
+//
+// Example:
+//   in:     [1, 2, 3, 4]
+//   count:  1
+//   out:    [3, 2, 3, 4, 0, 0]
+//   outLen: 4
+//
+// Example:
+//   in:     [1, 2, 3, 4]
+//   count:  2
+//   out:    [2, 0, 3, 4, 0, 0]
+//   outLen: 4
+//
+// Example:
+//   in:     [1, 2, 3, 4]
+//   count:  3
+//   out:    [3, 4, 0, 0, 0, 0]
+//   outLen: 2
+//
+// Example:
+//   in:     [1, 2, 3, 4]
+//   count:  4
+//   out:    [2, 0, 0, 0, 0, 0]
+//   outLen: 2
 template LeafKey(N) {
     signal input address[N];
     signal input count;
