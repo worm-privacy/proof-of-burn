@@ -30,65 +30,87 @@ template ShiftLeft(n) {
 }
 
 
+// Converts an array of nibbles (4-bit values) into an array of bytes (8-bit values).
+// Each byte is formed by combining two nibbles (4 bits each).
+//
+// Example:
+//   nibbles: [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
+//   bytes: [0x12, 0x34, 0x56]
+template NibblesToBytes(n) {
+    signal input nibbles[2 * n];
+    signal output bytes[n];
+    for(var i = 0; i < n; i++) {
+        bytes[i] <== nibbles[2 * i] * 16 + nibbles[2 * i + 1];
+    }
+}
+
+
 // Takes `N` nibbles and shifts them left by `count` with this pattern:
 //
-//   1. If even number of nibbles is remaining: [0x2, 0x0, rest_of_the_nibbles]
-//   2. If odd number of nibbles is remaining:  [0x3, first_nibble, rest_of_the_nibbles]
+//   1. If even number of nibbles is remaining: [0x20, rest_of_the_nibbles_as_bytes]
+//   2. If odd number of nibbles is remaining:  [0x30 + first_nibble, rest_of_the_nibbles_as_bytes]
 //
 // (Read more: https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#specification)
 //
 // Example:
-//   in:     [1, 2, 3, 4]
+//   in:     [0x1, 0x2, 0x3, 0x4]
 //   count:  0
-//   out:    [2, 0, 1, 2, 3, 4]
-//   outLen: 6
+//   out:    [0x20, 0x12, 0x34]
+//   outLen: 3
 //
 // Example:
-//   in:     [1, 2, 3, 4]
+//   in:     [0x1, 0x2, 0x3, 0x4]
 //   count:  1
-//   out:    [3, 2, 3, 4, 0, 0]
-//   outLen: 4
+//   out:    [0x32, 0x34, 0x00]
+//   outLen: 2
 //
 // Example:
-//   in:     [1, 2, 3, 4]
+//   in:     [0x1, 0x2, 0x3, 0x4]
 //   count:  2
-//   out:    [2, 0, 3, 4, 0, 0]
-//   outLen: 4
+//   out:    [0x20, 0x34, 0x00]
+//   outLen: 2
 //
 // Example:
-//   in:     [1, 2, 3, 4]
+//   in:     [0x1, 0x2, 0x3, 0x4]
 //   count:  3
-//   out:    [3, 4, 0, 0, 0, 0]
-//   outLen: 2
+//   out:    [0x34, 0x00, 0x00]
+//   outLen: 1
 //
 // Example:
-//   in:     [1, 2, 3, 4]
+//   in:     [0x1, 0x2, 0x3, 0x4]
 //   count:  4
-//   out:    [2, 0, 0, 0, 0, 0]
-//   outLen: 2
+//   out:    [0x20, 0x00, 0x00]
+//   outLen: 1
 template LeafKey(N) {
-    signal input address[N];
-    signal input count;
-    signal output out[N+2];
+    signal input addressHashNibbles[2*N];
+    signal input addressHashNibblesLen;
+    signal output out[N+1];
     signal output outLen;
 
+    signal outNibbles[2*N+2];
+    signal outNibblesLen;
+
     component div = Divide(16);
-    div.a <== count;
+    div.a <== addressHashNibblesLen;
     div.b <== 2;
 
-    component shifted = ShiftLeft(N);
-    shifted.in <== address;
-    shifted.count <== count;
-    signal temp[N - 1];
-    for(var i = 0; i < N; i++) {
-        if(i == N - 1) {
-            out[i+2] <== (1 - div.rem) * shifted.out[i];
+    component shifted = ShiftLeft(2 * N);
+    shifted.in <== addressHashNibbles;
+    shifted.count <== addressHashNibblesLen;
+    signal temp[2 * N - 1];
+    for(var i = 0; i < 2 * N; i++) {
+        if(i == 2 * N - 1) {
+            outNibbles[i+2] <== (1 - div.rem) * shifted.out[i];
         } else {
             temp[i] <== div.rem * shifted.out[i+1];
-            out[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
+            outNibbles[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
         }
     }
-    out[0] <== 2 + div.rem;
-    out[1] <== div.rem * shifted.out[0];
-    outLen <== N + 2 - count - div.rem;
+    outNibbles[0] <== 2 + div.rem;
+    outNibbles[1] <== div.rem * shifted.out[0];
+
+    component nibblesToBytes = NibblesToBytes(33);
+    nibblesToBytes.nibbles <== outNibbles;
+    out <== nibblesToBytes.bytes;
+    outLen <== N + 1 - div.out - div.rem;
 }

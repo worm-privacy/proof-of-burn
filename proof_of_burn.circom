@@ -87,20 +87,6 @@ template EntropyToAddressHash() {
     }
 }
 
-// Converts an array of nibbles (4-bit values) into an array of bytes (8-bit values).
-// Each byte is formed by combining two nibbles (4 bits each).
-//
-// Example:
-//   nibbles: [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
-//   bytes: [0x12, 0x34, 0x56]
-template NibblesToBytes(n) {
-    signal input nibbles[2 * n];
-    signal output bytes[n];
-    for(var i = 0; i < n; i++) {
-        bytes[i] <== nibbles[2 * i] * 16 + nibbles[2 * i + 1];
-    }
-}
-
 // Encrypts a balance by applying the MiMC hash function with a given entropy as the salt. 
 // The entropy acts as a unique value that ensures different encrypted outputs for the same balance.
 template EncryptBalance() {
@@ -136,17 +122,23 @@ template EntropyToNullifier() {
     nullifier[255] <== 0;
 }
 
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
-    signal input entropy; // Secret field-number, from which the burn-address and nullifier is derived
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles) {
+    signal input entropy; // Secret field number from which the burn address and nullifier are derived.
     signal input balance; // Balance of the burn-address
     signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
     signal input layerBitsLens[maxNumLayers]; // Bit length of MPT nodes
     signal input numLayers; // Number of MPT nodes
     signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
-    signal input numLeafAddressNibbles;
-    
+    signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node
+
     signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
+
+    // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
+    component leafAddrNibblesCheck = GreaterEqThan(16);
+    leafAddrNibblesCheck.in[0] <== numLeafAddressNibbles;
+    leafAddrNibblesCheck.in[1] <== minLeafAddressNibbles;
+    leafAddrNibblesCheck.out === 1;
 
     component layerLenCheckers[maxNumLayers];
     for(var i = 0; i < maxNumLayers; i++) {
@@ -191,18 +183,6 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
     entropyToAddressHash.entropy <== entropy;
     component addressHash = NibblesToBytes(32);
     addressHash.nibbles <== entropyToAddressHash.addressHashNibbles;
-
-    component termer = LeafKey(64);
-    termer.address <== entropyToAddressHash.addressHashNibbles;
-    termer.count <== 64 - numLeafAddressNibbles;
-    component termBytes = NibblesToBytes(33);
-    termBytes.nibbles <== termer.out;
-    signal termBytesLen;
-    component halver = Divide(16);
-    halver.a <== termer.outLen;
-    halver.b <== 2;
-    halver.rem === 0;
-    termBytesLen <== halver.out;
 
     // Fetch stateRoot and stateRoot from block-header
     signal blockRoot[256];
@@ -269,15 +249,18 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
         layerKeccaks[0][i] === stateRoot[i];
     }
 
+    component termer = LeafKey(32);
+    termer.addressHashNibbles <== entropyToAddressHash.addressHashNibbles;
+    termer.addressHashNibblesLen <== 64 - numLeafAddressNibbles;
     
     component rlpBurn = LeafCalculator();
-    rlpBurn.term <== termBytes.bytes;
-    rlpBurn.term_len <== termBytesLen;
+    rlpBurn.term <== termer.out;
+    rlpBurn.term_len <== termer.outLen;
     rlpBurn.balance <== balance;
-    rlpBurn.rlp_encoded_len === lastLayerLenSelector.out;
+    rlpBurn.outLen === lastLayerLenSelector.out;
     for(var i = 0; i < 128 * 8; i++) {
-        rlpBurn.rlp_encoded[i] === lastLayerBitsSelectors[i].out;
+        rlpBurn.out[i] === lastLayerBitsSelectors[i].out;
     }
 }
 
-component main = ProofOfBurn(4, 4, 5);
+component main = ProofOfBurn(4, 4, 5, 20);
