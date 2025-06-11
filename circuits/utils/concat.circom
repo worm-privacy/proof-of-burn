@@ -39,6 +39,11 @@ template Shift(n, maxShift) {
     signal input count;
     signal output out[n + maxShift];
 
+    component countChecker = LessEqThan(16);
+    countChecker.in[0] <== count;
+    countChecker.in[1] <== maxShift;
+    countChecker.out === 1;
+
     var outsum[n + maxShift];
 
     component eqcomps[maxShift + 1];

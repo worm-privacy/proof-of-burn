@@ -13,6 +13,11 @@ template ShiftLeft(n) {
     signal input count;
     signal output out[n];
 
+    component countChecker = LessEqThan(16);
+    countChecker.in[0] <== count;
+    countChecker.in[1] <== n;
+    countChecker.out === 1;
+
     signal outsum[n][n+1];
     for(var i = 0; i < n; i++) {
         outsum[i][0] <== 0;
@@ -39,7 +44,14 @@ template ShiftLeft(n) {
 template NibblesToBytes(n) {
     signal input nibbles[2 * n];
     signal output bytes[n];
+    component nibbleCheckers[2 * n];
     for(var i = 0; i < n; i++) {
+        // Check if all nibbles are maximum 4-bit long
+        nibbleCheckers[2 * i] = Num2Bits(4);
+        nibbleCheckers[2 * i].in <== nibbles[2 * i];
+        nibbleCheckers[2 * i + 1] = Num2Bits(4);
+        nibbleCheckers[2 * i + 1].in <== nibbles[2 * i + 1];
+
         bytes[i] <== nibbles[2 * i] * 16 + nibbles[2 * i + 1];
     }
 }
