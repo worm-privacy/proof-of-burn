@@ -1,0 +1,23 @@
+name: Test circuits
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t my-app .
+
+      - name: Run test script in Docker container
+        run: |
+          docker run --rm my-app python3 test.py
