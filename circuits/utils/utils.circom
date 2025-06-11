@@ -1,5 +1,5 @@
 
-pragma circom 2.1.5;
+pragma circom 2.2.2;
 
 // Computes the quotient and remainder for the division of a by b:
 // a === out * b + rem

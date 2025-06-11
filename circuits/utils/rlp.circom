@@ -1,4 +1,4 @@
-pragma circom 2.1.5;
+pragma circom 2.2.2;
 
 include "../circomlib/circuits/comparators.circom";
 include "../circomlib/circuits/mux1.circom";

@@ -5,7 +5,7 @@
 //      \_/\_/  \___/|_| \_\_|  |_|
 //
 
-pragma circom 2.1.5;
+pragma circom 2.2.2;
 
 include "./utils/keccak/keccak.circom";
 include "./utils/substring_finder.circom";

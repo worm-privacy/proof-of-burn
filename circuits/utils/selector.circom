@@ -1,4 +1,4 @@
-pragma circom 2.1.5;
+pragma circom 2.2.2;
 
 
 // Selects the element at the given index `select` from the input array `vals`.
