@@ -31,46 +31,6 @@ template ByteDecompose(N) {
     total === num; 
 }
 
-template GetRealByteLength(N) {
-    signal input bytes[N];
-    signal output len;
-
-    component isZero[N];
-
-    signal isZeroResult[N+1];
-    isZeroResult[0] <== 1;
-
-    for (var i = 0; i < N; i++) {
-        isZero[i] = IsZero();
-        isZero[i].in <== bytes[N-i-1];
-        isZeroResult[i+1] <== isZero[i].out * isZeroResult[i];
-    }
-    
-    var total = 0;
-    
-    for (var j = 1; j < N + 1; j++) {
-        total = total + isZeroResult[j];
-    }
-
-    len <== N - total;
-}
-
-template IfThenElse() {
-    signal input condition; 
-    signal input ifTrue;
-    signal input ifFalse;
-    signal output out;
-
-
-    signal intermediateTrue;
-    signal intermediateFalse;
-
-    intermediateTrue <== condition * ifTrue;
-    intermediateFalse <== (1 - condition) * ifFalse;
-
-    out <== intermediateTrue + intermediateFalse;
-}
-
 template Bits2NumBigendian(n) {
     signal input in[n];
     signal output out;
