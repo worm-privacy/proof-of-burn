@@ -56,6 +56,37 @@ template CountBytes(N) {
     len <== N - total;
 }
 
+
+// Reverses the first `inLen` elements of the input array `in`
+// Elements beyond `inLen` are zero-padded.
+//
+// Example:
+//   in:    [1, 2, 3, 4, 5], inLen: 3
+//   output:[3, 2, 1, 0, 0]
+template ReverseArray(N) {
+    signal input in[N];
+    signal input inLen;
+    signal output out[N];
+
+    component inLenChecker = LessEqThan(16);
+    inLenChecker.in[0] <== inLen;
+    inLenChecker.in[1] <== N;
+    inLenChecker.out === 1;
+
+    var lenDiff = N - inLen;
+    signal reversed[N];
+
+    component shifter = Shift(N, N);
+    shifter.count <== lenDiff;
+    shifter.in <== in; 
+
+   for(var i = 0; i < N; i++) {
+        reversed[i] <== shifter.out[N - i - 1];
+    }
+
+    out <== reversed;
+}
+
 template RlpBalanceWithNonce0(N) {
     signal input num;
     signal output out[N + 1];
