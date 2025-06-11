@@ -1,6 +1,14 @@
 
 pragma circom 2.1.5;
 
+// Computes the quotient and remainder for the division of a by b:
+// a === out * b + rem
+//
+// Example:
+//   a:   10
+//   b:   3
+//   out: 3
+//   rem: 1
 template Divide(N) {
     signal input a;
     signal input b;
@@ -16,22 +24,9 @@ template Divide(N) {
     out * b + rem === a;
 }
 
-template ByteDecompose(N) { 
-    signal input num;
-    signal output bytes[N];
-    var pow = 1;
-    var total = 0;
-    component bd[N];
-    for (var i = 0; i < N; i++) {
-        bytes[i] <-- (num >> (8 * i)) & 0xFF;
-        total += pow * bytes[i];
-        pow = pow * 256; 
-    }
-
-    total === num; 
-}
-
-template Bits2NumBigendian(n) {
+// Bits2NumBigEndian Template:
+// Converts an array of binary bits into a number in big-endian format.
+template Bits2NumBigEndian(n) {
     signal input in[n];
     signal output out;
     var number = 0;
@@ -49,52 +44,4 @@ template Bits2NumBigendian(n) {
     }
 
     number ==> out;
-}
-
-template ShiftLeft(n) {
-    signal input in[n];
-    signal input count;
-    signal output out[n];
-
-    signal outsum[n][n+1];
-    for(var i = 0; i < n; i++) {
-        outsum[i][0] <== 0;
-    }
-    component eqs[n][n];
-    for(var i = 0; i < n; i++) {
-        for(var j = 0; j < n; j++) {
-            eqs[i][j] = IsEqual();
-            eqs[i][j].in[0] <== i;
-            eqs[i][j].in[1] <== j - count;
-            outsum[i][j+1] <== outsum[i][j] + eqs[i][j].out * in[j];
-        }
-        out[i] <== outsum[i][n];
-    }
-}
-
-template TermCalc(N) {
-    signal input address[N];
-    signal input count;
-    signal output out[N+2];
-    signal output outLen;
-
-    component div = Divide(16);
-    div.a <== count;
-    div.b <== 2;
-
-    component shifted = ShiftLeft(N);
-    shifted.in <== address;
-    shifted.count <== count;
-    signal temp[N - 1];
-    for(var i = 0; i < N; i++) {
-        if(i == N - 1) {
-            out[i+2] <== (1 - div.rem) * shifted.out[i];
-        } else {
-            temp[i] <== div.rem * shifted.out[i+1];
-            out[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
-        }
-    }
-    out[0] <== 2 + div.rem;
-    out[1] <== div.rem * shifted.out[0];
-    outLen <== N + 2 - count - div.rem;
 }

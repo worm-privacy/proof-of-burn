@@ -5,9 +5,17 @@ include "./utils/substring_finder.circom";
 include "./utils/concat.circom";
 include "./utils/hasher.circom";
 include "./utils/rlp.circom";
+include "./utils/leaf.circom";
 
 
-
+// Computes the Keccak hash of the concatenation of `blockhash()`, `nullifier`, and `encryptedBalance`, 
+// and zeroes out the last byte of the hash to make it storeable in the field, returning it as a commitment.
+//
+// Example:
+//   blockRoot: [256-bit input]
+//   nullifier: [256-bit input]
+//   encryptedBalance: [256-bit input]
+//   commitment: The resulting commitment after applying the hash and zeroing the last byte.
 template InputsHasher() {
     signal input blockRoot[256];
     signal input nullifier[256];
@@ -28,13 +36,19 @@ template InputsHasher() {
     component keccak = KeccakBits(1);
     keccak.inBits <== keccakInputBits;
     keccak.inBitsLen <== 768;
-    component bitsToNum = Bits2NumBigendian(248);
+    component bitsToNum = Bits2NumBigEndian(248);
     for(var i = 0; i < 248; i++) {
         bitsToNum.in[i] <== keccak.out[i + 8];
     }
     commitment <== bitsToNum.out;
 }
 
+// Takes an entropy input and generates a burn address represented as 64 4-bit nibbles 
+// using the MiMC hash function, creating a unique address hash.
+//
+// Example:
+//   entropy: [A single field number]
+//   addressHashNibbles: [64 nibbles, each 4 bits, resulting from MiMC(entropy, 0)
 template EntropyToAddressHash() {
     signal input entropy;
     signal output addressHashNibbles[64];
@@ -66,6 +80,12 @@ template EntropyToAddressHash() {
     }
 }
 
+// Converts an array of nibbles (4-bit values) into an array of bytes (8-bit values).
+// Each byte is formed by combining two nibbles (4 bits each).
+//
+// Example:
+//   nibbles: [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
+//   bytes: [0x12, 0x34, 0x56]
 template NibblesToBytes(n) {
     signal input nibbles[2 * n];
     signal output bytes[n];
@@ -74,6 +94,8 @@ template NibblesToBytes(n) {
     }
 }
 
+// Encrypts a balance by applying the MiMC hash function with a given entropy as the salt. 
+// The entropy acts as a unique value that ensures different encrypted outputs for the same balance.
 template EncryptBalance() {
     signal input balance;
     signal input entropy;
@@ -163,7 +185,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks) {
     component addressHash = NibblesToBytes(32);
     addressHash.nibbles <== entropyToAddressHash.addressHashNibbles;
 
-    component termer = TermCalc(64);
+    component termer = LeafKey(64);
     termer.address <== entropyToAddressHash.addressHashNibbles;
     termer.count <== 64 - numLeafAddressNibbles;
     component termBytes = NibblesToBytes(33);

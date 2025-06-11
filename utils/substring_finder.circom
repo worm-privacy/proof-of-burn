@@ -5,7 +5,14 @@ include "./keccak/utils.circom";
 include "./utils.circom";
 
 
- template SubstringCheck(maxMainLen, subLen) {
+// Checks whether the array `subInput` is a contiguous substring of `mainInput`.
+//
+// Example:
+//   mainInput: [1, 2, 3, 4, 5, 6, 7, 0, 0, 0]
+//   mainLen:   7
+//   subInput:  [3, 4, 5]
+//   out:       1
+template SubstringCheck(maxMainLen, subLen) {
     signal input mainInput[maxMainLen];
     signal input mainLen;
     signal input subInput[subLen];
@@ -32,7 +39,7 @@ include "./utils.circom";
     for (var i = 0; i < maxMainLen; i++) {
         B[i+1] <== mainInput[i] * (2**i) + B[i];
     }
-    
+
     component eq[maxMainLen - subLen + 1];
     component endCheckers[maxMainLen - subLen + 1];
     signal allowed[maxMainLen - subLen + 2];
@@ -55,4 +62,4 @@ include "./utils.circom";
     component isz = IsZero();
     isz.in <== sums[maxMainLen - subLen + 1];
     out <== 1 - isz.out;
- }
+}

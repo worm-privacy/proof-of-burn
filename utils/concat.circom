@@ -2,9 +2,15 @@ pragma circom 2.1.5;
 
 include "./utils.circom";
 
+// Outputs an array where only the first `ind` elements of `in` are kept,
+// and the rest are zeroed out.
+//
+// Example:
+//   in:  [1, 2, 3, 4, 5], ind: 3
+//   out: [1, 2, 3, 0, 0]
 template Mask(n) {
     signal input in[n];
-    signal input ind;
+    signal input count;
     signal output out[n];
 
     signal eqs[n+1];
@@ -13,15 +19,21 @@ template Mask(n) {
     for(var i = 0; i < n; i++) {
         eqcomps[i] = IsEqual();
         eqcomps[i].in[0] <== i;
-        eqcomps[i].in[1] <== ind;
+        eqcomps[i].in[1] <== count;
         eqs[i+1] <== eqs[i] * (1 - eqcomps[i].out);
     }
 
     for(var i = 0; i < n; i++) {
-        out[i] <== in[i] * eqs[i+1];
+        out[i] <== in[i] * eqs[i + 1];
     }
 }
 
+// Shifts the input array `in` to the right by `count` positions,
+// filling the leftmost `count` positions with zeros.
+//
+// Example:
+//   in:    [1, 2, 3, 4, 5, 6, 7, 8], count: 3
+//   output:[0, 0, 0, 1, 2, 3, 4, 5]
 template Shift(n, maxShift) {
     signal input in[n];
     signal input count;
@@ -46,6 +58,16 @@ template Shift(n, maxShift) {
     }
 }
 
+
+// Concatenates arrays `a` and `b` up to lengths `aLen` and `bLen`
+// Output is length `outLen`
+// Elements beyond the concatenated length are zero-padded
+//
+// Example:
+//   a:      [1, 2, 3, 4, 5], aLen: 3
+//   b:      [10, 20, 30, 40, 50], bLen: 2
+//   outLen: 5
+//   out: [1, 2, 3, 10, 20, 0, 0, 0, 0, 0]
 template Concat(maxLenA, maxLenB) {
     signal input a[maxLenA];
     signal input aLen;
@@ -56,23 +78,23 @@ template Concat(maxLenA, maxLenB) {
     signal output out[maxLenA + maxLenB];
     signal output outLen;
 
-    component aLenChecker = LessEqThan(10);
+    component aLenChecker = LessEqThan(16);
     aLenChecker.in[0] <== aLen;
     aLenChecker.in[1] <== maxLenA;
     aLenChecker.out === 1;
 
-    component bLenChecker = LessEqThan(10);
+    component bLenChecker = LessEqThan(16);
     bLenChecker.in[0] <== bLen;
     bLenChecker.in[1] <== maxLenB;
     bLenChecker.out === 1;
 
     component aMasker = Mask(maxLenA);
     aMasker.in <== a;
-    aMasker.ind <== aLen;
+    aMasker.count <== aLen;
 
     component bMasker = Mask(maxLenB);
     bMasker.in <== b;
-    bMasker.ind <== bLen;
+    bMasker.count <== bLen;
 
     var outVals[maxLenA + maxLenB];
 
@@ -95,17 +117,28 @@ template Concat(maxLenA, maxLenB) {
     outLen <== aLen + bLen;
 }
 
+// Reverses the first `inLen` elements of the input array `in`
+// Elements beyond `inLen` are zero-padded.
+//
+// Example:
+//   in:    [1, 2, 3, 4, 5], inLen: 3
+//   output:[3, 2, 1, 0, 0]
 template ReverseArray(N) {
-    signal input bytes[N];
-    signal input realByteLen;
+    signal input in[N];
+    signal input inLen;
     signal output out[N];
 
-    var lenDiff = N - realByteLen;
+    component inLenChecker = LessEqThan(16);
+    inLenChecker.in[0] <== inLen;
+    inLenChecker.in[1] <== N;
+    inLenChecker.out === 1;
+
+    var lenDiff = N - inLen;
     signal reversed[N];
 
     component shifter = Shift(N, N);
     shifter.count <== lenDiff;
-    shifter.in <== bytes; 
+    shifter.in <== in; 
 
    for(var i = 0; i < N; i++) {
         reversed[i] <== shifter.out[N - i - 1];

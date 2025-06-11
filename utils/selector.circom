@@ -1,13 +1,17 @@
 pragma circom 2.1.5;
 
 
-// Returns vals[select]
+// Selects the element at the given index `select` from the input array `vals`.
+//
+// Example:
+// vals:   [10, 20, 30, 40]
+// select: 2
+// out:    30
 template Selector (n) {
     signal input vals[n];
     signal input select;
     signal output out;
 
-    // Limit select (0<=select<n)
     component range_check = LessThan(16);
     range_check.in[0] <== select;
     range_check.in[1] <== n;

@@ -5,8 +5,34 @@ include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
 include "./concat.circom";
 
+// Decomposes an input number `num` into an array of `N` bytes.
+// Each byte represents 8 bits of the number starting from the least significant byte.
+//
+// Example:
+//   num:   66051
+//   N:     8
+//   bytes: [3, 2, 1, 0, 0, 0, 0, 0]
+template ByteDecompose(N) { 
+    signal input num;
+    signal output bytes[N];
+    var pow = 1;
+    var total = 0;
+    component bd[N];
+    for (var i = 0; i < N; i++) {
+        bytes[i] <-- (num >> (8 * i)) & 0xFF;
+        total += pow * bytes[i];
+        pow = pow * 256; 
+    }
 
-template GetRealByteLength(N) {
+    total === num; 
+}
+
+// Counts the number of bytes required to store the number (i.e., ignores trailing zeros).
+//
+// Example:
+//   bytes: [3, 0, 1, 4, 2, 0, 0, 0]
+//   len:   5
+template CountBytes(N) {
     signal input bytes[N];
     signal output len;
 
@@ -38,12 +64,12 @@ template RlpBalanceWithNonce0(N) {
     component decomp = ByteDecompose(N);
     decomp.num <== num;
 
-    component length = GetRealByteLength(N);
+    component length = CountBytes(N);
     length.bytes <== decomp.bytes;
 
     component reversed = ReverseArray(N);
-    reversed.bytes <== decomp.bytes;
-    reversed.realByteLen <== length.len;
+    reversed.in <== decomp.bytes;
+    reversed.inLen <== length.len;
 
     component isSingleByte = LessThan(252);
     isSingleByte.in[0] <== num;
