@@ -2,7 +2,7 @@ import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
-from mimc7 import mimc7, Field
+from mimc7 import mimc7, Field, FIELD_SIZE
 
 MAX_HEADER_BITS = 5 * 136 * 8
 MAX_NUM_LAYERS = 4
@@ -30,7 +30,14 @@ def burn(entropy):
     assert w3.eth.wait_for_transaction_receipt(tx_hash).status == 1
     return burn_addr
 
-entropy = 123
+import random
+def find_entropy(max_bits):
+    entropy = random.randint(0, FIELD_SIZE - 1)
+    while len(bin(mimc7(Field(entropy), Field(2)).val)[2:]) > max_bits:
+        entropy += 1
+    return entropy
+
+entropy = find_entropy(240)
 addr = burn(entropy)
 
 blknum = w3.eth.block_number

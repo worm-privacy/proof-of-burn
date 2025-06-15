@@ -122,7 +122,17 @@ template EntropyToNullifier() {
     nullifier[255] <== 0;
 }
 
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles) {
+
+template ProofOfWorkChecker(maxBits) {
+    signal input entropy;
+    component hasher = Hasher();
+    hasher.left <== entropy;
+    hasher.right <== 2;
+    component num2bits = Num2Bits(maxBits);
+    num2bits.in <== hasher.hash;
+}
+
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, powBits) {
     signal input entropy; // Secret field number from which the burn address and nullifier are derived.
     signal input balance; // Balance of the burn-address
     signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
@@ -133,6 +143,10 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node
 
     signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
+
+    // Check if PoW has been done in order to find entropy
+    component powChecker = ProofOfWorkChecker(powBits);
+    powChecker.entropy <== entropy;
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     component leafAddrNibblesCheck = GreaterEqThan(16);
@@ -267,4 +281,4 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 }
 
-component main = ProofOfBurn(4, 4, 5, 20);
+component main = ProofOfBurn(4, 4, 5, 20, 240);
