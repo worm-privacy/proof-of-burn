@@ -90,8 +90,8 @@ template EntropyToAddressHash() {
 // Encrypts a balance by applying the MiMC hash function with a given entropy as the salt. 
 // The entropy acts as a unique value that ensures different encrypted outputs for the same balance.
 template EncryptBalance() {
-    signal input balance;
     signal input entropy;
+    signal input balance;
     signal output encryptedBalance[256];
 
     component hasher = Hasher();
@@ -192,7 +192,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     
     // Fetch the last layer bits and len
     component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
-    for(var j = 0; j < maxNodeBlocks*136*8; j++) {
+    for(var j = 0; j < maxNodeBlocks * 136 * 8; j++) {
         lastLayerBitsSelectors[j] = Selector(maxNumLayers);
         lastLayerBitsSelectors[j].select <== numLayers - 1;
     }
@@ -201,28 +201,27 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate keccaks of all layers and check if the keccak of each
     // layer is substring of the upper layer
-    component keccaks[maxNumLayers];
-    signal isValidLayer[maxNumLayers + 1];
-    isValidLayer[0] <== 1;
     signal existingLayer[maxNumLayers];
-    component substringCheckers[maxNumLayers - 1];
+    signal substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][256];
     for(var i = 0; i < maxNumLayers; i++) {
         // Layer exists if: i < numLayers
         existingLayer[i] <== LessThan(16)([i, numLayers]);
 
+        // Calculate keccak of this layer
         layerKeccaks[i] <== KeccakBits(maxNodeBlocks)(layerBits[i], layerBitsLens[i]);
 
         if(i > 0) {
-            substringCheckers[i-1] = SubstringCheck(maxNodeBlocks * 136 * 8, 256);
-            substringCheckers[i-1].subInput <== layerKeccaks[i];
-            substringCheckers[i-1].mainLen <== layerBitsLens[i - 1];
-            substringCheckers[i-1].mainInput <== layerBits[i - 1];
-            
-            substringCheckers[i-1].out === existingLayer[i-1];
+            substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136 * 8, 256)(
+                subInput <== layerKeccaks[i],
+                mainLen <== layerBitsLens[i - 1],
+                mainInput <== layerBits[i - 1]
+            );
+
+            (1 - substringCheckers[i - 1]) * existingLayer[i] === 0;
         }
         
-        for(var j = 0; j < 4*136*8; j++) {
+        for(var j = 0; j < 4 * 136 * 8; j++) {
             lastLayerBitsSelectors[j].vals[i] <== layerBits[i][j];
         }
         lastLayerLenSelector.vals[i] <== layerBitsLens[i];
@@ -235,14 +234,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate leaf-layer through address-hash and its balance
     component rlpBurn = LeafCalculator();
-    (rlpBurn.term, rlpBurn.term_len) <== LeafKey(32)(addressHashNibbles, numLeafAddressNibbles);
+    (rlpBurn.key, rlpBurn.keyLen) <== LeafKey(32)(addressHashNibbles, 64 - numLeafAddressNibbles);
     rlpBurn.balance <== balance;
     rlpBurn.outLen === lastLayerLenSelector.out;
-
+    
     // Make sure the calculated leaf-layer is equal with the last-layer
     for(var i = 0; i < 128 * 8; i++) {
         rlpBurn.out[i] === lastLayerBitsSelectors[i].out;
     }
 }
 
-component main = ProofOfBurn(4, 4, 5, 20, 240);
+component main = ProofOfBurn(4, 4, 5, 20, 250);

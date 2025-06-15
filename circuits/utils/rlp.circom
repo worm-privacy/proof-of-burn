@@ -221,8 +221,8 @@ template RlpEmptyAccount() {
 }
 
 template LeafCalculator() {
-    signal input term[33];
-    signal input term_len;
+    signal input key[33];
+    signal input keyLen;
     signal input balance;
     signal output out[1024];
     signal output outLen;
@@ -230,34 +230,34 @@ template LeafCalculator() {
     component rlpEmptyAccount = RlpEmptyAccount();
     rlpEmptyAccount.balance <== balance;
 
-    signal account_rlp[92];
-    signal account_rlp_len;
-    signal term_rlp[36];
-    signal term_rlp_len;
+    signal accountRlp[92];
+    signal accountRlpLen;
+    signal keyRlp[36];
+    signal keyRlpLen;
 
-    account_rlp[0] <== 0xb8; 
-    account_rlp[1] <== rlpEmptyAccount.outLen + 2;
+    accountRlp[0] <== 0xb8; 
+    accountRlp[1] <== rlpEmptyAccount.outLen + 2;
     
-    account_rlp[2] <== 0xf7 + 1; 
-    account_rlp[3] <== rlpEmptyAccount.outLen;
+    accountRlp[2] <== 0xf7 + 1; 
+    accountRlp[3] <== rlpEmptyAccount.outLen;
     for(var i = 0; i < 88; i++) {
-        account_rlp[i+4] <== rlpEmptyAccount.out[i];
+        accountRlp[i + 4] <== rlpEmptyAccount.out[i];
     }
-    account_rlp_len <== 4 + rlpEmptyAccount.outLen;
+    accountRlpLen <== 4 + rlpEmptyAccount.outLen;
 
-    term_rlp[0] <== 0xf7 + 1;
-    term_rlp[1] <== (term_len + 1) + account_rlp_len;
-    term_rlp[2] <== 0x80 + term_len;
+    keyRlp[0] <== 0xf7 + 1;
+    keyRlp[1] <== (keyLen + 1) + accountRlpLen;
+    keyRlp[2] <== 0x80 + keyLen;
     for(var i = 0; i < 33; i++) {
-        term_rlp[i+3] <== term[i];
+        keyRlp[i+3] <== key[i];
     }
-    term_rlp_len <== term_len + 3;
+    keyRlpLen <== keyLen + 3;
 
     component leafCalc = Concat(36, 92);
-    leafCalc.a <== term_rlp;
-    leafCalc.aLen <== term_rlp_len;
-    leafCalc.b <== account_rlp;
-    leafCalc.bLen <== account_rlp_len;
+    leafCalc.a <== keyRlp;
+    leafCalc.aLen <== keyRlpLen;
+    leafCalc.b <== accountRlp;
+    leafCalc.bLen <== accountRlpLen;
 
     outLen <== leafCalc.outLen * 8;
     component decomp[128];
