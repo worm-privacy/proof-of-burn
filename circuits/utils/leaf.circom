@@ -1,6 +1,7 @@
 pragma circom 2.2.2;
 
 include "./utils.circom";
+include "./assert.circom";
 
 // Shifts the `in` array to the left by the given `count` times, filling the end with zeros.
 //
@@ -13,10 +14,7 @@ template ShiftLeft(n) {
     signal input count;
     signal output out[n];
 
-    component countChecker = LessEqThan(16);
-    countChecker.in[0] <== count;
-    countChecker.in[1] <== n;
-    countChecker.out === 1;
+    AssertLessEqThan(16)(count, n);
 
     signal outsum[n][n+1];
     for(var i = 0; i < n; i++) {

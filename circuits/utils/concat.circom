@@ -1,6 +1,7 @@
 pragma circom 2.2.2;
 
 include "./utils.circom";
+include "./assert.circom";
 
 // Outputs an array where only the first `ind` elements of `in` are kept,
 // and the rest are zeroed out.
@@ -15,15 +16,10 @@ template Mask(n) {
 
     signal eqs[n+1];
     eqs[0] <== 1;
-    component eqcomps[n];
+    signal eqcomps[n];
     for(var i = 0; i < n; i++) {
-        eqcomps[i] = IsEqual();
-        eqcomps[i].in[0] <== i;
-        eqcomps[i].in[1] <== count;
-        eqs[i+1] <== eqs[i] * (1 - eqcomps[i].out);
-    }
-
-    for(var i = 0; i < n; i++) {
+        eqcomps[i] <== IsEqual()([i, count]);
+        eqs[i+1] <== eqs[i] * (1 - eqcomps[i]);
         out[i] <== in[i] * eqs[i + 1];
     }
 }
@@ -39,10 +35,7 @@ template Shift(n, maxShift) {
     signal input count;
     signal output out[n + maxShift];
 
-    component countChecker = LessEqThan(16);
-    countChecker.in[0] <== count;
-    countChecker.in[1] <== maxShift;
-    countChecker.out === 1;
+    AssertLessEqThan(16)(count, maxShift);
 
     var outsum[n + maxShift];
 
@@ -83,40 +76,19 @@ template Concat(maxLenA, maxLenB) {
     signal output out[maxLenA + maxLenB];
     signal output outLen;
 
-    component aLenChecker = LessEqThan(16);
-    aLenChecker.in[0] <== aLen;
-    aLenChecker.in[1] <== maxLenA;
-    aLenChecker.out === 1;
+    AssertLessEqThan(16)(aLen, maxLenA);
+    AssertLessEqThan(16)(bLen, maxLenB);
 
-    component bLenChecker = LessEqThan(16);
-    bLenChecker.in[0] <== bLen;
-    bLenChecker.in[1] <== maxLenB;
-    bLenChecker.out === 1;
-
-    component aMasker = Mask(maxLenA);
-    aMasker.in <== a;
-    aMasker.count <== aLen;
-
-    component bMasker = Mask(maxLenB);
-    bMasker.in <== b;
-    bMasker.count <== bLen;
-
-    var outVals[maxLenA + maxLenB];
-
-    component bShifter = Shift(maxLenB, maxLenA);
-    bShifter.count <== aLen;
-    bShifter.in <== bMasker.out;
-
-    for(var i = 0; i < maxLenA; i++) {
-        outVals[i] += aMasker.out[i];
-    }
-
+    signal maskedA[maxLenA] <== Mask(maxLenA)(a, aLen);
+    signal maskedB[maxLenB] <== Mask(maxLenB)(b, bLen);
+    signal shiftedB[maxLenA + maxLenB] <== Shift(maxLenB, maxLenA)(maskedB, aLen);
+    
     for(var i = 0; i < maxLenA + maxLenB; i++) {
-        outVals[i] += bShifter.out[i];
-    }
-
-    for(var i = 0; i < maxLenA + maxLenB; i++) {
-        out[i] <== outVals[i];
+        if(i < maxLenA) {
+            out[i] <== maskedA[i] + shiftedB[i];
+        } else {
+            out[i] <== shiftedB[i];
+        }
     }
 
     outLen <== aLen + bLen;

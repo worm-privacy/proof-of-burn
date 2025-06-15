@@ -72,10 +72,7 @@ template ReverseArray(N) {
     signal input inLen;
     signal output out[N];
 
-    component inLenChecker = LessEqThan(16);
-    inLenChecker.in[0] <== inLen;
-    inLenChecker.in[1] <== N;
-    inLenChecker.out === 1;
+    AssertLessEqThan(16)(inLen, N);
 
     var lenDiff = N - inLen;
     signal reversed[N];
@@ -106,7 +103,7 @@ template RlpInteger(N) {
     reversed.in <== decomp.bytes;
     reversed.inLen <== length.len;
 
-    component isSingleByte = LessThan(252);
+    component isSingleByte = LessThan(128);
     isSingleByte.in[0] <== num;
     isSingleByte.in[1] <== 128;
 

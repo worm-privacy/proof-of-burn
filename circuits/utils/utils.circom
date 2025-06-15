@@ -1,6 +1,8 @@
 
 pragma circom 2.2.2;
 
+include "./assert.circom";
+
 // Computes the quotient and remainder for the division of a by b:
 // a === out * b + rem
 //
@@ -19,16 +21,10 @@ template Divide(N) {
     rem <-- a % b;
 
     // Check if `rem` and `b` are at most N-bits long and `rem < b`
-    component remLessThanB = LessThan(N);
-    remLessThanB.in[0] <== rem;
-    remLessThanB.in[1] <== b;
-    remLessThanB.out === 1;
+    AssertLessThan(N)(rem, b);
 
     // Check if `out` and `a` are at most N-bits long and `out < a`
-    component outLessThanA = LessThan(N);
-    outLessThanA.in[0] <== out;
-    outLessThanA.in[1] <== a;
-    outLessThanA.out === 1;
+    AssertLessEqThan(N)(out, a);
 
     out * b + rem === a;
 }

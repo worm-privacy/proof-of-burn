@@ -1,5 +1,7 @@
 pragma circom 2.2.2;
 
+include "./assert.circom";
+
 
 // Selects the element at the given index `select` from the input array `vals`.
 //
@@ -12,20 +14,15 @@ template Selector (n) {
     signal input select;
     signal output out;
 
-    component range_check = LessThan(16);
-    range_check.in[0] <== select;
-    range_check.in[1] <== n;
-    range_check.out === 1;
+    AssertLessThan(16)(select, n);
 
-    component eq_checkers[n];
-    signal eq_val_sums[n+1];
-    eq_val_sums[0] <== 0;
+    signal eqs[n];
+    signal sum[n+1];
+    sum[0] <== 0;
     for(var i = 0; i < n; i++) {
-        eq_checkers[i] = IsEqual();
-        eq_checkers[i].in[0] <== select;
-        eq_checkers[i].in[1] <== i;
-        eq_val_sums[i+1] <== eq_val_sums[i] + eq_checkers[i].out * vals[i];
+        eqs[i] <== IsEqual()([select, i]);
+        sum[i + 1] <== sum[i] + eqs[i] * vals[i];
     }
 
-    out <== eq_val_sums[n];
+    out <== sum[n];
 }

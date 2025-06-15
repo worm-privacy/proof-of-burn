@@ -132,6 +132,13 @@ template ProofOfWorkChecker(maxBits) {
     num2bits.in <== hasher.hash;
 }
 
+template AssertBinary(N) {
+    signal input in[N];
+    for(var i = 0; i < N; i++) {
+        in[i] * (1 - in[i]) === 0;
+    }
+}
+
 template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, powBits) {
     signal input entropy; // Secret field number from which the burn address and nullifier are derived.
     signal input balance; // Balance of the burn-address
@@ -145,77 +152,43 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
 
     // Check if PoW has been done in order to find entropy
-    component powChecker = ProofOfWorkChecker(powBits);
-    powChecker.entropy <== entropy;
+    ProofOfWorkChecker(powBits)(entropy);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
-    component leafAddrNibblesCheck = GreaterEqThan(16);
-    leafAddrNibblesCheck.in[0] <== numLeafAddressNibbles;
-    leafAddrNibblesCheck.in[1] <== minLeafAddressNibbles;
-    leafAddrNibblesCheck.out === 1;
+    signal addrHasMinNibbles <== GreaterEqThan(16)(in <== [numLeafAddressNibbles, minLeafAddressNibbles]);
+    addrHasMinNibbles === 1;
 
-    component layerLenCheckers[maxNumLayers];
+    signal layerLenCheckers[maxNumLayers];
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
-        layerLenCheckers[i] = LessThan(16);
-        layerLenCheckers[i].in[0] <== layerBitsLens[i];
-        layerLenCheckers[i].in[1] <== maxNodeBlocks * 136 * 8;
-        layerLenCheckers[i].out === 1;
-
-        // Check layer bits are binary
-        for(var j = 0; j < maxNodeBlocks * 136 * 8; j++) {
-            layerBits[i][j] * (1 - layerBits[i][j]) === 0;
-        }
+        layerLenCheckers[i] <== LessThan(16)([layerBitsLens[i], maxNodeBlocks * 136 * 8]);
+        layerLenCheckers[i] === 1;
+        AssertBinary(maxNodeBlocks * 136 * 8)(layerBits[i]);
     }
     // Check block-header len is less than maximum length
-    component blockHeaderLenChecker = LessThan(16);
-    blockHeaderLenChecker.in[0] <== blockHeaderLen;
-    blockHeaderLenChecker.in[1] <== maxHeaderBlocks * 136 * 8;
-    blockHeaderLenChecker.out === 1;
-
-    // Check block-header bits are binary
-    for(var j = 0; j < maxHeaderBlocks * 136 * 8; j++) {
-        blockHeader[j] * (1 - blockHeader[j]) === 0;
-    }
+    signal blockHeaderLenChecker <== LessThan(16)([blockHeaderLen, maxHeaderBlocks * 136 * 8]);
+    blockHeaderLenChecker === 1;
+    AssertBinary(maxHeaderBlocks * 136 * 8)(blockHeader);
 
     // Calculate encrypted-balance
-    signal encryptedBalance[256];
-    component balanceEnc = EncryptBalance();
-    balanceEnc.entropy <== entropy;
-    balanceEnc.balance <== balance;
-    encryptedBalance <== balanceEnc.encryptedBalance;
+    signal encryptedBalance[256] <== EncryptBalance()(entropy, balance);
 
     // Calculate nullifier
-    signal nullifier[256];
-    component entToNul = EntropyToNullifier();
-    entToNul.entropy <== entropy;
-    nullifier <== entToNul.nullifier;
+    signal nullifier[256] <== EntropyToNullifier()(entropy);
 
     // Calculate burn-address
-    component entropyToAddressHash = EntropyToAddressHash();
-    entropyToAddressHash.entropy <== entropy;
-    component addressHash = NibblesToBytes(32);
-    addressHash.nibbles <== entropyToAddressHash.addressHashNibbles;
+    signal addressHashNibbles[64] <== EntropyToAddressHash()(entropy);
+    signal addressHashBytes[32] <== NibblesToBytes(32)(addressHashNibbles);
 
     // Fetch stateRoot and stateRoot from block-header
-    signal blockRoot[256];
+    signal blockRoot[256] <== KeccakBits(maxHeaderBlocks)(blockHeader, blockHeaderLen);
     signal stateRoot[256];
-    component headerKeccak = KeccakBits(maxHeaderBlocks);
-    headerKeccak.inBits <== blockHeader;
-    headerKeccak.inBitsLen <== blockHeaderLen;
-    for(var i = 0; i < 256; i++) {
-        blockRoot[i] <== headerKeccak.out[i];
-    }
     for(var i = 0; i < 256; i++) {
         stateRoot[i] <== blockHeader[91 * 8 + i];
     }
 
     // Calculate public commitment
-    component inpsHasher = InputsHasher();
-    inpsHasher.blockRoot <== blockRoot;
-    inpsHasher.nullifier <== nullifier;
-    inpsHasher.encryptedBalance <== encryptedBalance;
-    commitment <== inpsHasher.commitment;
+    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance);
     
     // Fetch the last layer bits and len
     component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
@@ -231,19 +204,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     component keccaks[maxNumLayers];
     signal isValidLayer[maxNumLayers + 1];
     isValidLayer[0] <== 1;
-    component existingLayer[maxNumLayers];
+    signal existingLayer[maxNumLayers];
     component substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][256];
     for(var i = 0; i < maxNumLayers; i++) {
         // Layer exists if: i < numLayers
-        existingLayer[i] = LessThan(16);
-        existingLayer[i].in[0] <== i;
-        existingLayer[i].in[1] <== numLayers;
+        existingLayer[i] <== LessThan(16)([i, numLayers]);
 
-        keccaks[i] = KeccakBits(maxNodeBlocks);
-        keccaks[i].inBits <== layerBits[i];
-        keccaks[i].inBitsLen <== layerBitsLens[i];
-        layerKeccaks[i] <== keccaks[i].out;
+        layerKeccaks[i] <== KeccakBits(maxNodeBlocks)(layerBits[i], layerBitsLens[i]);
 
         if(i > 0) {
             substringCheckers[i-1] = SubstringCheck(maxNodeBlocks * 136 * 8, 256);
@@ -251,7 +219,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
             substringCheckers[i-1].mainLen <== layerBitsLens[i - 1];
             substringCheckers[i-1].mainInput <== layerBits[i - 1];
             
-            substringCheckers[i-1].out === existingLayer[i-1].out;
+            substringCheckers[i-1].out === existingLayer[i-1];
         }
         
         for(var j = 0; j < 4*136*8; j++) {
@@ -266,12 +234,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate leaf-layer through address-hash and its balance
-    component termer = LeafKey(32);
-    termer.addressHashNibbles <== entropyToAddressHash.addressHashNibbles;
-    termer.addressHashNibblesLen <== 64 - numLeafAddressNibbles;
     component rlpBurn = LeafCalculator();
-    rlpBurn.term <== termer.out;
-    rlpBurn.term_len <== termer.outLen;
+    (rlpBurn.term, rlpBurn.term_len) <== LeafKey(32)(addressHashNibbles, numLeafAddressNibbles);
     rlpBurn.balance <== balance;
     rlpBurn.outLen === lastLayerLenSelector.out;
 
