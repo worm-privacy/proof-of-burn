@@ -155,19 +155,15 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     ProofOfWorkChecker(powBits)(entropy);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
-    signal addrHasMinNibbles <== GreaterEqThan(16)(in <== [numLeafAddressNibbles, minLeafAddressNibbles]);
-    addrHasMinNibbles === 1;
+    AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
 
-    signal layerLenCheckers[maxNumLayers];
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
-        layerLenCheckers[i] <== LessThan(16)([layerBitsLens[i], maxNodeBlocks * 136 * 8]);
-        layerLenCheckers[i] === 1;
+        AssertLessThan(16)(layerBitsLens[i], maxNodeBlocks * 136 * 8);
         AssertBinary(maxNodeBlocks * 136 * 8)(layerBits[i]);
     }
     // Check block-header len is less than maximum length
-    signal blockHeaderLenChecker <== LessThan(16)([blockHeaderLen, maxHeaderBlocks * 136 * 8]);
-    blockHeaderLenChecker === 1;
+    AssertLessThan(16)(blockHeaderLen, maxHeaderBlocks * 136 * 8);
     AssertBinary(maxHeaderBlocks * 136 * 8)(blockHeader);
 
     // Calculate encrypted-balance
