@@ -43,7 +43,7 @@ def run(main, test_cases):
         f.write(test_cpp)
     subprocess.run(["make"], cwd="test_cpp/")
     outputs = []
-    for test_case in test_cases:
+    for test_case, expected in test_cases:
         with io.open("test_cpp/input.json", "w") as f:
             json.dump(test_case, f)
         res = subprocess.run(
@@ -52,161 +52,224 @@ def run(main, test_cases):
             capture_output=True,
         )
         if res.stderr:
+            if expected != None:
+                raise Exception(f"Expected null!")
             outputs.append(None)
         else:
             with io.open("test_cpp/output.json", "r") as f:
-                outputs.append(json.load(f))
+                output = [int(p) for p in json.load(f)]
+                if output != expected:
+                    raise Exception(f"Unexpected output! {output} != {expected}")
+                outputs.append(output)
     return outputs
 
 
-# print(
-#     run(
-#         "Mask(5)",
-#         [
-#             {"in": [1, 2, 3, 4, 5], "count": 0},
-#             {"in": [1, 2, 3, 4, 5], "count": 2},
-#             {"in": [1, 2, 3, 4, 5], "count": 4},
-#             {"in": [1, 2, 3, 4, 5], "count": 5},
-#             {"in": [1, 2, 3, 4, 5], "count": 10},
-#             {"in": [1, 2, 3, 4, 5], "count": 1000},
-#         ],
-#     )
-# )
+run(
+    "Mask(5)",
+    [
+        ({"in": [1, 2, 3, 4, 5], "count": 0}, [0, 0, 0, 0, 0]),
+        ({"in": [1, 2, 3, 4, 5], "count": 2}, [1, 2, 0, 0, 0]),
+        ({"in": [1, 2, 3, 4, 5], "count": 4}, [1, 2, 3, 4, 0]),
+        ({"in": [1, 2, 3, 4, 5], "count": 5}, [1, 2, 3, 4, 5]),
+        ({"in": [1, 2, 3, 4, 5], "count": 10}, [1, 2, 3, 4, 5]),
+        ({"in": [1, 2, 3, 4, 5], "count": 1000}, [1, 2, 3, 4, 5]),
+    ],
+)
 
-# print(
-#     run(
-#         "Shift(8, 3)",
-#         [
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 0},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 1},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 2},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 3},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 4},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 5},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 100},
-#         ],
-#     )
-# )
 
-# print(
-#     run(
-#         "ShiftLeft(8)",
-#         [
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 0},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 1},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 4},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 7},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 8},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 9},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 10},
-#             {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 100},
-#         ],
-#     )
-# )
+run(
+    "Shift(8, 3)",
+    [
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 0},
+            [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 1},
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 2},
+            [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 3},
+            [0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 4},
+            None,
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 100},
+            None,
+        ),
+    ],
+)
 
-# print(
-#     run(
-#         "NibblesToBytes(2)",
-#         [
-#             {"nibbles": [1, 2, 3, 4]},
-#             {"nibbles": [15, 2, 3, 4]},
-#             {"nibbles": [16, 2, 3, 4]},
-#             {"nibbles": [1, 16, 3, 4]},
-#         ],
-#     )
-# )
 
-# print(
-#     run(
-#         "Selector(5)",
-#         [
-#             {"vals": [0, 10, 20, 30, 40], "select": 2},
-#             {"vals": [0, 10, 20, 30, 40], "select": 0},
-#             {"vals": [0, 10, 20, 30, 40], "select": 4},
-#             {"vals": [0, 10, 20, 30, 40], "select": 5},
-#             {"vals": [0, 10, 20, 30, 40], "select": 100},
-#         ],
-#     )
-# )
+run(
+    "ShiftLeft(8)",
+    [
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 0},
+            [1, 2, 3, 4, 5, 6, 7, 8],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 1},
+            [2, 3, 4, 5, 6, 7, 8, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 4},
+            [5, 6, 7, 8, 0, 0, 0, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 7},
+            [8, 0, 0, 0, 0, 0, 0, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 8},
+            [0, 0, 0, 0, 0, 0, 0, 0],
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 9},
+            None,
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 10},
+            None,
+        ),
+        (
+            {"in": [1, 2, 3, 4, 5, 6, 7, 8], "count": 100},
+            None,
+        ),
+    ],
+)
 
-# print(
-#     run(
-#         "Concat(5,5)",
-#         [
-#             {
-#                 "a": [1, 2, 3, 4, 5],
-#                 "aLen": 5,
-#                 "b": [10, 20, 30, 40, 50],
-#                 "bLen": 2,
-#             },
-#             {
-#                 "a": [1, 2, 3, 4, 5],
-#                 "aLen": 6,
-#                 "b": [10, 20, 30, 40, 50],
-#                 "bLen": 2,
-#             },
-#         ],
-#     )
-# )
+run(
+    "NibblesToBytes(2)",
+    [
+        ({"nibbles": [1, 2, 3, 4]}, [0x12, 0x34]),
+        ({"nibbles": [15, 2, 3, 4]}, [0xF2, 0x34]),
+        ({"nibbles": [16, 2, 3, 4]}, None),
+        ({"nibbles": [1, 16, 3, 4]}, None),
+    ],
+)
 
-# print(
-#     run(
-#         "SubstringCheck(10, 3)",
-#         [
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 0,
-#                 "subInput": [3, 4, 5],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 2,
-#                 "subInput": [3, 4, 5],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 3,
-#                 "subInput": [3, 4, 5],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 4,
-#                 "subInput": [3, 4, 5],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 5,
-#                 "subInput": [3, 4, 5],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 9,
-#                 "subInput": [8, 9, 10],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 10,
-#                 "subInput": [8, 9, 10],
-#             },
-#             {
-#                 "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-#                 "mainLen": 11,
-#                 "subInput": [8, 9, 10],
-#             },
-#         ],
-#     )
-# )
+
+run(
+    "Selector(5)",
+    [
+        ({"vals": [0, 10, 20, 30, 40], "select": 2}, [20]),
+        ({"vals": [0, 10, 20, 30, 40], "select": 0}, [0]),
+        ({"vals": [0, 10, 20, 30, 40], "select": 4}, [40]),
+        ({"vals": [0, 10, 20, 30, 40], "select": 5}, None),
+        ({"vals": [0, 10, 20, 30, 40], "select": 100}, None),
+    ],
+)
 
 
 print(
     run(
-        "Selector(5)",
+        "Concat(5,5)",
         [
-            {"vals": [0, 10, 20, 30, 40], "select": 2},
-            {"vals": [0, 10, 20, 30, 40], "select": 0},
-            {"vals": [0, 10, 20, 30, 40], "select": 4},
-            {"vals": [0, 10, 20, 30, 40], "select": 5},
-            {"vals": [0, 10, 20, 30, 40], "select": 100},
+            (
+                {
+                    "a": [1, 2, 3, 4, 5],
+                    "aLen": 5,
+                    "b": [10, 20, 30, 40, 50],
+                    "bLen": 2,
+                },
+                [1, 2, 3, 4, 5, 10, 20, 0, 0, 0, 7],
+            ),
+            (
+                {
+                    "a": [1, 2, 3, 4, 5],
+                    "aLen": 6,
+                    "b": [10, 20, 30, 40, 50],
+                    "bLen": 2,
+                },
+                None,
+            ),
         ],
     )
+)
+
+
+run(
+    "SubstringCheck(10, 3)",
+    [
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 0,
+                "subInput": [3, 4, 5],
+            },
+            None,
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 2,
+                "subInput": [3, 4, 5],
+            },
+            None,
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 3,
+                "subInput": [1, 2, 3],
+            },
+            [1],
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 3,
+                "subInput": [3, 4, 5],
+            },
+            [0],
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 4,
+                "subInput": [3, 4, 5],
+            },
+            [0],
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 5,
+                "subInput": [3, 4, 5],
+            },
+            [1],
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 9,
+                "subInput": [8, 9, 10],
+            },
+            [0],
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 10,
+                "subInput": [8, 9, 10],
+            },
+            [1],
+        ),
+        (
+            {
+                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainLen": 11,
+                "subInput": [8, 9, 10],
+            },
+            None,
+        ),
+    ],
 )
