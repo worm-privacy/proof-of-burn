@@ -17,15 +17,13 @@ template ByteDecompose(N) {
     signal output bytes[N];
     var pow = 1;
     var total = 0;
-    component byteCheckers[N];
     for (var i = 0; i < N; i++) {
         bytes[i] <-- (num >> (8 * i)) & 0xFF;
         total += pow * bytes[i];
         pow = pow * 256; 
 
         // Make sure the bytes[i] is actually a byte
-        byteCheckers[i] = Num2Bits(8);
-        byteCheckers[i].in <== bytes[i];
+        AssertBits(8)(bytes[i]);
     }
 
     total === num; 
@@ -40,15 +38,14 @@ template CountBytes(N) {
     signal input bytes[N];
     signal output len;
 
-    component isZero[N];
+    signal isZero[N];
 
     signal isZeroResult[N+1];
     isZeroResult[0] <== 1;
 
     for (var i = 0; i < N; i++) {
-        isZero[i] = IsZero();
-        isZero[i].in <== bytes[N-i-1];
-        isZeroResult[i+1] <== isZero[i].out * isZeroResult[i];
+        isZero[i] <== IsZero()(bytes[N-i-1]);
+        isZeroResult[i+1] <== isZero[i] * isZeroResult[i];
     }
     
     var total = 0;
@@ -77,12 +74,10 @@ template ReverseArray(N) {
     var lenDiff = N - inLen;
     signal reversed[N];
 
-    component shifter = Shift(N, N);
-    shifter.count <== lenDiff;
-    shifter.in <== in; 
+    signal shifted[2 * N] <== Shift(N, N)(in, lenDiff);
 
-   for(var i = 0; i < N; i++) {
-        reversed[i] <== shifter.out[N - i - 1];
+    for(var i = 0; i < N; i++) {
+        reversed[i] <== shifted[N - i - 1];
     }
 
     out <== reversed;
@@ -93,33 +88,19 @@ template RlpInteger(N) {
     signal output out[N];
     signal output outLen;
 
-    component decomp = ByteDecompose(N);
-    decomp.num <== num;
+    signal bytes[N] <== ByteDecompose(N)(num);
+    signal length <== CountBytes(N)(bytes);
+    signal reversedBytes[N] <== ReverseArray(N)(bytes, length);
+    signal isSingleByte <== LessThan(128)([num, 128]);
+    signal isZero <== IsZero()(num);
 
-    component length = CountBytes(N);
-    length.bytes <== decomp.bytes;
+    outLen <== (1 - isSingleByte) + length + isZero;
 
-    component reversed = ReverseArray(N);
-    reversed.in <== decomp.bytes;
-    reversed.inLen <== length.len;
+    signal firstRlpByte <== Mux1()([0x80 + length, num], isSingleByte);
 
-    component isSingleByte = LessThan(128);
-    isSingleByte.in[0] <== num;
-    isSingleByte.in[1] <== 128;
-
-    component isZero = IsZero();
-    isZero.in <== num;
-
-    outLen <== (1 - isSingleByte.out) + length.len + isZero.out;
-
-    component firstRlpByteSelector = Mux1();
-    firstRlpByteSelector.c[0] <== 0x80 + length.len;
-    firstRlpByteSelector.c[1] <== num;
-    firstRlpByteSelector.s <== isSingleByte.out;
-
-    out[0] <== firstRlpByteSelector.out + isZero.out * 0x80;
+    out[0] <== firstRlpByte + isZero * 0x80;
     for (var i = 1; i < N; i++) {
-        out[i] <== (1 - isSingleByte.out) * reversed.out[i-1];
+        out[i] <== (1 - isSingleByte) * reversedBytes[i-1];
     }
 }
 
@@ -131,12 +112,11 @@ template RlpEmptyAccount() {
     signal nonceAndBalanceRlp[22];
     signal nonceAndBalanceRlpLen;
     nonceAndBalanceRlp[0] <== 0x80; // Nonce of a burn-address is always zero
-    component balanceRlp = RlpInteger(21);
-    balanceRlp.num <== balance;
+    signal (balanceRlp[21], balanceRlpLen) <== RlpInteger(21)(balance);
     for(var i = 0; i < 21; i++) {
-        nonceAndBalanceRlp[i + 1] <== balanceRlp.out[i];
+        nonceAndBalanceRlp[i + 1] <== balanceRlp[i];
     }
-    nonceAndBalanceRlpLen <== balanceRlp.outLen + 1;
+    nonceAndBalanceRlpLen <== balanceRlpLen + 1;
 
     // Concatenated RLP of storage-hash and code-hash of an empty account
     // Storage-hash: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
@@ -210,7 +190,7 @@ template RlpEmptyAccount() {
     storageAndCodeHashRlp[64] <== 164;
     storageAndCodeHashRlp[65] <== 112;
 
-    component concat = Concat(22, 66);
+    component concat = Concat(22, 66)();
     concat.a <== nonceAndBalanceRlp;
     concat.aLen <== nonceAndBalanceRlpLen;
     concat.b <== storageAndCodeHashRlp;

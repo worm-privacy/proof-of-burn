@@ -15,6 +15,17 @@ include "./utils/rlp.circom";
 include "./utils/leaf.circom";
 
 
+// Convert a field element to 256-bits
+template FieldToBits() {
+    signal input in;
+    signal output out[256];
+
+    signal bitsStrict[254] <== Num2Bits_strict()(in);
+    for(var i = 0; i < 254; i++) out[i] <== bitsStrict[i];
+    out[254] <== 0;
+    out[255] <== 0;
+}
+
 // Computes the Keccak hash of the concatenation of `blockhash()`, `nullifier`, and `encryptedBalance`, 
 // and zeroes out the last byte of the hash to make it storeable in the field, returning it as a commitment.
 //
@@ -22,12 +33,17 @@ include "./utils/leaf.circom";
 //   blockRoot: [256-bit input]
 //   nullifier: [256-bit input]
 //   encryptedBalance: [256-bit input]
+//   fee:              [256-bit input]
 //   commitment: The resulting commitment after applying the hash and zeroing the last byte.
 template InputsHasher() {
     signal input blockRoot[256];
     signal input nullifier[256];
     signal input encryptedBalance[256];
+    signal input fee;
+
     signal output commitment;
+
+    signal feeBits[256] <== FieldToBits()(fee);
 
     // Pack the inputs within a 136 byte keccak block
     signal keccakInputBits[1088];
@@ -35,17 +51,16 @@ template InputsHasher() {
         keccakInputBits[i] <== blockRoot[i];
         keccakInputBits[256 + i] <== nullifier[i];
         keccakInputBits[512 + i] <== encryptedBalance[i];
+        keccakInputBits[768 + i] <== feeBits[i];
     }
-    for(var i = 768; i < 1088; i++) {
+    for(var i = 1024; i < 1088; i++) {
         keccakInputBits[i] <== 0;
     }
     
-    component keccak = KeccakBits(1);
-    keccak.inBits <== keccakInputBits;
-    keccak.inBitsLen <== 768;
+    signal hash[256] <== KeccakBits(1)(keccakInputBits, 1024);
     component bitsToNum = Bits2NumBigEndian(248);
     for(var i = 0; i < 248; i++) {
-        bitsToNum.in[i] <== keccak.out[i + 8];
+        bitsToNum.in[i] <== hash[i + 8];
     }
     commitment <== bitsToNum.out;
 }
@@ -60,27 +75,25 @@ template EntropyToAddressHash() {
     signal input entropy;
     signal output addressHashNibbles[64];
 
-    component burnHasher = Hasher();
-    burnHasher.left <== entropy;
-    burnHasher.right <== 0;
-    component encBurnToBits = Num2Bits_strict();
-    encBurnToBits.in <== burnHasher.hash;
+    signal hash <== Hasher()(entropy, 0);
+    signal hashBits[256] <== FieldToBits()(hash);
     component addressHash = KeccakBits(1);
     for(var i = 0; i < 20; i++) {
         for(var j = 0; j < 8; j++) {
-            addressHash.inBits[8*(19-i)+j] <== encBurnToBits.out[8*i + j];
+            addressHash.inBits[8 * (19 - i) + j] <== hashBits[8 * i + j];
         }
     }
     for(var i = 160; i < 8 * 136; i++) {
         addressHash.inBits[i] <== 0;
     }
     addressHash.inBitsLen <== 160;
+
     for(var i = 0; i < 32; i++) {
         var higher = 0;
         var lower = 0;
         for(var j = 0; j < 4; j++) {
-            lower += addressHash.out[i*8 + j] * (2 ** j);
-            higher += addressHash.out[i*8 + j + 4] * (2 ** j);
+            lower += addressHash.out[i * 8 + j] * (2 ** j);
+            higher += addressHash.out[i * 8 + j + 4] * (2 ** j);
         }
         addressHashNibbles[2 * i] <== higher;
         addressHashNibbles[2 * i + 1] <== lower;
@@ -94,53 +107,30 @@ template EncryptBalance() {
     signal input balance;
     signal output encryptedBalance[256];
 
-    component hasher = Hasher();
-    hasher.left <== balance;
-    hasher.right <== entropy;
-    component encToBits = Num2Bits_strict();
-    encToBits.in <== hasher.hash;
-    for(var i = 0; i < 254; i++) {
-        encryptedBalance[i] <== encToBits.out[i];
-    }
-    encryptedBalance[254] <== 0;
-    encryptedBalance[255] <== 0;
+    signal hash <== Hasher()(balance, entropy);
+    encryptedBalance <== FieldToBits()(hash);
 }
 
+// Nullifier: MiMC(entropy, 1)
 template EntropyToNullifier() {
     signal input entropy;
     signal output nullifier[256];
 
-    component hasher = Hasher();
-    hasher.left <== entropy;
-    hasher.right <== 1;
-    component encToBits = Num2Bits_strict();
-    encToBits.in <== hasher.hash;
-    for(var i = 0; i < 254; i++) {
-        nullifier[i] <== encToBits.out[i];
-    }
-    nullifier[254] <== 0;
-    nullifier[255] <== 0;
+    signal hash <== Hasher()(entropy, 1);
+    nullifier <== FieldToBits()(hash);
 }
 
 
+// Proof-of-Work: MiMC(entropy, 2) < 2^maxBits
 template ProofOfWorkChecker(maxBits) {
     signal input entropy;
-    component hasher = Hasher();
-    hasher.left <== entropy;
-    hasher.right <== 2;
-    component num2bits = Num2Bits(maxBits);
-    num2bits.in <== hasher.hash;
+    signal hash <== Hasher()(entropy, 2);
+    AssertBits(maxBits)(hash);
 }
 
-template AssertBinary(N) {
-    signal input in[N];
-    for(var i = 0; i < N; i++) {
-        in[i] * (1 - in[i]) === 0;
-    }
-}
-
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, powBits) {
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBits, powBits) {
     signal input entropy; // Secret field number from which the burn address and nullifier are derived.
+    signal input fee; // To be paid to the relayer who actually submits the proof
     signal input balance; // Balance of the burn-address
     signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
     signal input layerBitsLens[maxNumLayers]; // Bit length of MPT nodes
@@ -157,6 +147,9 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
 
+    // fee should be less than the amount being minted
+    AssertLessEqThan(amountBits)(fee, balance);
+
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
         AssertLessThan(16)(layerBitsLens[i], maxNodeBlocks * 136 * 8);
@@ -167,7 +160,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBinary(maxHeaderBlocks * 136 * 8)(blockHeader);
 
     // Calculate encrypted-balance
-    signal encryptedBalance[256] <== EncryptBalance()(entropy, balance);
+    signal encryptedBalance[256] <== EncryptBalance()(entropy, balance - fee);
 
     // Calculate nullifier
     signal nullifier[256] <== EntropyToNullifier()(entropy);
@@ -184,7 +177,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate public commitment
-    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance);
+    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee);
     
     // Fetch the last layer bits and len
     component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
@@ -192,8 +185,16 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         lastLayerBitsSelectors[j] = Selector(maxNumLayers);
         lastLayerBitsSelectors[j].select <== numLayers - 1;
     }
+    for(var i = 0; i < maxNumLayers; i++) {
+        for(var j = 0; j < 4 * 136 * 8; j++) {
+            lastLayerBitsSelectors[j].vals[i] <== layerBits[i][j];
+        }
+    }
     component lastLayerLenSelector = Selector(maxNumLayers);
     lastLayerLenSelector.select <== numLayers - 1;
+    for(var i = 0; i < maxNumLayers; i++) {
+        lastLayerLenSelector.vals[i] <== layerBitsLens[i];
+    }
 
     // Calculate keccaks of all layers and check if the keccak of each
     // layer is substring of the upper layer
@@ -216,11 +217,6 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
             (1 - substringCheckers[i - 1]) * existingLayer[i] === 0;
         }
-        
-        for(var j = 0; j < 4 * 136 * 8; j++) {
-            lastLayerBitsSelectors[j].vals[i] <== layerBits[i][j];
-        }
-        lastLayerLenSelector.vals[i] <== layerBitsLens[i];
     }
 
     // Keccak of the top layer should be equal with the claimed state-root
@@ -240,4 +236,4 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 }
 
-component main = ProofOfBurn(4, 4, 5, 20, 250);
+component main {public [fee]} = ProofOfBurn(4, 4, 5, 20, 200, 250);

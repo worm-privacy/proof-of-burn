@@ -20,13 +20,11 @@ template ShiftLeft(n) {
     for(var i = 0; i < n; i++) {
         outsum[i][0] <== 0;
     }
-    component eqs[n][n];
+    signal eqs[n][n];
     for(var i = 0; i < n; i++) {
         for(var j = 0; j < n; j++) {
-            eqs[i][j] = IsEqual();
-            eqs[i][j].in[0] <== i;
-            eqs[i][j].in[1] <== j - count;
-            outsum[i][j+1] <== outsum[i][j] + eqs[i][j].out * in[j];
+            eqs[i][j] <== IsEqual()([i, j - count]);
+            outsum[i][j+1] <== outsum[i][j] + eqs[i][j] * in[j];
         }
         out[i] <== outsum[i][n];
     }
@@ -42,13 +40,10 @@ template ShiftLeft(n) {
 template NibblesToBytes(n) {
     signal input nibbles[2 * n];
     signal output bytes[n];
-    component nibbleCheckers[2 * n];
     for(var i = 0; i < n; i++) {
         // Check if all nibbles are maximum 4-bit long
-        nibbleCheckers[2 * i] = Num2Bits(4);
-        nibbleCheckers[2 * i].in <== nibbles[2 * i];
-        nibbleCheckers[2 * i + 1] = Num2Bits(4);
-        nibbleCheckers[2 * i + 1].in <== nibbles[2 * i + 1];
+        AssertBits(4)(nibbles[2 * i]);
+        AssertBits(4)(nibbles[2 * i + 1]);
 
         bytes[i] <== nibbles[2 * i] * 16 + nibbles[2 * i + 1];
     }
@@ -92,35 +87,29 @@ template NibblesToBytes(n) {
 //   out:    [0x20, 0x00, 0x00]
 //   outLen: 1
 template LeafKey(N) {
-    signal input addressHashNibbles[2*N];
+    signal input addressHashNibbles[2 * N];
     signal input addressHashNibblesLen;
-    signal output out[N+1];
+    signal output out[N + 1];
     signal output outLen;
 
-    signal outNibbles[2*N+2];
+    signal outNibbles[2 * N + 2];
     signal outNibblesLen;
 
-    component div = Divide(16);
-    div.a <== addressHashNibblesLen;
-    div.b <== 2;
+    signal (div, rem) <== Divide(16)(addressHashNibblesLen, 2);
 
-    component shifted = ShiftLeft(2 * N);
-    shifted.in <== addressHashNibbles;
-    shifted.count <== addressHashNibblesLen;
+    signal shifted[2 * N] <== ShiftLeft(2 * N)(addressHashNibbles, addressHashNibblesLen);
     signal temp[2 * N - 1];
     for(var i = 0; i < 2 * N; i++) {
         if(i == 2 * N - 1) {
-            outNibbles[i+2] <== (1 - div.rem) * shifted.out[i];
+            outNibbles[i+2] <== (1 - rem) * shifted[i];
         } else {
-            temp[i] <== div.rem * shifted.out[i+1];
-            outNibbles[i+2] <== (1 - div.rem) * shifted.out[i] + temp[i];
+            temp[i] <== rem * shifted[i + 1];
+            outNibbles[i + 2] <== (1 - rem) * shifted[i] + temp[i];
         }
     }
-    outNibbles[0] <== 2 + div.rem;
-    outNibbles[1] <== div.rem * shifted.out[0];
+    outNibbles[0] <== 2 + rem;
+    outNibbles[1] <== rem * shifted[0];
 
-    component nibblesToBytes = NibblesToBytes(33);
-    nibblesToBytes.nibbles <== outNibbles;
-    out <== nibblesToBytes.bytes;
-    outLen <== N + 1 - div.out - div.rem;
+    out <== NibblesToBytes(33)(outNibbles);
+    outLen <== N + 1 - div - rem;
 }

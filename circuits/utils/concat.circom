@@ -39,14 +39,12 @@ template Shift(n, maxShift) {
 
     var outsum[n + maxShift];
 
-    component eqcomps[maxShift + 1];
+    signal eqcomps[maxShift + 1];
     signal temps[maxShift + 1][n];
     for(var i = 0; i <= maxShift; i++) {
-        eqcomps[i] = IsEqual();
-        eqcomps[i].in[0] <== i;
-        eqcomps[i].in[1] <== count;
+        eqcomps[i] <== IsEqual()([i, count]);
         for(var j = 0; j < n; j++) {
-            temps[i][j] <== eqcomps[i].out * in[j];
+            temps[i][j] <== eqcomps[i] * in[j];
             outsum[i + j] += temps[i][j];
         }
     }
