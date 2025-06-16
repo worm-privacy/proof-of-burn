@@ -128,7 +128,7 @@ template ProofOfWorkChecker(maxBits) {
     AssertBits(maxBits)(hash);
 }
 
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBits, powBits) {
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powBits) {
     signal input entropy; // Secret field number from which the burn address and nullifier are derived.
     signal input fee; // To be paid to the relayer who actually submits the proof
     signal input balance; // Balance of the burn-address
@@ -148,7 +148,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
 
     // fee should be less than the amount being minted
-    AssertLessEqThan(amountBits)(fee, balance);
+    AssertLessEqThan(amountBytes * 8)(fee, balance);
 
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
@@ -225,7 +225,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate leaf-layer through address-hash and its balance
-    component rlpBurn = LeafCalculator();
+    component rlpBurn = LeafCalculator(33, amountBytes);
     (rlpBurn.key, rlpBurn.keyLen) <== LeafKey(32)(addressHashNibbles, 64 - numLeafAddressNibbles);
     rlpBurn.balance <== balance;
     rlpBurn.outLen === lastLayerLenSelector.out;
@@ -236,4 +236,4 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 }
 
-component main {public [fee]} = ProofOfBurn(4, 4, 5, 20, 200, 250);
+component main {public [fee]} = ProofOfBurn(4, 4, 5, 20, 31, 250);

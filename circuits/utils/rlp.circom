@@ -15,6 +15,9 @@ include "./concat.circom";
 template ByteDecompose(N) { 
     signal input num;
     signal output bytes[N];
+
+    assert(N <= 31); // Avoid overflows
+
     var pow = 1;
     var total = 0;
     for (var i = 0; i < N; i++) {
@@ -85,8 +88,10 @@ template ReverseArray(N) {
 
 template RlpInteger(N) {
     signal input num;
-    signal output out[N];
+    signal output out[N + 1];
     signal output outLen;
+
+    assert(N <= 31); // Avoid overflows
 
     signal bytes[N] <== ByteDecompose(N)(num);
     signal length <== CountBytes(N)(bytes);
@@ -97,23 +102,22 @@ template RlpInteger(N) {
     outLen <== (1 - isSingleByte) + length + isZero;
 
     signal firstRlpByte <== Mux1()([0x80 + length, num], isSingleByte);
-
     out[0] <== firstRlpByte + isZero * 0x80;
-    for (var i = 1; i < N; i++) {
+    for (var i = 1; i < N + 1; i++) {
         out[i] <== (1 - isSingleByte) * reversedBytes[i-1];
     }
 }
 
-template RlpEmptyAccount() {
+template RlpEmptyAccount(maxBalanceBytes) {
     signal input balance;
-    signal output out[88];
+    signal output out[maxBalanceBytes + 2 + 66];
     signal output outLen;
 
-    signal nonceAndBalanceRlp[22];
+    signal nonceAndBalanceRlp[maxBalanceBytes + 2];
     signal nonceAndBalanceRlpLen;
     nonceAndBalanceRlp[0] <== 0x80; // Nonce of a burn-address is always zero
-    signal (balanceRlp[21], balanceRlpLen) <== RlpInteger(21)(balance);
-    for(var i = 0; i < 21; i++) {
+    signal (balanceRlp[maxBalanceBytes + 1], balanceRlpLen) <== RlpInteger(maxBalanceBytes)(balance);
+    for(var i = 0; i < maxBalanceBytes + 1; i++) {
         nonceAndBalanceRlp[i + 1] <== balanceRlp[i];
     }
     nonceAndBalanceRlpLen <== balanceRlpLen + 1;
@@ -190,7 +194,7 @@ template RlpEmptyAccount() {
     storageAndCodeHashRlp[64] <== 164;
     storageAndCodeHashRlp[65] <== 112;
 
-    component concat = Concat(22, 66)();
+    component concat = Concat(maxBalanceBytes + 2, 66);
     concat.a <== nonceAndBalanceRlp;
     concat.aLen <== nonceAndBalanceRlpLen;
     concat.b <== storageAndCodeHashRlp;
@@ -200,52 +204,59 @@ template RlpEmptyAccount() {
     outLen <== concat.outLen;
 }
 
-template LeafCalculator() {
-    signal input key[33];
+template LeafCalculator(maxKeyLen, maxBalanceBytes) {
+    signal input key[maxKeyLen];
     signal input keyLen;
     signal input balance;
-    signal output out[1024];
+
+    var maxRlpEmptyAccountLen = maxBalanceBytes + 2 + 66;
+    var maxKeyRlpLen = 3 + maxKeyLen;
+    var maxValueRlpLen = 4 + maxRlpEmptyAccountLen;
+    var maxOutLen = maxKeyRlpLen + maxValueRlpLen;
+
+    signal output out[maxOutLen * 8];
     signal output outLen;
 
-    component rlpEmptyAccount = RlpEmptyAccount();
-    rlpEmptyAccount.balance <== balance;
-
-    signal accountRlp[92];
-    signal accountRlpLen;
-    signal keyRlp[36];
+    signal (
+        rlpEmptyAccount[maxRlpEmptyAccountLen], rlpEmptyAccountLen
+    ) <== RlpEmptyAccount(maxBalanceBytes)(balance);
+    
+    signal valueRlp[maxValueRlpLen];
+    signal valueRlpLen;
+    signal keyRlp[maxKeyRlpLen];
     signal keyRlpLen;
 
-    accountRlp[0] <== 0xb8; 
-    accountRlp[1] <== rlpEmptyAccount.outLen + 2;
-    
-    accountRlp[2] <== 0xf7 + 1; 
-    accountRlp[3] <== rlpEmptyAccount.outLen;
-    for(var i = 0; i < 88; i++) {
-        accountRlp[i + 4] <== rlpEmptyAccount.out[i];
+    valueRlp[0] <== 0xb7 + 1; 
+    valueRlp[1] <== rlpEmptyAccountLen + 2;
+    valueRlp[2] <== 0xf7 + 1; 
+    valueRlp[3] <== rlpEmptyAccountLen;
+    for(var i = 0; i < maxRlpEmptyAccountLen; i++) {
+        valueRlp[i + 4] <== rlpEmptyAccount[i];
     }
-    accountRlpLen <== 4 + rlpEmptyAccount.outLen;
+    valueRlpLen <== 4 + rlpEmptyAccountLen;
 
     keyRlp[0] <== 0xf7 + 1;
-    keyRlp[1] <== (keyLen + 1) + accountRlpLen;
+    keyRlp[1] <== (keyLen + 1) + valueRlpLen;
     keyRlp[2] <== 0x80 + keyLen;
     for(var i = 0; i < 33; i++) {
-        keyRlp[i+3] <== key[i];
+        keyRlp[i + 3] <== key[i];
     }
-    keyRlpLen <== keyLen + 3;
+    keyRlpLen <== 3 + keyLen;
 
-    component leafCalc = Concat(36, 92);
-    leafCalc.a <== keyRlp;
-    leafCalc.aLen <== keyRlpLen;
-    leafCalc.b <== accountRlp;
-    leafCalc.bLen <== accountRlpLen;
+    signal (leafBytes[maxOutLen], leafBytesLen) <== Concat(maxKeyRlpLen, maxValueRlpLen)(
+        a <== keyRlp,
+        aLen <== keyRlpLen,
+        b <== valueRlp,
+        bLen <== valueRlpLen
+    );
 
-    outLen <== leafCalc.outLen * 8;
-    component decomp[128];
-    for(var i = 0; i < 128; i++) {
+    outLen <== leafBytesLen * 8;
+    component decomp[maxOutLen];
+    for(var i = 0; i < maxOutLen; i++) {
         decomp[i] = Num2Bits(8);
-        decomp[i].in <== leafCalc.out[i];
+        decomp[i].in <== leafBytes[i];
         for(var j = 0; j < 8; j++) {
-            out[i*8+j] <== decomp[i].out[j];
+            out[i * 8 + j] <== decomp[i].out[j];
         }
     }
 }
