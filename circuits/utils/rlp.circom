@@ -87,21 +87,21 @@ template ReverseArray(N) {
 }
 
 template RlpInteger(N) {
-    signal input num;
+    signal input in;
     signal output out[N + 1];
     signal output outLen;
 
     assert(N <= 31); // Avoid overflows
 
-    signal bytes[N] <== ByteDecompose(N)(num);
+    signal bytes[N] <== ByteDecompose(N)(in);
     signal length <== CountBytes(N)(bytes);
     signal reversedBytes[N] <== ReverseArray(N)(bytes, length);
-    signal isSingleByte <== LessThan(128)([num, 128]);
-    signal isZero <== IsZero()(num);
+    signal isSingleByte <== LessThan(N * 8)([in, 128]);
+    signal isZero <== IsZero()(in);
 
     outLen <== (1 - isSingleByte) + length + isZero;
 
-    signal firstRlpByte <== Mux1()([0x80 + length, num], isSingleByte);
+    signal firstRlpByte <== Mux1()([0x80 + length, in], isSingleByte);
     out[0] <== firstRlpByte + isZero * 0x80;
     for (var i = 1; i < N + 1; i++) {
         out[i] <== (1 - isSingleByte) * reversedBytes[i-1];
