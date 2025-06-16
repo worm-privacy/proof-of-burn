@@ -19,7 +19,7 @@ def run(main, test_cases):
         
         """
         f.write(imports + f"component main = {main};")
-    subprocess.run(["circom", "-c", "circuits/test.circom"])
+    subprocess.run(["circom", "-c", "circuits/test.circom", "--O0"])
     with io.open("test_cpp/main.cpp") as f:
         test_cpp = f.read()
         test_cpp = test_cpp.replace(
@@ -63,6 +63,15 @@ def run(main, test_cases):
                     raise Exception(f"Unexpected output! {output} != {expected}")
                 outputs.append(output)
     return outputs
+
+
+def bytes_to_bits(bytes):
+    out = []
+    for byte in bytes:
+        lst = [int(a) for a in list(reversed(bin(byte)[2:]))]
+        for i in range(8):
+            out.append(lst[i] if i < len(lst) else 0)
+    return out
 
 
 run(
@@ -408,5 +417,40 @@ run(
             },
             None,
         ),
+    ],
+)
+
+import web3
+
+
+def keccak(inp):
+    return bytes_to_bits(web3.Web3.keccak(inp))
+
+
+def blockify(inp, blks):
+    bits = bytes_to_bits(inp)
+    return bits + [0] * (blks * 136 * 8 - len(bits))
+
+
+run(
+    "KeccakBits(1)",
+    [
+        ({"inBits": blockify(b"", 1), "inBitsLen": 0}, keccak(b"")),
+        ({"inBits": blockify(b"salam", 1), "inBitsLen": 5 * 8}, keccak(b"salam")),
+        ({"inBits": blockify(b"a" * 135, 1), "inBitsLen": 135 * 8}, keccak(b"a" * 135)),
+        ({"inBits": blockify(b"a" * 136, 1), "inBitsLen": 136 * 8}, None),
+    ],
+)
+
+run(
+    "KeccakBits(2)",
+    [
+        ({"inBits": blockify(b"", 2), "inBitsLen": 0}, keccak(b"")),
+        ({"inBits": blockify(b"salam", 2), "inBitsLen": 5 * 8}, keccak(b"salam")),
+        ({"inBits": blockify(b"a" * 135, 2), "inBitsLen": 135 * 8}, keccak(b"a" * 135)),
+        ({"inBits": blockify(b"a" * 136, 2), "inBitsLen": 136 * 8}, keccak(b"a" * 136)),
+        ({"inBits": blockify(b"a" * 137, 2), "inBitsLen": 137 * 8}, keccak(b"a" * 137)),
+        ({"inBits": blockify(b"a" * 271, 2), "inBitsLen": 271 * 8}, keccak(b"a" * 271)),
+        ({"inBits": blockify(b"a" * 272, 2), "inBitsLen": 272 * 8}, None),
     ],
 )
