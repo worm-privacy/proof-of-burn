@@ -6,6 +6,7 @@ from mimc7 import mimc7, Field, FIELD_SIZE
 
 MAX_HEADER_BITS = 5 * 136 * 8
 MAX_NUM_LAYERS = 4
+POW_BITS = 250
 
 
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
@@ -37,7 +38,7 @@ def find_entropy(max_bits):
         entropy += 1
     return entropy
 
-entropy = find_entropy(240)
+entropy = find_entropy(POW_BITS)
 addr = burn(entropy)
 
 blknum = w3.eth.block_number
@@ -127,18 +128,21 @@ for layer_bytes in list(proof.accountProof):
 num_layers = len(layers)
 while len(layers) < MAX_NUM_LAYERS:
     layers.append([0] * (4 * 136 * 8))
-    layer_lens.append(0)
+    layer_lens.append(256)
 import io
 with io.open("details.json", 'w') as f:
     json.dump({
         "addr": addr,
         "addrHash": w3.keccak(hexstr=addr).hex()
     }, f)
+
+fee = 123
 print(
     json.dumps(
         {
             "numLeafAddressNibbles": str(addr_term_len),
             "entropy": str(entropy),
+            "fee": str(fee),
             "balance": str(proof.balance),
             "numLayers": num_layers,
             "layerBits": layers,

@@ -177,29 +177,25 @@ template BitPad(maxBlocks, blockSize) {
     signal input ind;
 
     signal output out[maxBits];
-    signal output num_blocks;
+    signal output numBlocks;
 
-    component div = Divide(32);
-    div.a <== ind + 1;
-    div.b <== blockSize;
-    num_blocks <== div.out + 1;
+    signal (div, rem) <== Divide(32)(ind + 1, blockSize);
+    numBlocks <== div + 1;
 
-    signal eqs[maxBits+1];
+    AssertLessThan(16)(div, maxBlocks);
+
+    signal eqs[maxBits + 1];
     eqs[0] <== 1;
-    component eqcomps[maxBits];
+    signal eqcomps[maxBits];
     for(var i = 0; i < maxBits; i++) {
-        eqcomps[i] = IsEqual();
-        eqcomps[i].in[0] <== i;
-        eqcomps[i].in[1] <== ind;
-        eqs[i+1] <== eqs[i] * (1 - eqcomps[i].out);
+        eqcomps[i] <== IsEqual()([i, ind]);
+        eqs[i + 1] <== eqs[i] * (1 - eqcomps[i]);
     }
 
-    component isLast[maxBits];
+    signal isLast[maxBits];
     for(var i = 0; i < maxBits; i++) {
-        isLast[i] = IsEqual();
-        isLast[i].in[0] <== i;
-        isLast[i].in[1] <== num_blocks * blockSize - 1;
-        out[i] <== in[i] * eqs[i+1] + eqcomps[i].out + isLast[i].out;
+        isLast[i] <== IsEqual()([i, numBlocks * blockSize - 1]);
+        out[i] <== in[i] * eqs[i + 1] + eqcomps[i] + isLast[i];
     }
 }
 
@@ -209,11 +205,8 @@ template KeccakBits(maxBlocks) {
     signal input inBitsLen;
     signal output out[256];
 
-    component padder = BitPad(maxBlocks, 136 * 8);
-    padder.in <== inBits;
-    padder.ind <== inBitsLen;
-    component keccak = Keccak(maxBlocks);
-    keccak.in <== padder.out;
-    keccak.blocks <== padder.num_blocks;
-    out <== keccak.out;
+    signal (
+        padded[maxBlocks * 136 * 8], numBlocks
+    ) <== BitPad(maxBlocks, 136 * 8)(inBits, inBitsLen);
+    out <== Keccak(maxBlocks)(padded, numBlocks);
 }
