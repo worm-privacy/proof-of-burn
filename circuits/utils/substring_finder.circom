@@ -1,7 +1,5 @@
 pragma circom 2.2.2;
 
-include "./keccak/keccak.circom";
-include "./keccak/utils.circom";
 include "./utils.circom";
 include "./assert.circom";
 

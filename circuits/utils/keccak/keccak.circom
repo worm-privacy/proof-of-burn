@@ -179,7 +179,7 @@ template BitPad(maxBlocks, blockSize) {
     signal output out[maxBits];
     signal output numBlocks;
 
-    signal (div, rem) <== Divide(32)(ind + 1, blockSize);
+    signal (div, rem) <== Divide(16)(ind + 1, blockSize);
     numBlocks <== div + 1;
 
     AssertLessThan(16)(div, maxBlocks);
@@ -204,6 +204,14 @@ template KeccakBits(maxBlocks) {
     signal input inBits[maxBlocks * 136 * 8];
     signal input inBitsLen;
     signal output out[256];
+
+    // Make sure inBitsLen is divisible by 8.
+    signal rem;
+    (_, rem) <== Divide(16)(inBitsLen, 8);
+    rem === 0;
+
+    // Give some space for padding
+    AssertLessEqThan(16)(inBitsLen, maxBlocks * 136 * 8 - 8);
 
     signal (
         padded[maxBlocks * 136 * 8], numBlocks
