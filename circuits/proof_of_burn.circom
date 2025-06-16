@@ -58,8 +58,8 @@ template InputsHasher() {
     }
     
     signal hash[256] <== KeccakBits(1)(keccakInputBits, 1024);
-    component bitsToNum = Bits2NumBigEndian(248);
-    for(var i = 0; i < 248; i++) {
+    component bitsToNum = Bits2NumBigEndian(31);
+    for(var i = 0; i < 31 * 8; i++) {
         bitsToNum.in[i] <== hash[i + 8];
     }
     commitment <== bitsToNum.out;

@@ -17,7 +17,7 @@ template Selector (n) {
     AssertLessThan(16)(select, n);
 
     signal eqs[n];
-    signal sum[n+1];
+    signal sum[n + 1];
     sum[0] <== 0;
     for(var i = 0; i < n; i++) {
         eqs[i] <== IsEqual()([select, i]);

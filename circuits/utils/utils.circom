@@ -31,13 +31,13 @@ template Divide(N) {
 
 // Bits2NumBigEndian Template:
 // Converts an array of binary bits into a number in big-endian format.
-template Bits2NumBigEndian(n) {
-    signal input in[n];
+template Bits2NumBigEndian(numBytes) {
+    signal input in[numBytes * 8];
     signal output out;
     var number = 0;
     var step1 = 1;
 
-    for (var i = n / 8 - 1; i >= 0; i--) {
+    for (var i = numBytes - 1; i >= 0; i--) {
         var step2 = 1;
         var tmp_number = 0;
         for (var j = 0; j < 8; j++) {

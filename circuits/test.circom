@@ -9,4 +9,4 @@
         include "utils/substring_finder.circom";
         include "utils/utils.circom";
         
-        component main = SubstringCheck(10, 3);
+        component main = CountBytes(4);

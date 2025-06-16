@@ -47,8 +47,8 @@ template CountBytes(N) {
     isZeroResult[0] <== 1;
 
     for (var i = 0; i < N; i++) {
-        isZero[i] <== IsZero()(bytes[N-i-1]);
-        isZeroResult[i+1] <== isZero[i] * isZeroResult[i];
+        isZero[i] <== IsZero()(bytes[N - i - 1]);
+        isZeroResult[i + 1] <== isZero[i] * isZeroResult[i];
     }
     
     var total = 0;
