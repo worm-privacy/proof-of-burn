@@ -220,7 +220,7 @@ template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     signal input addressHashNibblesLen;
     signal input balance;
 
-    signal (key[maxAddressHashBytes + 1], keyLen) <== LeafKey(32)(addressHashNibbles, 64 - addressHashNibblesLen);    
+    signal (key[maxAddressHashBytes + 1], keyLen) <== LeafKey(32)(addressHashNibbles, addressHashNibblesLen);    
 
     signal output out[maxOutLen * 8];
     signal output outLen;

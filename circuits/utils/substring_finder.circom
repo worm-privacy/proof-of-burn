@@ -24,13 +24,13 @@ template SubstringCheck(maxMainLen, subLen) {
     signal A[subLen + 1];
     A[0] <== 0;
     for (var i = 0; i < subLen; i++) {
-        A[i+1] <== subInput[i] * (2**i) + A[i];
+        A[i + 1] <== subInput[i] * (2 ** i) + A[i];
     }
 
     signal B[maxMainLen + 1];
     B[0] <== 0;
     for (var i = 0; i < maxMainLen; i++) {
-        B[i+1] <== mainInput[i] * (2**i) + B[i];
+        B[i + 1] <== mainInput[i] * (2 ** i) + B[i];
     }
 
     signal eq[maxMainLen - subLen + 1];
@@ -42,8 +42,8 @@ template SubstringCheck(maxMainLen, subLen) {
     for (var i = 0; i < maxMainLen - subLen + 1; i++) {
         eq[i] <== IsEqual()([A[subLen] * (2 ** i), B[i + subLen] - B[i]]);
         endCheckers[i] <== IsEqual()([i, mainLen - subLen + 1]);
-        allowed[i+1] <== allowed[i] * (1 - endCheckers[i]);
-        sums[i+1] <== sums[i] + allowed[i+1] * eq[i];
+        allowed[i + 1] <== allowed[i] * (1 - endCheckers[i]);
+        sums[i + 1] <== sums[i] + allowed[i + 1] * eq[i];
     }
 
     signal isz <== IsZero()(sums[maxMainLen - subLen + 1]);

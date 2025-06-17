@@ -14,13 +14,14 @@ template Mask(n) {
     signal input count;
     signal output out[n];
 
-    signal eqs[n+1];
-    eqs[0] <== 1;
-    signal eqcomps[n];
+    // Filter: [1, 1, 1, ..., 1, 1, 0, 0, 0, ..., 0, 0]
+    signal filter[n + 1];
+    filter[0] <== 1;
+    signal isEq[n];
     for(var i = 0; i < n; i++) {
-        eqcomps[i] <== IsEqual()([i, count]);
-        eqs[i+1] <== eqs[i] * (1 - eqcomps[i]);
-        out[i] <== in[i] * eqs[i + 1];
+        isEq[i] <== IsEqual()([i, count]);
+        filter[i + 1] <== filter[i] * (1 - isEq[i]);
+        out[i] <== in[i] * filter[i + 1];
     }
 }
 
@@ -37,20 +38,20 @@ template Shift(n, maxShift) {
 
     AssertLessEqThan(16)(count, maxShift);
 
-    var outsum[n + maxShift];
+    var outVars[n + maxShift];
 
-    signal eqcomps[maxShift + 1];
+    signal isEq[maxShift + 1];
     signal temps[maxShift + 1][n];
     for(var i = 0; i <= maxShift; i++) {
-        eqcomps[i] <== IsEqual()([i, count]);
+        isEq[i] <== IsEqual()([i, count]);
         for(var j = 0; j < n; j++) {
-            temps[i][j] <== eqcomps[i] * in[j];
-            outsum[i + j] += temps[i][j];
+            temps[i][j] <== isEq[i] * in[j];
+            outVars[i + j] += temps[i][j];
         }
     }
 
     for(var i = 0; i < n + maxShift; i++) {
-        out[i] <== outsum[i];
+        out[i] <== outVars[i];
     }
 }
 

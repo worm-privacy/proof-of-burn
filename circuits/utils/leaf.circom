@@ -16,7 +16,7 @@ template ShiftLeft(n) {
 
     AssertLessEqThan(16)(count, n);
 
-    signal outsum[n][n+1];
+    signal outsum[n][n + 1];
     for(var i = 0; i < n; i++) {
         outsum[i][0] <== 0;
     }
@@ -59,31 +59,31 @@ template NibblesToBytes(n) {
 //
 // Example:
 //   in:     [0x1, 0x2, 0x3, 0x4]
-//   count:  0
+//   len:    4
 //   out:    [0x20, 0x12, 0x34]
 //   outLen: 3
 //
 // Example:
 //   in:     [0x1, 0x2, 0x3, 0x4]
-//   count:  1
+//   len:    3
 //   out:    [0x32, 0x34, 0x00]
 //   outLen: 2
 //
 // Example:
 //   in:     [0x1, 0x2, 0x3, 0x4]
-//   count:  2
+//   len:    2
 //   out:    [0x20, 0x34, 0x00]
 //   outLen: 2
 //
 // Example:
 //   in:     [0x1, 0x2, 0x3, 0x4]
-//   count:  3
+//   len:    1
 //   out:    [0x34, 0x00, 0x00]
 //   outLen: 1
 //
 // Example:
 //   in:     [0x1, 0x2, 0x3, 0x4]
-//   count:  4
+//   len:    0
 //   out:    [0x20, 0x00, 0x00]
 //   outLen: 1
 template LeafKey(N) {
@@ -92,24 +92,32 @@ template LeafKey(N) {
     signal output out[N + 1];
     signal output outLen;
 
-    signal outNibbles[2 * N + 2];
-    signal outNibblesLen;
-
     signal (div, rem) <== Divide(16)(addressHashNibblesLen, 2);
 
-    signal shifted[2 * N] <== ShiftLeft(2 * N)(addressHashNibbles, addressHashNibblesLen);
+    // Shift left (2 * N - addressHashNibblesLen) times so that
+    // the last addressHashNibblesLen nibbles remain
+    signal shifted[2 * N] <== ShiftLeft(2 * N)(addressHashNibbles, 2 * N - addressHashNibblesLen);
+
+    signal outNibbles[2 * N + 2];
+    // 2 if even number of nibbles, 3 if odd number of nibbles
+    outNibbles[0] <== 2 + rem;
+
+    // If odd number of nibbles, the second nibble of the result 
+    // should be the first nibble of the remaining value
+    outNibbles[1] <== rem * shifted[0]; 
+
     signal temp[2 * N - 1];
+
+    // If odd number of nibbles, shift-right by one
     for(var i = 0; i < 2 * N; i++) {
-        if(i == 2 * N - 1) {
-            outNibbles[i+2] <== (1 - rem) * shifted[i];
-        } else {
+        if(i < 2 * N - 1) {
             temp[i] <== rem * shifted[i + 1];
             outNibbles[i + 2] <== (1 - rem) * shifted[i] + temp[i];
+        } else {
+            outNibbles[i + 2] <== (1 - rem) * shifted[i];
         }
     }
-    outNibbles[0] <== 2 + rem;
-    outNibbles[1] <== rem * shifted[0];
 
     out <== NibblesToBytes(N + 1)(outNibbles);
-    outLen <== N + 1 - div - rem;
+    outLen <== 1 + div;
 }
