@@ -110,6 +110,6 @@ template LeafKey(N) {
     outNibbles[0] <== 2 + rem;
     outNibbles[1] <== rem * shifted[0];
 
-    out <== NibblesToBytes(33)(outNibbles);
+    out <== NibblesToBytes(N + 1)(outNibbles);
     outLen <== N + 1 - div - rem;
 }
