@@ -110,17 +110,19 @@ template RlpInteger(N) {
 
 template RlpEmptyAccount(maxBalanceBytes) {
     signal input balance;
-    signal output out[maxBalanceBytes + 2 + 66];
+    signal output out[2 + maxBalanceBytes + 2 + 66];
     signal output outLen;
 
-    signal nonceAndBalanceRlp[maxBalanceBytes + 2];
+    signal prefixedNonceAndBalanceRlp[maxBalanceBytes + 4];
     signal nonceAndBalanceRlpLen;
-    nonceAndBalanceRlp[0] <== 0x80; // Nonce of a burn-address is always zero
+    signal prefixedNonceAndBalanceRlpLen;
+    prefixedNonceAndBalanceRlp[2] <== 0x80; // Nonce of a burn-address is always zero
     signal (balanceRlp[maxBalanceBytes + 1], balanceRlpLen) <== RlpInteger(maxBalanceBytes)(balance);
     for(var i = 0; i < maxBalanceBytes + 1; i++) {
-        nonceAndBalanceRlp[i + 1] <== balanceRlp[i];
+        prefixedNonceAndBalanceRlp[i + 3] <== balanceRlp[i];
     }
-    nonceAndBalanceRlpLen <== balanceRlpLen + 1;
+    nonceAndBalanceRlpLen <== 1 + balanceRlpLen;
+    prefixedNonceAndBalanceRlpLen <== 2 + nonceAndBalanceRlpLen;
 
     // Concatenated RLP of storage-hash and code-hash of an empty account
     // Storage-hash: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
@@ -194,9 +196,12 @@ template RlpEmptyAccount(maxBalanceBytes) {
     storageAndCodeHashRlp[64] <== 164;
     storageAndCodeHashRlp[65] <== 112;
 
-    component concat = Concat(maxBalanceBytes + 2, 66);
-    concat.a <== nonceAndBalanceRlp;
-    concat.aLen <== nonceAndBalanceRlpLen;
+    prefixedNonceAndBalanceRlp[0] <== 0xf7 + 1;
+    prefixedNonceAndBalanceRlp[1] <== nonceAndBalanceRlpLen + storageAndCodeHashRlpLen;
+
+    component concat = Concat(maxBalanceBytes + 4, 66);
+    concat.a <== prefixedNonceAndBalanceRlp;
+    concat.aLen <== prefixedNonceAndBalanceRlpLen;
     concat.b <== storageAndCodeHashRlp;
     concat.bLen <== storageAndCodeHashRlpLen;
 
@@ -209,9 +214,9 @@ template LeafCalculator(maxKeyLen, maxBalanceBytes) {
     signal input keyLen;
     signal input balance;
 
-    var maxRlpEmptyAccountLen = maxBalanceBytes + 2 + 66;
+    var maxRlpEmptyAccountLen = 2 + maxBalanceBytes + 2 + 66;
     var maxKeyRlpLen = 3 + maxKeyLen;
-    var maxValueRlpLen = 4 + maxRlpEmptyAccountLen;
+    var maxValueRlpLen = 2 + maxRlpEmptyAccountLen;
     var maxOutLen = maxKeyRlpLen + maxValueRlpLen;
 
     signal output out[maxOutLen * 8];
@@ -227,13 +232,11 @@ template LeafCalculator(maxKeyLen, maxBalanceBytes) {
     signal keyRlpLen;
 
     valueRlp[0] <== 0xb7 + 1; 
-    valueRlp[1] <== rlpEmptyAccountLen + 2;
-    valueRlp[2] <== 0xf7 + 1; 
-    valueRlp[3] <== rlpEmptyAccountLen;
+    valueRlp[1] <== rlpEmptyAccountLen;
     for(var i = 0; i < maxRlpEmptyAccountLen; i++) {
-        valueRlp[i + 4] <== rlpEmptyAccount[i];
+        valueRlp[i + 2] <== rlpEmptyAccount[i];
     }
-    valueRlpLen <== 4 + rlpEmptyAccountLen;
+    valueRlpLen <== 2 + rlpEmptyAccountLen;
 
     keyRlp[0] <== 0xf7 + 1;
     keyRlp[1] <== (keyLen + 1) + valueRlpLen;
