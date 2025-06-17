@@ -110,26 +110,27 @@ template RlpInteger(N) {
 
 template RlpEmptyAccount(maxBalanceBytes) {
     signal input balance;
-    signal output out[2 + maxBalanceBytes + 2 + 66];
+    signal output out[4 + maxBalanceBytes + 66];
     signal output outLen;
 
-    signal prefixedNonceAndBalanceRlp[maxBalanceBytes + 4];
+    // 4 prefix bytes: [0xf8, TOTAL_BYTES_LEN, 0x80 (Nonce: 0), BALANCE_BYTES_LEN]
+    signal prefixedNonceAndBalanceRlp[4 + maxBalanceBytes];
     signal nonceAndBalanceRlpLen;
     signal prefixedNonceAndBalanceRlpLen;
-    prefixedNonceAndBalanceRlp[2] <== 0x80; // Nonce of a burn-address is always zero
+    prefixedNonceAndBalanceRlp[2] <== 0x80; // Nonce of a burn-address is always zero (RLP: 0x80)
     signal (balanceRlp[maxBalanceBytes + 1], balanceRlpLen) <== RlpInteger(maxBalanceBytes)(balance);
     for(var i = 0; i < maxBalanceBytes + 1; i++) {
         prefixedNonceAndBalanceRlp[i + 3] <== balanceRlp[i];
     }
-    nonceAndBalanceRlpLen <== 1 + balanceRlpLen;
-    prefixedNonceAndBalanceRlpLen <== 2 + nonceAndBalanceRlpLen;
+    nonceAndBalanceRlpLen <== 1 + balanceRlpLen; // BALANCE_BYTES_LEN is the prefix
+    prefixedNonceAndBalanceRlpLen <== 2 + nonceAndBalanceRlpLen; // [0x80 (Nonce: 0), BALANCE_BYTES_LEN] is the prefix
 
     // Concatenated RLP of storage-hash and code-hash of an empty account
     // Storage-hash: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
     // Code-hash:    0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 
-    var storageAndCodeHashRlpLen = 66;
+    var storageAndCodeHashRlpLen = 66; // 1 + 32 + 1 + 32 (32-byte chunks are prefixed)
     signal storageAndCodeHashRlp[storageAndCodeHashRlpLen];
-    storageAndCodeHashRlp[0] <== 160;
+    storageAndCodeHashRlp[0] <== 160; // Prefix: 0x80 + 32
     storageAndCodeHashRlp[1] <== 86;
     storageAndCodeHashRlp[2] <== 232;
     storageAndCodeHashRlp[3] <== 31;
@@ -162,7 +163,7 @@ template RlpEmptyAccount(maxBalanceBytes) {
     storageAndCodeHashRlp[30] <== 99;
     storageAndCodeHashRlp[31] <== 180;
     storageAndCodeHashRlp[32] <== 33;
-    storageAndCodeHashRlp[33] <== 160;
+    storageAndCodeHashRlp[33] <== 160; // Prefix: 0x80 + 32
     storageAndCodeHashRlp[34] <== 197;
     storageAndCodeHashRlp[35] <== 210;
     storageAndCodeHashRlp[36] <== 70;
@@ -196,10 +197,10 @@ template RlpEmptyAccount(maxBalanceBytes) {
     storageAndCodeHashRlp[64] <== 164;
     storageAndCodeHashRlp[65] <== 112;
 
-    prefixedNonceAndBalanceRlp[0] <== 0xf7 + 1;
+    prefixedNonceAndBalanceRlp[0] <== 0xf7 + 1; // + 1, because the next byte is number of total bytes
     prefixedNonceAndBalanceRlp[1] <== nonceAndBalanceRlpLen + storageAndCodeHashRlpLen;
 
-    component concat = Concat(maxBalanceBytes + 4, 66);
+    component concat = Concat(4 + maxBalanceBytes, 66);
     concat.a <== prefixedNonceAndBalanceRlp;
     concat.aLen <== prefixedNonceAndBalanceRlpLen;
     concat.b <== storageAndCodeHashRlp;
@@ -209,15 +210,17 @@ template RlpEmptyAccount(maxBalanceBytes) {
     outLen <== concat.outLen;
 }
 
-template LeafCalculator(maxKeyLen, maxBalanceBytes) {
-    signal input key[maxKeyLen];
-    signal input keyLen;
-    signal input balance;
-
-    var maxRlpEmptyAccountLen = 2 + maxBalanceBytes + 2 + 66;
-    var maxKeyRlpLen = 3 + maxKeyLen;
+template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
+    var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66;
+    var maxKeyRlpLen = 3 + maxAddressHashBytes + 1;
     var maxValueRlpLen = 2 + maxRlpEmptyAccountLen;
     var maxOutLen = maxKeyRlpLen + maxValueRlpLen;
+
+    signal input addressHashNibbles[2 * maxAddressHashBytes];
+    signal input addressHashNibblesLen;
+    signal input balance;
+
+    signal (key[maxAddressHashBytes + 1], keyLen) <== LeafKey(32)(addressHashNibbles, 64 - addressHashNibblesLen);    
 
     signal output out[maxOutLen * 8];
     signal output outLen;

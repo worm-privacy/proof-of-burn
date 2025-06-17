@@ -225,14 +225,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate leaf-layer through address-hash and its balance
-    component rlpBurn = LeafCalculator(33, amountBytes);
-    (rlpBurn.key, rlpBurn.keyLen) <== LeafKey(32)(addressHashNibbles, 64 - numLeafAddressNibbles);
-    rlpBurn.balance <== balance;
-    rlpBurn.outLen === lastLayerLenSelector.out;
+    signal (leafBits[1112], leafBitsLen) <== LeafCalculator(32, amountBytes)(
+        addressHashNibbles, numLeafAddressNibbles, balance
+    );
     
     // Make sure the calculated leaf-layer is equal with the last-layer
-    for(var i = 0; i < 128 * 8; i++) {
-        rlpBurn.out[i] === lastLayerBitsSelectors[i].out;
+    for(var i = 0; i < 1112; i++) {
+        leafBits[i] === lastLayerBitsSelectors[i].out;
     }
 }
 
