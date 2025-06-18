@@ -29,24 +29,24 @@ template Divide(N) {
     out * b + rem === a;
 }
 
-// Bits2NumBigEndian Template:
 // Converts an array of binary bits into a number in big-endian format.
 template Bits2NumBigEndian(numBytes) {
     signal input in[numBytes * 8];
     signal output out;
-    var number = 0;
-    var step1 = 1;
 
+    assert(numBytes <= 31); // Avoid overflows
+
+    var result = 0;
+    var step = 1;
+
+    // Big-endian (Byte-level)
     for (var i = numBytes - 1; i >= 0; i--) {
-        var step2 = 1;
-        var tmp_number = 0;
+        // Little-endian (Bit-level)
         for (var j = 0; j < 8; j++) {
-            tmp_number += in[i * 8 + j] * step2;
-            step2 *= 2;
+            result += in[i * 8 + j] * step;
+            step *= 2;
         }
-        number += tmp_number * step1;
-        step1 *= 256;
     }
 
-    number ==> out;
+    out <== result;
 }

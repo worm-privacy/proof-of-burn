@@ -92,7 +92,7 @@ template ReverseArray(N) {
     // Shift-right by `N - inLen` to put the elements at the last of
     // a 2 * N element array.
     // shifted: [0, 0, 0, 0, 0, 0, 0, 1, 2, 3]
-    signal shifted[2 * N] <== Shift(N, N)(in, N - inLen);
+    signal shifted[2 * N] <== ShiftRight(N, N)(in, N - inLen);
 
     // Reverse the whole thing and only keep the last N elements
     // out: [3, 2, 1, 0, 0]

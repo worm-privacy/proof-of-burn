@@ -58,6 +58,8 @@ template InputsHasher() {
     }
     
     signal hash[256] <== KeccakBits(1)(keccakInputBits, 1024);
+
+    // Ignore the last byte while converting keccak to field element
     component bitsToNum = Bits2NumBigEndian(31);
     for(var i = 0; i < 31 * 8; i++) {
         bitsToNum.in[i] <== hash[i + 8];
@@ -179,7 +181,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Calculate public commitment
     commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee);
     
-    // Fetch the last layer bits and len
+    // Fetch the last layer (layerBits[numLayers - 1]) bits
     component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
     for(var j = 0; j < maxNodeBlocks * 136 * 8; j++) {
         lastLayerBitsSelectors[j] = Selector(maxNumLayers);
@@ -190,6 +192,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
             lastLayerBitsSelectors[j].vals[i] <== layerBits[i][j];
         }
     }
+
+    // Fetch the last layer (layerBitsLens[numLayers - 1]) len
     component lastLayerLenSelector = Selector(maxNumLayers);
     lastLayerLenSelector.select <== numLayers - 1;
     for(var i = 0; i < maxNumLayers; i++) {
@@ -215,6 +219,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
                 mainInput <== layerBits[i - 1]
             );
 
+            // Check substring-ness only when the layer exists
             (1 - substringCheckers[i - 1]) * existingLayer[i] === 0;
         }
     }
@@ -233,6 +238,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     for(var i = 0; i < 1112; i++) {
         leafBits[i] === lastLayerBitsSelectors[i].out;
     }
+    leafBitsLen === lastLayerLenSelector.out;
 }
 
 component main {public [fee]} = ProofOfBurn(4, 4, 5, 20, 31, 250);

@@ -35,7 +35,7 @@ template Mask(n) {
 // Example:
 //   in:    [1, 2, 3, 4, 5, 6, 7, 8], count: 3
 //   output:[0, 0, 0, 1, 2, 3, 4, 5]
-template Shift(n, maxShift) {
+template ShiftRight(n, maxShift) {
     signal input in[n];
     signal input count;
     signal output out[n + maxShift];
@@ -96,7 +96,7 @@ template Concat(maxLenA, maxLenB) {
     signal maskedB[maxLenB] <== Mask(maxLenB)(b, bLen);
 
     // shiftedB: [0, 0, 0, 10, 20, 0, 0, 0]
-    signal shiftedB[maxLenA + maxLenB] <== Shift(maxLenB, maxLenA)(maskedB, aLen);
+    signal shiftedB[maxLenA + maxLenB] <== ShiftRight(maxLenB, maxLenA)(maskedB, aLen);
     
     // out = maskedA + shiftedB
     // out: [1, 2, 3, 10, 20, 0, 0, 0, 0, 0]
