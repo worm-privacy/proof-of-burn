@@ -108,19 +108,30 @@ template RlpInteger(N) {
 
     assert(N <= 31); // Avoid overflows
 
+    // Decompose and reverse: calculate the big-endian version of the balance
     signal bytes[N] <== ByteDecompose(N)(in);
     signal length <== CountBytes(N)(bytes);
-    signal reversedBytes[N] <== ReverseArray(N)(bytes, length);
+    signal bigEndian[N] <== ReverseArray(N)(bytes, length);
+
+    // If the number is below 128, then the first byte is the number itself
+    // Except when the number is zero, in that case the first byte is 0x80
+    // If the number is greater than or equal 128, then the first byte is
+    // (0x80 + number_of_bytes)
     signal isSingleByte <== LessThan(N * 8)([in, 128]);
     signal isZero <== IsZero()(in);
-
-    outLen <== (1 - isSingleByte) + length + isZero;
-
     signal firstRlpByte <== Mux1()([0x80 + length, in], isSingleByte);
     out[0] <== firstRlpByte + isZero * 0x80;
+    
+    // If the number is greater than or equal 128, then comes the rest of
+    // the big-endian representation of bytes
     for (var i = 1; i < N + 1; i++) {
-        out[i] <== (1 - isSingleByte) * reversedBytes[i-1];
+        out[i] <== (1 - isSingleByte) * bigEndian[i - 1];
     }
+
+    // If zero: (1 - 1) + 0 + 1 = 1 (Correct) [0x80]
+    // If below 128: (1 - 1) + 1 + 0 = 1 (Correct) [num]
+    // If greater than or equal 128: (1 - 0) + length + 0 = 1 + length (Correct) [0x80 + length, ...]
+    outLen <== (1 - isSingleByte) + length + isZero;
 }
 
 template RlpEmptyAccount(maxBalanceBytes) {
@@ -130,14 +141,16 @@ template RlpEmptyAccount(maxBalanceBytes) {
 
     // 4 prefix bytes: [0xf8, TOTAL_BYTES_LEN, 0x80 (Nonce: 0), BALANCE_BYTES_LEN]
     signal prefixedNonceAndBalanceRlp[4 + maxBalanceBytes];
-    signal nonceAndBalanceRlpLen;
     signal prefixedNonceAndBalanceRlpLen;
+    
     prefixedNonceAndBalanceRlp[2] <== 0x80; // Nonce of a burn-address is always zero (RLP: 0x80)
     signal (balanceRlp[maxBalanceBytes + 1], balanceRlpLen) <== RlpInteger(maxBalanceBytes)(balance);
     for(var i = 0; i < maxBalanceBytes + 1; i++) {
         prefixedNonceAndBalanceRlp[i + 3] <== balanceRlp[i];
     }
-    nonceAndBalanceRlpLen <== 1 + balanceRlpLen; // BALANCE_BYTES_LEN is the prefix
+
+    signal nonceAndBalanceRlpLen; // Without the [0xf8, TOTAL_BYTES_LEN] prefix
+    nonceAndBalanceRlpLen <== 1 + balanceRlpLen; // BALANCE_BYTES_LEN is the only prefix
     prefixedNonceAndBalanceRlpLen <== 2 + nonceAndBalanceRlpLen; // [0x80 (Nonce: 0), BALANCE_BYTES_LEN] is the prefix
 
     // Concatenated RLP of storage-hash and code-hash of an empty account
@@ -215,6 +228,7 @@ template RlpEmptyAccount(maxBalanceBytes) {
     prefixedNonceAndBalanceRlp[0] <== 0xf7 + 1; // + 1, because the next byte is number of total bytes
     prefixedNonceAndBalanceRlp[1] <== nonceAndBalanceRlpLen + storageAndCodeHashRlpLen;
 
+    // Final result: RLP(0, balance, storageHash, codeHash)
     component concat = Concat(4 + maxBalanceBytes, 66);
     concat.a <== prefixedNonceAndBalanceRlp;
     concat.aLen <== prefixedNonceAndBalanceRlpLen;
@@ -226,15 +240,17 @@ template RlpEmptyAccount(maxBalanceBytes) {
 }
 
 template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
-    var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66;
-    var maxKeyRlpLen = 3 + maxAddressHashBytes + 1;
-    var maxValueRlpLen = 2 + maxRlpEmptyAccountLen;
-    var maxOutLen = maxKeyRlpLen + maxValueRlpLen;
+    var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66; // More info in RlpEmptyAccount gadget
+    var maxKeyLen = 1 + maxAddressHashBytes; // Leaf keys are prefixed with 0x20 or 0x3_
+    var maxPrefixedKeyRlpLen = 3 + maxKeyRlpLen; // Prefix: [0x80 + KEY_LEN, 0xf8, (KEY_LEN + 1) + VALUE_RLP_LEN]
+    var maxValueRlpLen = 2 + maxRlpEmptyAccountLen; // Prefix: [0xb8, VALUE_LEN]
+    var maxOutLen = maxPrefixedKeyRlpLen + maxValueRlpLen;
 
     signal input addressHashNibbles[2 * maxAddressHashBytes];
     signal input addressHashNibblesLen;
     signal input balance;
 
+    // Calculate the MPT leaf key based on the address-hash nibbles
     signal (key[maxAddressHashBytes + 1], keyLen) <== LeafKey(32)(addressHashNibbles, addressHashNibblesLen);    
 
     signal output out[maxOutLen * 8];
@@ -244,10 +260,14 @@ template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
         rlpEmptyAccount[maxRlpEmptyAccountLen], rlpEmptyAccountLen
     ) <== RlpEmptyAccount(maxBalanceBytes)(balance);
     
+    // Key is the RLP-encoding of part of the address-hash.
+    // (NOTE: This is also prefixed with the RLP of the whole leaf)
+    signal prefixedKeyRlp[maxPrefixedKeyRlpLen];
+    signal prefixedKeyRlpLen;
+
+    // Value is the RLP-encoding of an empty-account RLP.
     signal valueRlp[maxValueRlpLen];
     signal valueRlpLen;
-    signal keyRlp[maxKeyRlpLen];
-    signal keyRlpLen;
 
     valueRlp[0] <== 0xb7 + 1; 
     valueRlp[1] <== rlpEmptyAccountLen;
@@ -256,21 +276,24 @@ template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     }
     valueRlpLen <== 2 + rlpEmptyAccountLen;
 
-    keyRlp[0] <== 0xf7 + 1;
-    keyRlp[1] <== (keyLen + 1) + valueRlpLen;
-    keyRlp[2] <== 0x80 + keyLen;
-    for(var i = 0; i < 33; i++) {
-        keyRlp[i + 3] <== key[i];
-    }
-    keyRlpLen <== 3 + keyLen;
+    // Prefix of the whole leaf: RLP([key, value])
+    prefixedKeyRlp[0] <== 0xf7 + 1;
+    prefixedKeyRlp[1] <== (keyLen + 1) + valueRlpLen; // (keyLen + 1) is keyRlpLen
 
-    signal (leafBytes[maxOutLen], leafBytesLen) <== Concat(maxKeyRlpLen, maxValueRlpLen)(
-        a <== keyRlp,
-        aLen <== keyRlpLen,
+    prefixedKeyRlp[2] <== 0x80 + keyLen;
+    for(var i = 0; i < 33; i++) {
+        prefixedKeyRlp[i + 3] <== key[i];
+    }
+    prefixedKeyRlpLen <== 3 + keyLen;
+
+    signal (leafBytes[maxOutLen], leafBytesLen) <== Concat(maxPrefixedKeyRlpLen, maxValueRlpLen)(
+        a <== prefixedKeyRlp,
+        aLen <== prefixedKeyRlpLen,
         b <== valueRlp,
         bLen <== valueRlpLen
     );
 
+    // Convert output to bits
     outLen <== leafBytesLen * 8;
     component decomp[maxOutLen];
     for(var i = 0; i < maxOutLen; i++) {
