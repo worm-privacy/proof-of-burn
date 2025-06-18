@@ -20,32 +20,51 @@ template SubstringCheck(maxMainLen, subLen) {
     AssertLessEqThan(16)(mainLen, maxMainLen);
     AssertLessEqThan(16)(subLen, mainLen);
 
-    // A = 2^0 subInput[0] + 2^1 subInput[1] + ... + 2^255 subInput[255]
+    // A = 2^0*subInput[0] + 2^1*subInput[1] + ... + 2^(subLen - 1) subInput[subLen - 1]
     signal A[subLen + 1];
     A[0] <== 0;
     for (var i = 0; i < subLen; i++) {
         A[i + 1] <== subInput[i] * (2 ** i) + A[i];
     }
 
+    // B = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^(maxMainLen - 1) mainInput[maxMainLen - 1]
     signal B[maxMainLen + 1];
     B[0] <== 0;
     for (var i = 0; i < maxMainLen; i++) {
         B[i + 1] <== mainInput[i] * (2 ** i) + B[i];
     }
 
-    signal eq[maxMainLen - subLen + 1];
-    signal endCheckers[maxMainLen - subLen + 1];
+    // Substring exists if there is `i` where:
+    // 2 ^ i * A[subLen] == B[i] - B[i - subLen]
+
+    // Existence flags. When exists[i] is 1 it means that:
+    // mainInput[i..i + subLen] == subInput
+    signal exists[maxMainLen - subLen + 1];
+
+    // Used for creating an `allowed` filter: [1, 1, ..., 1, 1, 0, 0, ..., 0, 0]
+    // Where the first `mainLen - subLen` elements are 1, indicating the existence
+    // flags that should be considered.
+    signal isLastIndex[maxMainLen - subLen + 1];
     signal allowed[maxMainLen - subLen + 2];
     allowed[0] <== 1;
+
+    // For summing up all the *allowed* existence flags.
     signal sums[maxMainLen - subLen + 2];
     sums[0] <== 0;
+
     for (var i = 0; i < maxMainLen - subLen + 1; i++) {
-        eq[i] <== IsEqual()([A[subLen] * (2 ** i), B[i + subLen] - B[i]]);
-        endCheckers[i] <== IsEqual()([i, mainLen - subLen + 1]);
-        allowed[i + 1] <== allowed[i] * (1 - endCheckers[i]);
-        sums[i + 1] <== sums[i] + allowed[i + 1] * eq[i];
+        // Building the `allowed` filter
+        isLastIndex[i] <== IsEqual()([i, mainLen - subLen + 1]);
+        allowed[i + 1] <== allowed[i] * (1 - isLastIndex[i]);
+
+        // Existence check
+        exists[i] <== IsEqual()([A[subLen] * (2 ** i), B[i + subLen] - B[i]]);
+
+        // Existence flag is accumulated in the sum only when we are in the allowed region
+        sums[i + 1] <== sums[i] + allowed[i + 1] * exists[i];
     }
 
-    signal isz <== IsZero()(sums[maxMainLen - subLen + 1]);
-    out <== 1 - isz;
+    // Substring exists only when there has been a 1 while summing up the existence flags
+    signal doesNotExist <== IsZero()(sums[maxMainLen - subLen + 1]);
+    out <== 1 - doesNotExist;
 }

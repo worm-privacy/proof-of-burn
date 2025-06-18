@@ -16,7 +16,10 @@ template Selector(n) {
 
     AssertLessThan(16)(select, n);
 
+    // isEq is the filter: [0, ..., 0, 1, 0, ..., 0]
+    // Where the ith index is 1 and the rest are 0
     signal isEq[n];
+
     signal sum[n + 1];
     sum[0] <== 0;
     for(var i = 0; i < n; i++) {

@@ -242,7 +242,7 @@ template RlpEmptyAccount(maxBalanceBytes) {
 template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66; // More info in RlpEmptyAccount gadget
     var maxKeyLen = 1 + maxAddressHashBytes; // Leaf keys are prefixed with 0x20 or 0x3_
-    var maxPrefixedKeyRlpLen = 3 + maxKeyRlpLen; // Prefix: [0x80 + KEY_LEN, 0xf8, (KEY_LEN + 1) + VALUE_RLP_LEN]
+    var maxPrefixedKeyRlpLen = 3 + maxKeyLen; // Prefix: [0x80 + KEY_LEN, 0xf8, (KEY_LEN + 1) + VALUE_RLP_LEN]
     var maxValueRlpLen = 2 + maxRlpEmptyAccountLen; // Prefix: [0xb8, VALUE_LEN]
     var maxOutLen = maxPrefixedKeyRlpLen + maxValueRlpLen;
 
