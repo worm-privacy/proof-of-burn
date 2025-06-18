@@ -40,24 +40,27 @@ template InputsHasher() {
     signal input nullifier[256];
     signal input encryptedBalance[256];
     signal input fee;
+    signal input receiverAddress;
 
     signal output commitment;
 
     signal feeBits[256] <== FieldToBits()(fee);
+    signal receiverAddressBits[256] <== FieldToBits()(receiverAddress);
 
     // Pack the inputs within a 136 byte keccak block
-    signal keccakInputBits[1088];
+    signal keccakInputBits[2176];
     for(var i = 0; i < 256; i++) {
         keccakInputBits[i] <== blockRoot[i];
         keccakInputBits[256 + i] <== nullifier[i];
         keccakInputBits[512 + i] <== encryptedBalance[i];
         keccakInputBits[768 + i] <== feeBits[i];
+        keccakInputBits[1024 + i] <== receiverAddressBits[i];
     }
-    for(var i = 1024; i < 1088; i++) {
+    for(var i = 1280; i < 2176; i++) {
         keccakInputBits[i] <== 0;
     }
     
-    signal hash[256] <== KeccakBits(1)(keccakInputBits, 1024);
+    signal hash[256] <== KeccakBits(2)(keccakInputBits, 1280);
 
     // Ignore the last byte while converting keccak to field element
     component bitsToNum = Bits2NumBigEndian(31);
@@ -73,11 +76,12 @@ template InputsHasher() {
 // Example:
 //   entropy: [A single field number]
 //   addressHashNibbles: [64 nibbles, each 4 bits, resulting from MiMC(entropy, 0)
-template EntropyToAddressHash() {
+template EntropyAndReceiverToAddressHash() {
     signal input entropy;
+    signal input receiver;
     signal output addressHashNibbles[64];
 
-    signal hash <== Hasher()(entropy, 0);
+    signal hash <== Hasher()(entropy, receiver);
     signal hashBits[256] <== FieldToBits()(hash);
     component addressHash = KeccakBits(1);
     for(var i = 0; i < 20; i++) {
@@ -140,8 +144,11 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
     signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node
+    signal input receiverAddress; // The address which can receive the minted burnt-token
 
     signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
+
+    AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
     // Check if PoW has been done in order to find entropy
     ProofOfWorkChecker(powBits)(entropy);
@@ -168,7 +175,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal nullifier[256] <== EntropyToNullifier()(entropy);
 
     // Calculate burn-address
-    signal addressHashNibbles[64] <== EntropyToAddressHash()(entropy);
+    signal addressHashNibbles[64] <== EntropyAndReceiverToAddressHash()(entropy, receiverAddress);
     signal addressHashBytes[32] <== NibblesToBytes(32)(addressHashNibbles);
 
     // Fetch stateRoot and stateRoot from block-header
@@ -179,7 +186,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate public commitment
-    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee);
+    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee, receiverAddress);
     
     // Fetch the last layer (layerBits[numLayers - 1]) bits
     component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];

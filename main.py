@@ -12,11 +12,12 @@ POW_BITS = 250
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
 
 
-def burn(entropy):
+def burn(entropy, receiver):
+    recv = web3.Web3.to_int(hexstr=receiver)
     account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
-    hashed = w3.to_bytes(mimc7(Field(entropy), Field(0)).val)
+    hashed = w3.to_bytes(mimc7(Field(entropy), Field(recv)).val)
     addr = list(hashed[len(hashed)-20:])
     burn_addr = w3.to_checksum_address(bytes(addr))
     tx = {
@@ -39,7 +40,8 @@ def find_entropy(max_bits):
     return entropy
 
 entropy = find_entropy(POW_BITS)
-addr = burn(entropy)
+receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
+addr = burn(entropy, receiver)
 
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
@@ -140,6 +142,7 @@ fee = 123
 print(
     json.dumps(
         {
+            "receiverAddress": str(web3.Web3.to_int(hexstr=receiver)),
             "numLeafAddressNibbles": str(addr_term_len),
             "entropy": str(entropy),
             "fee": str(fee),
