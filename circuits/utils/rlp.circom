@@ -33,32 +33,43 @@ template ByteDecompose(N) {
     }
 }
 
-// Counts the number of bytes required to store the number (i.e., ignores trailing zeros).
+// Counts the number of bytes required to store the number (i.e., ignores leading zeros).
 //
 // Example:
-//   bytes: [3, 0, 1, 4, 2, 0, 0, 0]
+//   bytes: [3, 0, 1, 4, 2, 0, 0, 0] (3 leading-zeros)
 //   len:   5
 template CountBytes(N) {
     signal input bytes[N];
     signal output len;
 
+    // Example:
+    // bytes: [3, 0, 1, 4, 2, 0, 0, 0]
+
+    // Checking zero-ness of each byte
+    // isZero (Reversed):   [0, 1, 0, 0, 0, 1, 1, 1]
+    // isZero:              [1, 1, 1, 0, 0, 0, 1, 0]
     signal isZero[N];
-
-    signal isZeroResult[N + 1];
-    isZeroResult[0] <== 1;
-
     for (var i = 0; i < N; i++) {
         isZero[i] <== IsZero()(bytes[N - i - 1]);
-        isZeroResult[i + 1] <== isZero[i] * isZeroResult[i];
-    }
-    
-    var total = 0;
-    
-    for (var j = 1; j < N + 1; j++) {
-        total = total + isZeroResult[j];
     }
 
-    len <== N - total;
+    // Accumulating 1s until we reach a zero
+    // stillZero: [*, 1, 1, 1, 0, 0, 0, 0, 0]
+    // (The first element is initially set to 1)
+    signal stillZero[N + 1];
+    stillZero[0] <== 1;
+    for (var i = 0; i < N; i++) {
+        stillZero[i + 1] <== isZero[i] * stillZero[i];
+    }
+    
+    // Number of leading-zeros = Sum of bits in stillZero
+    var leadingZeros = 0;
+    for (var j = 1; j < N + 1; j++) {
+        leadingZeros = leadingZeros + stillZero[j];
+    }
+
+    // Number of effective bytes = N - number of leading-zeros
+    len <== N - leadingZeros;
 }
 
 
@@ -75,16 +86,19 @@ template ReverseArray(N) {
 
     AssertLessEqThan(16)(inLen, N);
 
-    var lenDiff = N - inLen;
-    signal reversed[N];
+    // Example:
+    //   in:    [1, 2, 3, 4, 5], inLen: 3
 
-    signal shifted[2 * N] <== Shift(N, N)(in, lenDiff);
+    // Shift-right by `N - inLen` to put the elements at the last of
+    // a 2 * N element array.
+    // shifted: [0, 0, 0, 0, 0, 0, 0, 1, 2, 3]
+    signal shifted[2 * N] <== Shift(N, N)(in, N - inLen);
 
+    // Reverse the whole thing and only keep the last N elements
+    // out: [3, 2, 1, 0, 0]
     for(var i = 0; i < N; i++) {
-        reversed[i] <== shifted[N - i - 1];
+        out[i] <== shifted[N - i - 1];
     }
-
-    out <== reversed;
 }
 
 template RlpInteger(N) {
