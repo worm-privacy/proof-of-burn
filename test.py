@@ -98,38 +98,76 @@ def rlp_empty_account(balance, max_balance_bytes):
 
 
 run(
+    "ByteDecompose(4)",
+    [
+        ({"num": [0x00]}, [0, 0, 0, 0]),
+        ({"num": [0xDE]}, [0xDE, 0, 0, 0]),
+        ({"num": [0xDEAD]}, [0xAD, 0xDE, 0, 0]),
+        ({"num": [0xDEADBE]}, [0xBE, 0xAD, 0xDE, 0]),
+        ({"num": [0xDEADBEEF]}, [0xEF, 0xBE, 0xAD, 0xDE]),
+        ({"num": [0xFF]}, [0xFF, 0, 0, 0]),
+        ({"num": [0xFFFFFFFF]}, [0xFF, 0xFF, 0xFF, 0xFF]),
+        ({"num": [0xFFFFFFFF + 1]}, None),
+    ],
+)
+
+run(
     "LeafKey(3)",
     [
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 6},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 6,
+            },
             [0x20, 0x12, 0x34, 0x56, 4],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 5},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 5,
+            },
             [0x32, 0x34, 0x56, 0x00, 3],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 4},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 4,
+            },
             [0x20, 0x34, 0x56, 0x00, 3],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 3},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 3,
+            },
             [0x34, 0x56, 0x00, 0x00, 2],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 2},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 2,
+            },
             [0x20, 0x56, 0x00, 0x00, 2],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 1},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 1,
+            },
             [0x36, 0x00, 0x00, 0x00, 1],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 0},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 0,
+            },
             [0x20, 0x00, 0x00, 0x00, 1],
         ),
         (
-            {"addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6], "addressHashNibblesLen": 7},
+            {
+                "addressHashNibbles": [0x1, 0x2, 0x3, 0x4, 0x5, 0x6],
+                "addressHashNibblesLen": 7,
+            },
             None,
         ),
     ],

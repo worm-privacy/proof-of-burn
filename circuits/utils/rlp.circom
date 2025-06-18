@@ -18,18 +18,19 @@ template ByteDecompose(N) {
 
     assert(N <= 31); // Avoid overflows
 
-    var pow = 1;
-    var total = 0;
+    // Decompose into bits and arrange them into 8-bit chunks
+    signal bits[N * 8] <== Num2Bits(N * 8)(num);
+    signal byteBits[N][8];
     for (var i = 0; i < N; i++) {
-        bytes[i] <-- (num >> (8 * i)) & 0xFF;
-        total += pow * bytes[i];
-        pow = pow * 256; 
-
-        // Make sure the bytes[i] is actually a byte
-        AssertBits(8)(bytes[i]);
+        for(var j = 0; j < 8; j++) {
+            byteBits[i][j] <== bits[8 * i + j];
+        }
     }
 
-    total === num; 
+    // Convert 8-bit chunks to bytes
+    for (var i = 0; i < N; i++) {
+        bytes[i] <== Bits2Num(8)(byteBits[i]);
+    }
 }
 
 // Counts the number of bytes required to store the number (i.e., ignores trailing zeros).
@@ -43,7 +44,7 @@ template CountBytes(N) {
 
     signal isZero[N];
 
-    signal isZeroResult[N+1];
+    signal isZeroResult[N + 1];
     isZeroResult[0] <== 1;
 
     for (var i = 0; i < N; i++) {
