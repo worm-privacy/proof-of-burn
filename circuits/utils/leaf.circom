@@ -16,17 +16,17 @@ template ShiftLeft(n) {
 
     AssertLessEqThan(16)(count, n);
 
-    signal outsum[n][n + 1];
-    for(var i = 0; i < n; i++) {
-        outsum[i][0] <== 0;
-    }
-    signal eqs[n][n];
+    var outVars[n];
+    signal isEq[n][n];
+    signal temp[n][n];
+    // out[i] <== sum_j(in[j] * (i == j - count))
     for(var i = 0; i < n; i++) {
         for(var j = 0; j < n; j++) {
-            eqs[i][j] <== IsEqual()([i, j - count]);
-            outsum[i][j+1] <== outsum[i][j] + eqs[i][j] * in[j];
+            isEq[i][j] <== IsEqual()([i, j - count]) ;
+            temp[i][j] <== isEq[i][j] * in[j];
+            outVars[i] += temp[i][j];
         }
-        out[i] <== outsum[i][n];
+        out[i] <== outVars[i];
     }
 }
 
