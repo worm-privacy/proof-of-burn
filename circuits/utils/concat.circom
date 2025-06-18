@@ -14,13 +14,17 @@ template Mask(n) {
     signal input count;
     signal output out[n];
 
-    // Filter: [1, 1, 1, ..., 1, 1, 0, 0, 0, ..., 0, 0]
+    // Generate filter: [1, 1, 1, ..., 1, 1, 0, 0, 0, ..., 0, 0]
     signal filter[n + 1];
     filter[0] <== 1;
     signal isEq[n];
     for(var i = 0; i < n; i++) {
         isEq[i] <== IsEqual()([i, count]);
         filter[i + 1] <== filter[i] * (1 - isEq[i]);
+    }
+
+    // Apply filter
+    for(var i = 0; i < n; i++) {
         out[i] <== in[i] * filter[i + 1];
     }
 }
@@ -40,6 +44,9 @@ template Shift(n, maxShift) {
 
     var outVars[n + maxShift];
 
+    // Shift by `i` only when `i == count`
+    // out[i + j] <== (i == count) * in[j]
+    // I.e out[i + j] <== in[j] when `i == count`
     signal isEq[maxShift + 1];
     signal temps[maxShift + 1][n];
     for(var i = 0; i <= maxShift; i++) {
@@ -78,10 +85,21 @@ template Concat(maxLenA, maxLenB) {
     AssertLessEqThan(16)(aLen, maxLenA);
     AssertLessEqThan(16)(bLen, maxLenB);
 
+    // Example:
+    // a: [1, 2, 3, 4, 5] aLen: 3
+    // b: [10, 20, 30, 40, 50] bLen: 2
+
+    // maskedA: [1, 2, 3, 0, 0]
     signal maskedA[maxLenA] <== Mask(maxLenA)(a, aLen);
+
+    // maskedB: [10, 20, 0, 0, 0]
     signal maskedB[maxLenB] <== Mask(maxLenB)(b, bLen);
+
+    // shiftedB: [0, 0, 0, 10, 20, 0, 0, 0]
     signal shiftedB[maxLenA + maxLenB] <== Shift(maxLenB, maxLenA)(maskedB, aLen);
     
+    // out = maskedA + shiftedB
+    // out: [1, 2, 3, 10, 20, 0, 0, 0, 0, 0]
     for(var i = 0; i < maxLenA + maxLenB; i++) {
         if(i < maxLenA) {
             out[i] <== maskedA[i] + shiftedB[i];
