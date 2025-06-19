@@ -29,13 +29,15 @@ template SubstringCheck(maxMainLen, subLen) {
     // Convert the sub-input into a field-element
     signal subInputNum <== Bits2Num(subLen)(subInput);
 
-    // B[i + 1] = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^i*mainInput[i]
+    // B[i] = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^(i-1)*mainInput[i-1]
     signal B[maxMainLen + 1];
     B[0] <== 0;
     for (var i = 0; i < maxMainLen; i++) {
         B[i + 1] <== mainInput[i] * (2 ** i) + B[i];
     }
-
+    // B[i + N] - B[i] = 2^i.mainInput[i] + ... + 2^(i+N-1).mainInput[i+N-1]
+    //                 = 2^i.(2^0.mainInput[i] + ... + 2^(N-1).mainInput[i+N-1])
+    //
     // Substring-ness Equation: Substring exists if there is `i` where:
     // 2 ^ i * subInputNum == B[i + subLen] - B[i]
     //
