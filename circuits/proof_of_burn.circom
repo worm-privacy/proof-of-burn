@@ -8,7 +8,7 @@
 pragma circom 2.2.2;
 
 include "./utils/keccak/keccak.circom";
-include "./utils/substring_finder.circom";
+include "./utils/substring_check.circom";
 include "./utils/concat.circom";
 include "./utils/hasher.circom";
 include "./utils/rlp.circom";
@@ -212,6 +212,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal existingLayer[maxNumLayers];
     signal substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][256];
+    signal reducedLayerKeccaks[maxNumLayers][248];
+
     for(var i = 0; i < maxNumLayers; i++) {
         // Layer exists if: i < numLayers
         existingLayer[i] <== LessThan(16)([i, numLayers]);
@@ -219,9 +221,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         // Calculate keccak of this layer
         layerKeccaks[i] <== KeccakBits(maxNodeBlocks)(layerBits[i], layerBitsLens[i]);
 
+        // Ignore the last byte of keccak so that the bits fit in a field element
+        for(var j = 0; j < 248; j++) {
+            reducedLayerKeccaks[i][j] <== layerKeccaks[i][j];
+        }
+
         if(i > 0) {
-            substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136 * 8, 256)(
-                subInput <== layerKeccaks[i],
+            substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136 * 8, 248)(
+                subInput <== reducedLayerKeccaks[i],
                 mainLen <== layerBitsLens[i - 1],
                 mainInput <== layerBits[i - 1]
             );

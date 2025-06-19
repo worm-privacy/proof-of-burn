@@ -13,7 +13,7 @@ def run(main, test_cases):
         include "utils/leaf.circom";
         include "utils/rlp.circom";
         include "utils/selector.circom";
-        include "utils/substring_finder.circom";
+        include "utils/substring_check.circom";
         include "utils/utils.circom";
         include "utils/keccak/keccak.circom";
         

@@ -17,25 +17,36 @@ template SubstringCheck(maxMainLen, subLen) {
     signal input subInput[subLen];
     signal output out;
 
+    assert(subLen <= 248); // So that subInput fits in a field element
+
+    // Substring-checker works with binary inputs
+    AssertBinary(subLen)(subInput);
+    AssertBinary(maxMainLen)(mainInput);
+
     AssertLessEqThan(16)(mainLen, maxMainLen);
     AssertLessEqThan(16)(subLen, mainLen);
 
-    // A = 2^0*subInput[0] + 2^1*subInput[1] + ... + 2^(subLen - 1) subInput[subLen - 1]
-    signal A[subLen + 1];
-    A[0] <== 0;
-    for (var i = 0; i < subLen; i++) {
-        A[i + 1] <== subInput[i] * (2 ** i) + A[i];
-    }
+    // Convert the sub-input into a field-element
+    signal subInputNum <== Bits2Num(subLen)(subInput);
 
-    // B = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^(maxMainLen - 1) mainInput[maxMainLen - 1]
+    // B[i + 1] = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^i*mainInput[i]
     signal B[maxMainLen + 1];
     B[0] <== 0;
     for (var i = 0; i < maxMainLen; i++) {
         B[i + 1] <== mainInput[i] * (2 ** i) + B[i];
     }
 
-    // Substring exists if there is `i` where:
-    // 2 ^ i * A[subLen] == B[i] - B[i - subLen]
+    // Substring-ness Equation: Substring exists if there is `i` where:
+    // 2 ^ i * subInputNum == B[i + subLen] - B[i]
+    //
+    // Reasons this is safe:
+    // 1. subInput's length is limited to 248 bits, so subInputNum will not overflow
+    // 2. The following equation holds even when both sides overflow:
+    //      B[i + subLen] - B[i] == 2^i * Num2Bits(B[i..i + subLen])
+    //      (This is true since reciprocals are unique in field elements)
+    // 3. Therefore this also has to be true:
+    //      Num2Bits(B[i..i + subLen]) == subInputNum
+    // 4. Thus, all the bits in B[i..i + subLen] has to be equal with subInput
 
     // Existence flags. When exists[i] is 1 it means that:
     // mainInput[i..i + subLen] == subInput
@@ -58,7 +69,7 @@ template SubstringCheck(maxMainLen, subLen) {
         allowed[i + 1] <== allowed[i] * (1 - isLastIndex[i]);
 
         // Existence check
-        exists[i] <== IsEqual()([A[subLen] * (2 ** i), B[i + subLen] - B[i]]);
+        exists[i] <== IsEqual()([subInputNum * (2 ** i), B[i + subLen] - B[i]]);
 
         // Existence flag is accumulated in the sum only when we are in the allowed region
         sums[i + 1] <== sums[i] + allowed[i + 1] * exists[i];
