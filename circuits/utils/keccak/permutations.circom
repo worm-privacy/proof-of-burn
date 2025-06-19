@@ -3,6 +3,7 @@
 
 pragma circom 2.2.2;
 
+include "../../circomlib/circuits/gates.circom";
 include "./utils.circom";
 
 
@@ -543,7 +544,7 @@ template stepChi() {
     var i;
 
     // ^b
-    component bXor = XorArraySingle(64);
+    component bXor = NotArray(64);
     for (i=0; i<64; i++) {
         bXor.a[i] <== b[i];
     }
