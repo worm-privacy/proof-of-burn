@@ -18,6 +18,10 @@
 */
 pragma circom 2.2.2;
 
+// Keyvan: OK
+// Example:
+// in: [1, 2, 3, 4, 5], n: 3
+// out: [4, 5, 0, 0, 0]
 template ShR(n, r) {
     signal input in[n];
     signal output out[n];

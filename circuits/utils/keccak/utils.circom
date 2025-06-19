@@ -7,6 +7,7 @@ include "./gates.circom";
 include "./xor3.circom";
 include "./shift.circom"; // contains ShiftRight
 
+// Keyvan: OK
 template Xor5(n) {
     signal input a[n];
     signal input b[n];
@@ -37,6 +38,7 @@ template Xor5(n) {
     }
 }
 
+// Keyvan: OK
 template XorArray(n) {
     signal input a[n];
     signal input b[n];
@@ -54,6 +56,7 @@ template XorArray(n) {
     }
 }
 
+// Keyvan: OK
 template XorArraySingle(n) {
     signal input a[n];
     signal output out[n];
@@ -70,6 +73,7 @@ template XorArraySingle(n) {
     }
 }
 
+// Keyvan: OK
 template OrArray(n) {
     signal input a[n];
     signal input b[n];
@@ -87,6 +91,7 @@ template OrArray(n) {
     }
 }
 
+// Keyvan: OK
 template AndArray(n) {
     signal input a[n];
     signal input b[n];
@@ -104,6 +109,10 @@ template AndArray(n) {
     }
 }
 
+// Keyvan: OK
+// Example:
+// in: [1, 2, 3, 4, 5], n: 3
+// out: [0, 0, 0, 1, 2]
 template ShL(n, r) {
     signal input in[n];
     signal output out[n];

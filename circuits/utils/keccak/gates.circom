@@ -18,6 +18,7 @@
 */
 pragma circom 2.2.2;
 
+// Keyvan: OK
 template XOR() {
     signal input a;
     signal input b;
@@ -26,6 +27,7 @@ template XOR() {
     out <== a + b - 2*a*b;
 }
 
+// Keyvan: OK
 template AND() {
     signal input a;
     signal input b;
@@ -34,6 +36,7 @@ template AND() {
     out <== a*b;
 }
 
+// Keyvan: OK
 template OR() {
     signal input a;
     signal input b;
@@ -42,6 +45,7 @@ template OR() {
     out <== a + b - a*b;
 }
 
+// Keyvan: OK
 template NOT() {
     signal input in;
     signal output out;
@@ -49,6 +53,7 @@ template NOT() {
     out <== 1 + in - 2*in;
 }
 
+// Keyvan: OK
 template NAND() {
     signal input a;
     signal input b;
@@ -57,6 +62,7 @@ template NAND() {
     out <== 1 - a*b;
 }
 
+// Keyvan: OK
 template NOR() {
     signal input a;
     signal input b;
@@ -65,6 +71,7 @@ template NOR() {
     out <== a*b + 1 - a - b;
 }
 
+// Keyvan: OK
 template MultiAND(n) {
     signal input in[n];
     signal output out;

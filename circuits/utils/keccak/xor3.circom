@@ -19,6 +19,9 @@
 
 /* Xor3 function for sha256
 
+a ^ b = a + b - 2ab
+(a ^ b) ^ c = (a + b - 2ab) + c - 2(a + b - 2ab)c = a + b + c - 2ab - 2ac - 2bc + 4abc
+
 out = a ^ b ^ c  =>
 
 out = a+b+c - 2*a*b - 2*a*c - 2*b*c + 4*a*b*c   =>
@@ -27,10 +30,12 @@ out = a*( 1 - 2*b - 2*c + 4*b*c ) + b + c - 2*b*c =>
 
 mid = b*c
 out = a*( 1 - 2*b -2*c + 4*mid ) + b + c - 2 * mid
+    = a - 2ab - 2ac + 4abc + b + c - 2bc = a + b + c - 2ab - 2ac -2bc + 4abc
 
 */
 pragma circom 2.2.2;
 
+// Keyvan: OK
 template Xor3(n) {
     signal input a[n];
     signal input b[n];
