@@ -57,15 +57,8 @@ template XorArraySingle(n) {
     signal input a[n];
     signal output out[n];
     var i;
-
-    component aux[n];
     for (i=0; i<n; i++) {
-        aux[i] = XOR();
-        aux[i].a <== a[i];
-        aux[i].b <== 1;
-    }
-    for (i=0; i<n; i++) {
-        out[i] <== aux[i].out;
+        out[i] <== 1 - a[i];
     }
 }
 
