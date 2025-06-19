@@ -23,18 +23,14 @@ template Xor5(n) {
         xor3.b[i] <== b[i];
         xor3.c[i] <== c[i];
     }
-    component xor4 = XorArray(n);
+    component xor3_2 = Xor3(n);
     for (i=0; i<n; i++) {
-        xor4.a[i] <== xor3.out[i];
-        xor4.b[i] <== d[i];
-    }
-    component xor5 = XorArray(n);
-    for (i=0; i<n; i++) {
-        xor5.a[i] <== xor4.out[i];
-        xor5.b[i] <== e[i];
+        xor3_2.a[i] <== xor3.out[i];
+        xor3_2.b[i] <== d[i];
+        xor3_2.c[i] <== e[i];
     }
     for (i=0; i<n; i++) {
-        out[i] <== xor5.out[i];
+        out[i] <== xor3_2.out[i];
     }
 }
 
