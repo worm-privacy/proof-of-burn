@@ -15,7 +15,7 @@ def run(main, test_cases):
         include "utils/selector.circom";
         include "utils/substring_check.circom";
         include "utils/utils.circom";
-        include "utils/keccak/keccak.circom";
+        include "utils/keccak.circom";
         
         """
         f.write(imports + f"component main = {main};")

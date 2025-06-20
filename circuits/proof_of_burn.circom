@@ -7,7 +7,7 @@
 
 pragma circom 2.2.2;
 
-include "./utils/keccak/keccak.circom";
+include "./utils/keccak.circom";
 include "./utils/substring_check.circom";
 include "./utils/concat.circom";
 include "./utils/hasher.circom";
