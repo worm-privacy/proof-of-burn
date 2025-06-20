@@ -100,7 +100,7 @@ template NotArray(n) {
     signal input a[n];
     signal output out[n];
     for (var i = 0; i < n; i++) {
-        out[i] <== 1 - a[i];
+        out[i] <== NOT()(a[i]);
     }
 }
 
