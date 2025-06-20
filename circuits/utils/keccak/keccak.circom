@@ -8,11 +8,11 @@ include "../selector.circom";
 include "./permutations.circom";
 
 template KeccakfRound(r) {
-    signal input in[25 * 64];
-    signal output out[25 * 64];
-    signal theta[25 * 64] <== Theta()(in);
-    signal rhopi[25 * 64] <== RhoPi()(theta);
-    signal chi[25 * 64] <== Chi()(rhopi);
+    signal input in[25][64];
+    signal output out[25][64];
+    signal theta[25][64] <== Theta()(in);
+    signal rhopi[25][64] <== RhoPi()(theta);
+    signal chi[25][64] <== Chi()(rhopi);
     out <== Iota(r)(chi);
 }
 
@@ -33,16 +33,20 @@ template Absorb() {
             aux[i].b[j] <== block[i * 64 + j];
         }
         for (var j = 0; j < 64; j++) {
-            newS.in[i * 64 + j] <== aux[i].out[j];
+            newS.in[i][j] <== aux[i].out[j];
         }
     }
     // fill the missing s that was not covered by the loop over
     // blockSizeBytes/8
-    for (var i=(blockSizeBytes / 8) * 64; i < 25 * 64; i++) {
-        newS.in[i] <== s[i];
+    for (var i=(blockSizeBytes / 8); i < 25; i++) {
+        for(var j = 0; j < 64; j++) {
+            newS.in[i][j] <== s[i * 64 + j];
+        }
     }
-    for (var i = 0; i < 25 * 64; i++) {
-        out[i] <== newS.out[i];
+    for (var i = 0; i < 25; i++) {
+        for(var j = 0; j < 64; j++) {
+            out[i * 64 + j] <== newS.out[i][j];
+        }
     }
 }
 
@@ -96,32 +100,24 @@ template Squeeze(nBits) {
 }
 
 template Keccakf() {
-    signal input in[25 * 64];
-    signal output out[25 * 64];
+    signal input in[25][64];
+    signal output out[25][64];
 
     // 24 rounds
     component round[24];
-    signal midRound[24 * 25 * 64];
+    signal midRound[24][25][64];
     for (var i = 0; i < 24; i++) {
         round[i] = KeccakfRound(i);
         if (i == 0) {
-            for (var j = 0; j < 25 * 64; j++) {
-                midRound[j] <== in[j];
-            }
+            midRound[0] <== in;
         }
-        for (var j = 0; j < 25 * 64; j++) {
-            round[i].in[j] <== midRound[i * 25 * 64 + j];
-        }
+        round[i].in <== midRound[i];
         if (i < 23) {
-            for (var j = 0; j < 25 * 64; j++) {
-                midRound[(i + 1) * 25 * 64 + j] <== round[i].out[j];
-            }
+            midRound[i + 1] <== round[i].out;
         }
     }
 
-    for (var i = 0; i < 25 * 64; i++) {
-        out[i] <== round[23].out[i];
-    }
+    out <== round[23].out;
 }
 
 template Keccak(nBlocksIn) {
