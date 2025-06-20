@@ -481,79 +481,94 @@ print(
     )
 )
 
-
 run(
     "SubstringCheck(10, 3)",
     [
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 3, 1, 1, 0, 0, 0, 1, 0],
+                "mainLen": 3,
+                "subInput": [1, 0, 1],
+            },
+            None,
+        ),
+        (
+            {
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
+                "mainLen": 3,
+                "subInput": [1, 0, 3],
+            },
+            None,
+        ),
+        (
+            {
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 0,
-                "subInput": [3, 4, 5],
+                "subInput": [1, 0, 1],
             },
             None,
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 2,
-                "subInput": [3, 4, 5],
+                "subInput": [1, 0, 1],
             },
             None,
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 3,
-                "subInput": [1, 2, 3],
+                "subInput": [1, 0, 1],
             },
             [1],
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 3,
-                "subInput": [3, 4, 5],
+                "subInput": [0, 1, 0],
             },
             [0],
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 4,
-                "subInput": [3, 4, 5],
+                "subInput": [1, 1, 1],
             },
             [0],
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 5,
-                "subInput": [3, 4, 5],
+                "subInput": [1, 1, 1],
             },
             [1],
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 1, 0, 0, 0],
                 "mainLen": 9,
-                "subInput": [8, 9, 10],
+                "subInput": [0, 0, 0],
             },
             [0],
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 1, 0, 0, 0],
                 "mainLen": 10,
-                "subInput": [8, 9, 10],
+                "subInput": [0, 0, 0],
             },
             [1],
         ),
         (
             {
-                "mainInput": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 11,
-                "subInput": [8, 9, 10],
+                "subInput": [0, 1, 0],
             },
             None,
         ),
