@@ -70,18 +70,18 @@ template InputsHasher() {
     commitment <== bitsToNum.out;
 }
 
-// Takes an entropy input and generates a burn address represented as 64 4-bit nibbles 
+// Takes an burnKey input and generates a burn address represented as 64 4-bit nibbles 
 // using the MiMC hash function, creating a unique address hash.
 //
 // Example:
-//   entropy: [A single field number]
-//   addressHashNibbles: [64 nibbles, each 4 bits, resulting from MiMC(entropy, 0)
-template EntropyAndReceiverToAddressHash() {
-    signal input entropy;
+//   burnKey: [A single field number]
+//   addressHashNibbles: [64 nibbles, each 4 bits, resulting from MiMC(burnKey, 0)
+template BurnKeyAndReceiverToAddressHash() {
+    signal input burnKey;
     signal input receiver;
     signal output addressHashNibbles[64];
 
-    signal hash <== Hasher()(entropy, receiver);
+    signal hash <== Hasher()(burnKey, receiver);
     signal hashBits[256] <== FieldToBits()(hash);
     component addressHash = KeccakBits(1);
     for(var i = 0; i < 20; i++) {
@@ -106,36 +106,36 @@ template EntropyAndReceiverToAddressHash() {
     }
 }
 
-// Encrypts a balance by applying the MiMC hash function with a given entropy as the salt. 
-// The entropy acts as a unique value that ensures different encrypted outputs for the same balance.
+// Encrypts a balance by applying the MiMC hash function with a given burnKey as the salt. 
+// The burnKey acts as a unique value that ensures different encrypted outputs for the same balance.
 template EncryptBalance() {
-    signal input entropy;
+    signal input burnKey;
     signal input balance;
     signal output encryptedBalance[256];
 
-    signal hash <== Hasher()(balance, entropy);
+    signal hash <== Hasher()(burnKey, balance);
     encryptedBalance <== FieldToBits()(hash);
 }
 
-// Nullifier: MiMC(entropy, 1)
-template EntropyToNullifier() {
-    signal input entropy;
+// Nullifier: MiMC(burnKey, 1)
+template BurnKeyToNullifier() {
+    signal input burnKey;
     signal output nullifier[256];
 
-    signal hash <== Hasher()(entropy, 1);
+    signal hash <== Hasher()(burnKey, 1);
     nullifier <== FieldToBits()(hash);
 }
 
 
-// Proof-of-Work: MiMC(entropy, 2) < 2^maxBits
+// Proof-of-Work: MiMC(burnKey, 2) < 2^maxBits
 template ProofOfWorkChecker(maxBits) {
-    signal input entropy;
-    signal hash <== Hasher()(entropy, 2);
+    signal input burnKey;
+    signal hash <== Hasher()(burnKey, 2);
     AssertBits(maxBits)(hash);
 }
 
 template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powBits) {
-    signal input entropy; // Secret field number from which the burn address and nullifier are derived.
+    signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
     signal input fee; // To be paid to the relayer who actually submits the proof
     signal input balance; // Balance of the burn-address
     signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
@@ -150,8 +150,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
-    // Check if PoW has been done in order to find entropy
-    ProofOfWorkChecker(powBits)(entropy);
+    // Check if PoW has been done in order to find burnKey
+    ProofOfWorkChecker(powBits)(burnKey);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
@@ -169,13 +169,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBinary(maxHeaderBlocks * 136 * 8)(blockHeader);
 
     // Calculate encrypted-balance
-    signal encryptedBalance[256] <== EncryptBalance()(entropy, balance - fee);
+    signal encryptedBalance[256] <== EncryptBalance()(burnKey, balance - fee);
 
     // Calculate nullifier
-    signal nullifier[256] <== EntropyToNullifier()(entropy);
+    signal nullifier[256] <== BurnKeyToNullifier()(burnKey);
 
     // Calculate burn-address
-    signal addressHashNibbles[64] <== EntropyAndReceiverToAddressHash()(entropy, receiverAddress);
+    signal addressHashNibbles[64] <== BurnKeyAndReceiverToAddressHash()(burnKey, receiverAddress);
     signal addressHashBytes[32] <== NibblesToBytes(32)(addressHashNibbles);
 
     // Fetch stateRoot and stateRoot from block-header

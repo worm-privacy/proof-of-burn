@@ -16,24 +16,22 @@ include "./utils/hasher.circom";
 //
 // Example:
 //   balance:           1000
-//   salt:              123456
+//   burnKey:           123456
 //   coin:              MiMC(1000, 123456)
 //   withdrawnBalance:  200
-//   remainingCoinSalt: 234567
-//   remainingCoin:     MiMC(800, 234567)
+//   remainingCoin:     MiMC(800, 123456)
 template Spend(maxAmountBits) {
     signal input balance;
-    signal input salt;
+    signal input burnKey;
     signal input withdrawnBalance;
-    signal input remainingCoinSalt;
 
     signal output coin;
     signal output remainingCoin;
 
     AssertGreaterEqThan(maxAmountBits)(balance, withdrawnBalance);
 
-    coin <== Hasher()(balance, salt);
-    remainingCoin <== Hasher()(balance - withdrawnBalance, remainingCoinSalt);
+    coin <== Hasher()(balance, burnKey);
+    remainingCoin <== Hasher()(balance - withdrawnBalance, burnKey);
 }
 
 component main {public [withdrawnBalance]} = Spend(200);
