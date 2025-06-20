@@ -13,11 +13,11 @@ template ShR(n, r) {
     signal input in[n];
     signal output out[n];
 
-    for (var i=0; i<n; i++) {
-        if (i+r >= n) {
+    for (var i = 0; i < n; i++) {
+        if (i + r >= n) {
             out[i] <== 0;
         } else {
-            out[i] <== in[ i+r ];
+            out[i] <== in[i + r];
         }
     }
 }
@@ -31,11 +31,11 @@ template ShL(n, r) {
     signal input in[n];
     signal output out[n];
 
-    for (var i=0; i<n; i++) {
+    for (var i = 0; i < n; i++) {
         if (i < r) {
             out[i] <== 0;
         } else {
-            out[i] <== in[ i-r ];
+            out[i] <== in[i - r];
         }
     }
 }
@@ -64,9 +64,9 @@ template Xor3(n) {
     signal output out[n];
     signal mid[n];
 
-    for (var k=0; k<n; k++) {
-        mid[k] <== b[k]*c[k];
-        out[k] <== a[k] * (1 -2*b[k]  -2*c[k] +4*mid[k]) + b[k] + c[k] -2*mid[k];
+    for (var k = 0; k < n; k++) {
+        mid[k] <== b[k] * c[k];
+        out[k] <== a[k] * (1 - 2 * b[k] - 2 * c[k] + 4 * mid[k]) + b[k] + c[k] - 2 * mid[k];
     }
 }
 
@@ -78,23 +78,9 @@ template Xor5(n) {
     signal input d[n];
     signal input e[n];
     signal output out[n];
-    var i;
     
-    component xor3 = Xor3(n);
-    for (i=0; i<n; i++) {
-        xor3.a[i] <== a[i];
-        xor3.b[i] <== b[i];
-        xor3.c[i] <== c[i];
-    }
-    component xor3_2 = Xor3(n);
-    for (i=0; i<n; i++) {
-        xor3_2.a[i] <== xor3.out[i];
-        xor3_2.b[i] <== d[i];
-        xor3_2.c[i] <== e[i];
-    }
-    for (i=0; i<n; i++) {
-        out[i] <== xor3_2.out[i];
-    }
+    signal xor_abc[n] <== Xor3(n)(a, b, c);
+    out <== Xor3(n)(xor_abc, d, e);
 }
 
 // Keyvan: OK
@@ -102,16 +88,9 @@ template XorArray(n) {
     signal input a[n];
     signal input b[n];
     signal output out[n];
-    var i;
 
-    component aux[n];
-    for (i=0; i<n; i++) {
-        aux[i] = XOR();
-        aux[i].a <== a[i];
-        aux[i].b <== b[i];
-    }
-    for (i=0; i<n; i++) {
-        out[i] <== aux[i].out;
+    for (var i = 0; i < n; i++) {
+        out[i] <== XOR()(a[i], b[i]);
     }
 }
 
@@ -119,8 +98,7 @@ template XorArray(n) {
 template NotArray(n) {
     signal input a[n];
     signal output out[n];
-    var i;
-    for (i=0; i<n; i++) {
+    for (var i = 0; i < n; i++) {
         out[i] <== 1 - a[i];
     }
 }
@@ -130,16 +108,9 @@ template OrArray(n) {
     signal input a[n];
     signal input b[n];
     signal output out[n];
-    var i;
 
-    component aux[n];
-    for (i=0; i<n; i++) {
-        aux[i] = OR();
-        aux[i].a <== a[i];
-        aux[i].b <== b[i];
-    }
-    for (i=0; i<n; i++) {
-        out[i] <== aux[i].out;
+    for (var i = 0; i < n; i++) {
+        out[i] <== OR()(a[i], b[i]);
     }
 }
 
@@ -148,15 +119,8 @@ template AndArray(n) {
     signal input a[n];
     signal input b[n];
     signal output out[n];
-    var i;
 
-    component aux[n];
-    for (i=0; i<n; i++) {
-        aux[i] = AND();
-        aux[i].a <== a[i];
-        aux[i].b <== b[i];
-    }
-    for (i=0; i<n; i++) {
-        out[i] <== aux[i].out;
+    for (var i = 0; i < n; i++) {
+        out[i] <== AND()(a[i], b[i]);
     }
 }
