@@ -6,6 +6,13 @@ pragma circom 2.2.2;
 include "../../circomlib/circuits/gates.circom";
 include "./utils.circom";
 
+template Pick(N, C) {
+    signal input in[N];
+    signal output out[C];
+    for(var i = 0; i < C; i++) {
+        out[i] <== in[i];
+    }
+}
 
 // Theta
 
@@ -15,336 +22,87 @@ template D(n, shl, shr) {
     signal input b[n];
     signal output out[n];
 
-    component aux0 = ShR(64, shr);
-    for (var i = 0; i < 64; i++) {
-        aux0.in[i] <== a[i];
-    }
-    component aux1 = ShL(64, shl);
-    for (var i = 0; i < 64; i++) {
-        aux1.in[i] <== a[i];
-    }
-    component aux2 = OrArray(64);
-    for (var i = 0; i < 64; i++) {
-        aux2.a[i] <== aux0.out[i];
-        aux2.b[i] <== aux1.out[i];
-    }
-    component aux3 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        aux3.a[i] <== b[i];
-        aux3.b[i] <== aux2.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[i] <== aux3.out[i];
-    }
+    signal a64[64] <== Pick(n, 64)(a);
+    signal b64[64] <== Pick(n, 64)(b);
+    signal aux0[64] <== ShR(64, shr)(a);
+    signal aux1[64] <== ShL(64, shl)(a);
+    signal aux2[64] <== OrArray(64)(aux0, aux1);
+    out <== XorArray(64)(b, aux2);
 }
 
 template Theta() {
     signal input in[25 * 64];
     signal output out[25 * 64];
 
-    component c0 = Xor5(64);
-    for (var i = 0; i < 64; i++) {
-        c0.a[i] <== in[i];
-        c0.b[i] <== in[5 * 64 + i];
-        c0.c[i] <== in[10 * 64 + i];
-        c0.d[i] <== in[15 * 64 + i];
-        c0.e[i] <== in[20 * 64 + i];
+    signal chunkedIn[25][64];
+    for (var i = 0; i < 25; i++) {
+        for (var j = 0; j < 64; j++) {
+            chunkedIn[i][j] <== in[i * 64 + j];
+        }
     }
 
-    component c1 = Xor5(64);
-    for (var i = 0; i < 64; i++) {
-        c1.a[i] <== in[1 * 64 + i];
-        c1.b[i] <== in[6 * 64 + i];
-        c1.c[i] <== in[11 * 64 + i];
-        c1.d[i] <== in[16 * 64 + i];
-        c1.e[i] <== in[21 * 64 + i];
-    }
+    signal c0[64] <== Xor5(64)(chunkedIn[0], chunkedIn[5], chunkedIn[10], chunkedIn[15], chunkedIn[20]);
+    signal c1[64] <== Xor5(64)(chunkedIn[1], chunkedIn[6], chunkedIn[11], chunkedIn[16], chunkedIn[21]);
+    signal c2[64] <== Xor5(64)(chunkedIn[2], chunkedIn[7], chunkedIn[12], chunkedIn[17], chunkedIn[22]);
+    signal c3[64] <== Xor5(64)(chunkedIn[3], chunkedIn[8], chunkedIn[13], chunkedIn[18], chunkedIn[23]);
+    signal c4[64] <== Xor5(64)(chunkedIn[4], chunkedIn[9], chunkedIn[14], chunkedIn[19], chunkedIn[24]);
 
-    component c2 = Xor5(64);
+    signal d0[64] <== D(64, 1, 64 - 1)(c1, c4); // d = c4 ^ (c1<<1 | c1>>(64 - 1))
+    signal r0[64] <== XorArray(64)(chunkedIn[0], d0); // r[0] = a[0] ^ d
+    signal r5[64] <== XorArray(64)(chunkedIn[5], d0); // r[5] = a[5] ^ d
+    signal r10[64] <== XorArray(64)(chunkedIn[10], d0); // r[10] = a[10] ^ d
+    signal r15[64] <== XorArray(64)(chunkedIn[15], d0); // r[15] = a[15] ^ d
+    signal r20[64] <== XorArray(64)(chunkedIn[20], d0); // r[20] = a[20] ^ d
+    signal d1[64] <== D(64, 1, 64 - 1)(c2, c0); // d = c0 ^ (c2<<1 | c2>>(64 - 1))
+    signal r1[64] <== XorArray(64)(chunkedIn[1], d1); // r[1] = a[1] ^ d
+    signal r6[64] <== XorArray(64)(chunkedIn[6], d1); // r[6] = a[6] ^ d
+    signal r11[64] <== XorArray(64)(chunkedIn[11], d1); // r[11] = a[11] ^ d
+    signal r16[64] <== XorArray(64)(chunkedIn[16], d1); // r[16] = a[16] ^ d
+    signal r21[64] <== XorArray(64)(chunkedIn[21], d1); // r[21] = a[21] ^ d
+    signal d2[64] <== D(64, 1, 64 - 1)(c3, c1); // d = c1 ^ (c3<<1 | c3>>(64 - 1))
+    signal r2[64] <== XorArray(64)(chunkedIn[2], d2); // r[2] = a[2] ^ d
+    signal r7[64] <== XorArray(64)(chunkedIn[7], d2); // r[7] = a[7] ^ d
+    signal r12[64] <== XorArray(64)(chunkedIn[12], d2); // r[12] = a[12] ^ d
+    signal r17[64] <== XorArray(64)(chunkedIn[17], d2); // r[17] = a[17] ^ d
+    signal r22[64] <== XorArray(64)(chunkedIn[22], d2); // r[22] = a[22] ^ d
+    signal d3[64] <== D(64, 1, 64 - 1)(c4, c2); // d = c2 ^ (c4<<1 | c4>>(64 - 1))
+    signal r3[64] <== XorArray(64)(chunkedIn[3], d3); // r[3] = a[3] ^ d
+    signal r8[64] <== XorArray(64)(chunkedIn[8], d3); // r[8] = a[8] ^ d
+    signal r13[64] <== XorArray(64)(chunkedIn[13], d3); // r[13] = a[13] ^ d
+    signal r18[64] <== XorArray(64)(chunkedIn[18], d3); // r[18] = a[18] ^ d
+    signal r23[64] <== XorArray(64)(chunkedIn[23], d3); // r[23] = a[23] ^ d
+    signal d4[64] <== D(64, 1, 64 - 1)(c0, c3); // d = c3 ^ (c0<<1 | c0>>(64 - 1))
+    signal r4[64] <== XorArray(64)(chunkedIn[4], d4); // r[4] = a[4] ^ d
+    signal r9[64] <== XorArray(64)(chunkedIn[9], d4); // r[9] = a[9] ^ d
+    signal r14[64] <== XorArray(64)(chunkedIn[14], d4); // r[14] = a[14] ^ d
+    signal r19[64] <== XorArray(64)(chunkedIn[19], d4); // r[19] = a[19] ^ d
+    signal r24[64] <== XorArray(64)(chunkedIn[24], d4); // r[24] = a[24] ^ d
     for (var i = 0; i < 64; i++) {
-        c2.a[i] <== in[2 * 64 + i];
-        c2.b[i] <== in[7 * 64 + i];
-        c2.c[i] <== in[12 * 64 + i];
-        c2.d[i] <== in[17 * 64 + i];
-        c2.e[i] <== in[22 * 64 + i];
-    }
-
-    component c3 = Xor5(64);
-    for (var i = 0; i < 64; i++) {
-        c3.a[i] <== in[3 * 64 + i];
-        c3.b[i] <== in[8 * 64 + i];
-        c3.c[i] <== in[13 * 64 + i];
-        c3.d[i] <== in[18 * 64 + i];
-        c3.e[i] <== in[23 * 64 + i];
-    }
-
-    component c4 = Xor5(64);
-    for (var i = 0; i < 64; i++) {
-        c4.a[i] <== in[4 * 64 + i];
-        c4.b[i] <== in[9 * 64 + i];
-        c4.c[i] <== in[14 * 64 + i];
-        c4.d[i] <== in[19 * 64 + i];
-        c4.e[i] <== in[24 * 64 + i];
-    }
-
-    // d = c4 ^ (c1<<1 | c1>>(64 - 1))
-    component d0 = D(64, 1, 64 - 1);
-    for (var i = 0; i < 64; i++) {
-        d0.a[i] <== c1.out[i];
-        d0.b[i] <== c4.out[i];
-    }
-    // r[0] = a[0] ^ d
-    component r0 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r0.a[i] <== in[i];
-        r0.b[i] <== d0.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[i] <== r0.out[i];
-    }
-    // r[5] = a[5] ^ d
-    component r5 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r5.a[i] <== in[5 * 64 + i];
-        r5.b[i] <== d0.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[5 * 64 + i] <== r5.out[i];
-    }
-    // r[10] = a[10] ^ d
-    component r10 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r10.a[i] <== in[10 * 64 + i];
-        r10.b[i] <== d0.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[10 * 64 + i] <== r10.out[i];
-    }
-    // r[15] = a[15] ^ d
-    component r15 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r15.a[i] <== in[15 * 64 + i];
-        r15.b[i] <== d0.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[15 * 64 + i] <== r15.out[i];
-    }
-    // r[20] = a[20] ^ d
-    component r20 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r20.a[i] <== in[20 * 64 + i];
-        r20.b[i] <== d0.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[20 * 64 + i] <== r20.out[i];
-    }
-
-    // d = c0 ^ (c2<<1 | c2>>(64 - 1))
-    component d1 = D(64, 1, 64 - 1);
-    for (var i = 0; i < 64; i++) {
-        d1.a[i] <== c2.out[i];
-        d1.b[i] <== c0.out[i];
-    }
-    // r[1] = a[1] ^ d
-    component r1 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r1.a[i] <== in[1 * 64 + i];
-        r1.b[i] <== d1.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[1 * 64 + i] <== r1.out[i];
-    }
-    // r[6] = a[6] ^ d
-    component r6 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r6.a[i] <== in[6 * 64 + i];
-        r6.b[i] <== d1.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[6 * 64 + i] <== r6.out[i];
-    }
-    // r[11] = a[11] ^ d
-    component r11 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r11.a[i] <== in[11 * 64 + i];
-        r11.b[i] <== d1.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[11 * 64 + i] <== r11.out[i];
-    }
-    // r[16] = a[16] ^ d
-    component r16 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r16.a[i] <== in[16 * 64 + i];
-        r16.b[i] <== d1.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[16 * 64 + i] <== r16.out[i];
-    }
-    // r[21] = a[21] ^ d
-    component r21 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r21.a[i] <== in[21 * 64 + i];
-        r21.b[i] <== d1.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[21 * 64 + i] <== r21.out[i];
-    }
-
-    // d = c1 ^ (c3<<1 | c3>>(64 - 1))
-    component d2 = D(64, 1, 64 - 1);
-    for (var i = 0; i < 64; i++) {
-        d2.a[i] <== c3.out[i];
-        d2.b[i] <== c1.out[i];
-    }
-    // r[2] = a[2] ^ d
-    component r2 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r2.a[i] <== in[2 * 64 + i];
-        r2.b[i] <== d2.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[2 * 64 + i] <== r2.out[i];
-    }
-    // r[7] = a[7] ^ d
-    component r7 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r7.a[i] <== in[7 * 64 + i];
-        r7.b[i] <== d2.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[7 * 64 + i] <== r7.out[i];
-    }
-    // r[12] = a[12] ^ d
-    component r12 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r12.a[i] <== in[12 * 64 + i];
-        r12.b[i] <== d2.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[12 * 64 + i] <== r12.out[i];
-    }
-    // r[17] = a[17] ^ d
-    component r17 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r17.a[i] <== in[17 * 64 + i];
-        r17.b[i] <== d2.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[17 * 64 + i] <== r17.out[i];
-    }
-    // r[22] = a[22] ^ d
-    component r22 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r22.a[i] <== in[22 * 64 + i];
-        r22.b[i] <== d2.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[22 * 64 + i] <== r22.out[i];
-    }
-
-    // d = c2 ^ (c4<<1 | c4>>(64 - 1))
-    component d3 = D(64, 1, 64 - 1);
-    for (var i = 0; i < 64; i++) {
-        d3.a[i] <== c4.out[i];
-        d3.b[i] <== c2.out[i];
-    }
-    // r[3] = a[3] ^ d
-    component r3 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r3.a[i] <== in[3 * 64 + i];
-        r3.b[i] <== d3.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[3 * 64 + i] <== r3.out[i];
-    }
-    // r[8] = a[8] ^ d
-    component r8 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r8.a[i] <== in[8 * 64 + i];
-        r8.b[i] <== d3.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[8 * 64 + i] <== r8.out[i];
-    }
-    // r[13] = a[13] ^ d
-    component r13 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r13.a[i] <== in[13 * 64 + i];
-        r13.b[i] <== d3.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[13 * 64 + i] <== r13.out[i];
-    }
-    // r[18] = a[18] ^ d
-    component r18 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r18.a[i] <== in[18 * 64 + i];
-        r18.b[i] <== d3.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[18 * 64 + i] <== r18.out[i];
-    }
-    // r[23] = a[23] ^ d
-    component r23 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r23.a[i] <== in[23 * 64 + i];
-        r23.b[i] <== d3.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[23 * 64 + i] <== r23.out[i];
-    }
-
-    // d = c3 ^ (c0<<1 | c0>>(64 - 1))
-    component d4 = D(64, 1, 64 - 1);
-    for (var i = 0; i < 64; i++) {
-        d4.a[i] <== c0.out[i];
-        d4.b[i] <== c3.out[i];
-    }
-    // r[4] = a[4] ^ d
-    component r4 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r4.a[i] <== in[4 * 64 + i];
-        r4.b[i] <== d4.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[4 * 64 + i] <== r4.out[i];
-    }
-    // r[9] = a[9] ^ d
-    component r9 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r9.a[i] <== in[9 * 64 + i];
-        r9.b[i] <== d4.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[9 * 64 + i] <== r9.out[i];
-    }
-    // r[14] = a[14] ^ d
-    component r14 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r14.a[i] <== in[14 * 64 + i];
-        r14.b[i] <== d4.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[14 * 64 + i] <== r14.out[i];
-    }
-    // r[19] = a[19] ^ d
-    component r19 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r19.a[i] <== in[19 * 64 + i];
-        r19.b[i] <== d4.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[19 * 64 + i] <== r19.out[i];
-    }
-    // r[24] = a[24] ^ d
-    component r24 = XorArray(64);
-    for (var i = 0; i < 64; i++) {
-        r24.a[i] <== in[24 * 64 + i];
-        r24.b[i] <== d4.out[i];
-    }
-    for (var i = 0; i < 64; i++) {
-        out[24 * 64 + i] <== r24.out[i];
+        out[i] <== r0[i];
+        out[5 * 64 + i] <== r5[i];
+        out[10 * 64 + i] <== r10[i];
+        out[15 * 64 + i] <== r15[i];
+        out[20 * 64 + i] <== r20[i];
+        out[1 * 64 + i] <== r1[i];
+        out[6 * 64 + i] <== r6[i];
+        out[11 * 64 + i] <== r11[i];
+        out[16 * 64 + i] <== r16[i];
+        out[21 * 64 + i] <== r21[i];
+        out[2 * 64 + i] <== r2[i];
+        out[7 * 64 + i] <== r7[i];
+        out[12 * 64 + i] <== r12[i];
+        out[17 * 64 + i] <== r17[i];
+        out[22 * 64 + i] <== r22[i];
+        out[3 * 64 + i] <== r3[i];
+        out[8 * 64 + i] <== r8[i];
+        out[13 * 64 + i] <== r13[i];
+        out[18 * 64 + i] <== r18[i];
+        out[23 * 64 + i] <== r23[i];
+        out[4 * 64 + i] <== r4[i];
+        out[9 * 64 + i] <== r9[i];
+        out[14 * 64 + i] <== r14[i];
+        out[19 * 64 + i] <== r19[i];
+        out[24 * 64 + i] <== r24[i];
     }
 }
 
@@ -363,153 +121,65 @@ template RhoPi() {
     signal input in[25 * 64];
     signal output out[25 * 64];
 
-    // r[10] = a[1]<<1|a[1]>>(64 - 1)
-    component s10 = stepRhoPi(1, 64 - 1);
-    for (var i = 0; i < 64; i++) {
-        s10.a[i] <== in[1 * 64 + i];
+    signal chunkedIn[25][64];
+    for (var i = 0; i < 25; i++) {
+        for (var j = 0; j < 64; j++) {
+            chunkedIn[i][j] <== in[i * 64 + j];
+        }
     }
-    // r[7] = a[10]<<3|a[10]>>(64 - 3)
-    component s7 = stepRhoPi(3, 64 - 3);
-    for (var i = 0; i < 64; i++) {
-        s7.a[i] <== in[10 * 64 + i];
-    }
-    // r[11] = a[7]<<6|a[7]>>(64 - 6)
-    component s11 = stepRhoPi(6, 64 - 6);
-    for (var i = 0; i < 64; i++) {
-        s11.a[i] <== in[7 * 64 + i];
-    }
-    // r[17] = a[11]<<10|a[11]>>(64 - 10)
-    component s17 = stepRhoPi(10, 64 - 10);
-    for (var i = 0; i < 64; i++) {
-        s17.a[i] <== in[11 * 64 + i];
-    }
-    // r[18] = a[17]<<15|a[17]>>(64 - 15)
-    component s18 = stepRhoPi(15, 64 - 15);
-    for (var i = 0; i < 64; i++) {
-        s18.a[i] <== in[17 * 64 + i];
-    }
-    // r[3] = a[18]<<21|a[18]>>(64 - 21)
-    component s3 = stepRhoPi(21, 64 - 21);
-    for (var i = 0; i < 64; i++) {
-        s3.a[i] <== in[18 * 64 + i];
-    }
-    // r[5] = a[3]<<28|a[3]>>(64 - 28)
-    component s5 = stepRhoPi(28, 64 - 28);
-    for (var i = 0; i < 64; i++) {
-        s5.a[i] <== in[3 * 64 + i];
-    }
-    // r[16] = a[5]<<36|a[5]>>(64 - 36)
-    component s16 = stepRhoPi(36, 64 - 36);
-    for (var i = 0; i < 64; i++) {
-        s16.a[i] <== in[5 * 64 + i];
-    }
-    // r[8] = a[16]<<45|a[16]>>(64 - 45)
-    component s8 = stepRhoPi(45, 64 - 45);
-    for (var i = 0; i < 64; i++) {
-        s8.a[i] <== in[16 * 64 + i];
-    }
-    // r[21] = a[8]<<55|a[8]>>(64 - 55)
-    component s21 = stepRhoPi(55, 64 - 55);
-    for (var i = 0; i < 64; i++) {
-        s21.a[i] <== in[8 * 64 + i];
-    }
-    // r[24] = a[21]<<2|a[21]>>(64 - 2)
-    component s24 = stepRhoPi(2, 64 - 2);
-    for (var i = 0; i < 64; i++) {
-        s24.a[i] <== in[21 * 64 + i];
-    }
-    // r[4] = a[24]<<14|a[24]>>(64 - 14)
-    component s4 = stepRhoPi(14, 64 - 14);
-    for (var i = 0; i < 64; i++) {
-        s4.a[i] <== in[24 * 64 + i];
-    }
-    // r[15] = a[4]<<27|a[4]>>(64 - 27)
-    component s15 = stepRhoPi(27, 64 - 27);
-    for (var i = 0; i < 64; i++) {
-        s15.a[i] <== in[4 * 64 + i];
-    }
-    // r[23] = a[15]<<41|a[15]>>(64 - 41)
-    component s23 = stepRhoPi(41, 64 - 41);
-    for (var i = 0; i < 64; i++) {
-        s23.a[i] <== in[15 * 64 + i];
-    }
-    // r[19] = a[23]<<56|a[23]>>(64 - 56)
-    component s19 = stepRhoPi(56, 64 - 56);
-    for (var i = 0; i < 64; i++) {
-        s19.a[i] <== in[23 * 64 + i];
-    }
-    // r[13] = a[19]<<8|a[19]>>(64 - 8)
-    component s13 = stepRhoPi(8, 64 - 8);
-    for (var i = 0; i < 64; i++) {
-        s13.a[i] <== in[19 * 64 + i];
-    }
-    // r[12] = a[13]<<25|a[13]>>(64 - 25)
-    component s12 = stepRhoPi(25, 64 - 25);
-    for (var i = 0; i < 64; i++) {
-        s12.a[i] <== in[13 * 64 + i];
-    }
-    // r[2] = a[12]<<43|a[12]>>(64 - 43)
-    component s2 = stepRhoPi(43, 64 - 43);
-    for (var i = 0; i < 64; i++) {
-        s2.a[i] <== in[12 * 64 + i];
-    }
-    // r[20] = a[2]<<62|a[2]>>(64 - 62)
-    component s20 = stepRhoPi(62, 64 - 62);
-    for (var i = 0; i < 64; i++) {
-        s20.a[i] <== in[2 * 64 + i];
-    }
-    // r[14] = a[20]<<18|a[20]>>(64 - 18)
-    component s14 = stepRhoPi(18, 64 - 18);
-    for (var i = 0; i < 64; i++) {
-        s14.a[i] <== in[20 * 64 + i];
-    }
-    // r[22] = a[14]<<39|a[14]>>(64 - 39)
-    component s22 = stepRhoPi(39, 64 - 39);
-    for (var i = 0; i < 64; i++) {
-        s22.a[i] <== in[14 * 64 + i];
-    }
-    // r[9] = a[22]<<61|a[22]>>(64 - 61)
-    component s9 = stepRhoPi(61, 64 - 61);
-    for (var i = 0; i < 64; i++) {
-        s9.a[i] <== in[22 * 64 + i];
-    }
-    // r[6] = a[9]<<20|a[9]>>(64 - 20)
-    component s6 = stepRhoPi(20, 64 - 20);
-    for (var i = 0; i < 64; i++) {
-        s6.a[i] <== in[9 * 64 + i];
-    }
-    // r[1] = a[6]<<44|a[6]>>(64 - 44)
-    component s1 = stepRhoPi(44, 64 - 44);
-    for (var i = 0; i < 64; i++) {
-        s1.a[i] <== in[6 * 64 + i];
-    }
+
+    
+    signal s10[64] <== stepRhoPi(1, 64 - 1)(chunkedIn[1]); // r[10] = a[1]<<1|a[1]>>(64 - 1)
+    signal s7[64] <== stepRhoPi(3, 64 - 3)(chunkedIn[10]); // r[7] = a[10]<<3|a[10]>>(64 - 3)
+    signal s11[64] <== stepRhoPi(6, 64 - 6)(chunkedIn[7]); // // r[11] = a[7]<<6|a[7]>>(64 - 6)
+    signal s17[64] <== stepRhoPi(10, 64 - 10)(chunkedIn[11]); // r[17] = a[11]<<10|a[11]>>(64 - 10)
+    signal s18[64] <== stepRhoPi(15, 64 - 15)(chunkedIn[17]); // r[18] = a[17]<<15|a[17]>>(64 - 15)
+    signal s3[64] <== stepRhoPi(21, 64 - 21)(chunkedIn[18]); // r[3] = a[18]<<21|a[18]>>(64 - 21)
+    signal s5[64] <== stepRhoPi(28, 64 - 28)(chunkedIn[3]); // r[5] = a[3]<<28|a[3]>>(64 - 28)
+    signal s16[64] <== stepRhoPi(36, 64 - 36)(chunkedIn[5]); // r[16] = a[5]<<36|a[5]>>(64 - 36)
+    signal s8[64] <== stepRhoPi(45, 64 - 45)(chunkedIn[16]); // r[8] = a[16]<<45|a[16]>>(64 - 45)
+    signal s21[64] <== stepRhoPi(55, 64 - 55)(chunkedIn[8]); // r[21] = a[8]<<55|a[8]>>(64 - 55)
+    signal s24[64] <== stepRhoPi(2, 64 - 2)(chunkedIn[21]); // r[24] = a[21]<<2|a[21]>>(64 - 2)
+    signal s4[64] <== stepRhoPi(14, 64 - 14)(chunkedIn[24]); // r[4] = a[24]<<14|a[24]>>(64 - 14)
+    signal s15[64] <== stepRhoPi(27, 64 - 27)(chunkedIn[4]); // r[15] = a[4]<<27|a[4]>>(64 - 27)
+    signal s23[64] <== stepRhoPi(41, 64 - 41)(chunkedIn[15]); // r[23] = a[15]<<41|a[15]>>(64 - 41)
+    signal s19[64] <== stepRhoPi(56, 64 - 56)(chunkedIn[23]); // r[19] = a[23]<<56|a[23]>>(64 - 56)
+    signal s13[64] <== stepRhoPi(8, 64 - 8)(chunkedIn[19]); // r[13] = a[19]<<8|a[19]>>(64 - 8)
+    signal s12[64] <== stepRhoPi(25, 64 - 25)(chunkedIn[13]); // r[12] = a[13]<<25|a[13]>>(64 - 25)
+    signal s2[64] <== stepRhoPi(43, 64 - 43)(chunkedIn[12]); // r[2] = a[12]<<43|a[12]>>(64 - 43)
+    signal s20[64] <== stepRhoPi(62, 64 - 62)(chunkedIn[2]); // r[20] = a[2]<<62|a[2]>>(64 - 62)
+    signal s14[64] <== stepRhoPi(18, 64 - 18)(chunkedIn[20]); // r[14] = a[20]<<18|a[20]>>(64 - 18)
+    signal s22[64] <== stepRhoPi(39, 64 - 39)(chunkedIn[14]); // r[22] = a[14]<<39|a[14]>>(64 - 39)
+    signal s9[64] <== stepRhoPi(61, 64 - 61)(chunkedIn[22]); // r[9] = a[22]<<61|a[22]>>(64 - 61)
+    signal s6[64] <== stepRhoPi(20, 64 - 20)(chunkedIn[9]); // r[6] = a[9]<<20|a[9]>>(64 - 20)
+    signal s1[64] <== stepRhoPi(44, 64 - 44)(chunkedIn[6]); // r[1] = a[6]<<44|a[6]>>(64 - 44)
 
     for (var i = 0; i < 64; i++) {
         out[i] <== in[i];
-        out[10 * 64 + i] <== s10.out[i];
-        out[7 * 64 + i] <== s7.out[i];
-        out[11 * 64 + i] <== s11.out[i];
-        out[17 * 64 + i] <== s17.out[i];
-        out[18 * 64 + i] <== s18.out[i];
-        out[3 * 64 + i] <== s3.out[i];
-        out[5 * 64 + i] <== s5.out[i];
-        out[16 * 64 + i] <== s16.out[i];
-        out[8 * 64 + i] <== s8.out[i];
-        out[21 * 64 + i] <== s21.out[i];
-        out[24 * 64 + i] <== s24.out[i];
-        out[4 * 64 + i] <== s4.out[i];
-        out[15 * 64 + i] <== s15.out[i];
-        out[23 * 64 + i] <== s23.out[i];
-        out[19 * 64 + i] <== s19.out[i];
-        out[13 * 64 + i] <== s13.out[i];
-        out[12 * 64 + i] <== s12.out[i];
-        out[2 * 64 + i] <== s2.out[i];
-        out[20 * 64 + i] <== s20.out[i];
-        out[14 * 64 + i] <== s14.out[i];
-        out[22 * 64 + i] <== s22.out[i];
-        out[9 * 64 + i] <== s9.out[i];
-        out[6 * 64 + i] <== s6.out[i];
-        out[1 * 64 + i] <== s1.out[i];
+        out[10 * 64 + i] <== s10[i];
+        out[7 * 64 + i] <== s7[i];
+        out[11 * 64 + i] <== s11[i];
+        out[17 * 64 + i] <== s17[i];
+        out[18 * 64 + i] <== s18[i];
+        out[3 * 64 + i] <== s3[i];
+        out[5 * 64 + i] <== s5[i];
+        out[16 * 64 + i] <== s16[i];
+        out[8 * 64 + i] <== s8[i];
+        out[21 * 64 + i] <== s21[i];
+        out[24 * 64 + i] <== s24[i];
+        out[4 * 64 + i] <== s4[i];
+        out[15 * 64 + i] <== s15[i];
+        out[23 * 64 + i] <== s23[i];
+        out[19 * 64 + i] <== s19[i];
+        out[13 * 64 + i] <== s13[i];
+        out[12 * 64 + i] <== s12[i];
+        out[2 * 64 + i] <== s2[i];
+        out[20 * 64 + i] <== s20[i];
+        out[14 * 64 + i] <== s14[i];
+        out[22 * 64 + i] <== s22[i];
+        out[9 * 64 + i] <== s9[i];
+        out[6 * 64 + i] <== s6[i];
+        out[1 * 64 + i] <== s1[i];
     }
 }
 
@@ -535,191 +205,65 @@ template Chi() {
     signal input in[25 * 64];
     signal output out[25 * 64];
 
-    component r0 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r0.a[i] <== in[i];
-        r0.b[i] <== in[1 * 64 + i];
-        r0.c[i] <== in[2 * 64 + i];
-    }
-    component r1 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r1.a[i] <== in[1 * 64 + i];
-        r1.b[i] <== in[2 * 64 + i];
-        r1.c[i] <== in[3 * 64 + i];
-    }
-    component r2 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r2.a[i] <== in[2 * 64 + i];
-        r2.b[i] <== in[3 * 64 + i];
-        r2.c[i] <== in[4 * 64 + i];
-    }
-    component r3 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r3.a[i] <== in[3 * 64 + i];
-        r3.b[i] <== in[4 * 64 + i];
-        r3.c[i] <== in[0 * 64 + i];
-    }
-    component r4 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r4.a[i] <== in[4 * 64 + i];
-        r4.b[i] <== in[i];
-        r4.c[i] <== in[1 * 64 + i];
+    signal chunkedIn[25][64];
+    for (var i = 0; i < 25; i++) {
+        for (var j = 0; j < 64; j++) {
+            chunkedIn[i][j] <== in[i * 64 + j];
+        }
     }
 
-    component r5 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r5.a[i] <== in[5 * 64 + i];
-        r5.b[i] <== in[6 * 64 + i];
-        r5.c[i] <== in[7 * 64 + i];
-    }
-    component r6 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r6.a[i] <== in[6 * 64 + i];
-        r6.b[i] <== in[7 * 64 + i];
-        r6.c[i] <== in[8 * 64 + i];
-    }
-    component r7 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r7.a[i] <== in[7 * 64 + i];
-        r7.b[i] <== in[8 * 64 + i];
-        r7.c[i] <== in[9 * 64 + i];
-    }
-    component r8 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r8.a[i] <== in[8 * 64 + i];
-        r8.b[i] <== in[9 * 64 + i];
-        r8.c[i] <== in[5 * 64 + i];
-    }
-    component r9 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r9.a[i] <== in[9 * 64 + i];
-        r9.b[i] <== in[5 * 64 + i];
-        r9.c[i] <== in[6 * 64 + i];
-    }
-
-    component r10 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r10.a[i] <== in[10 * 64 + i];
-        r10.b[i] <== in[11 * 64 + i];
-        r10.c[i] <== in[12 * 64 + i];
-    }
-    component r11 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r11.a[i] <== in[11 * 64 + i];
-        r11.b[i] <== in[12 * 64 + i];
-        r11.c[i] <== in[13 * 64 + i];
-    }
-    component r12 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r12.a[i] <== in[12 * 64 + i];
-        r12.b[i] <== in[13 * 64 + i];
-        r12.c[i] <== in[14 * 64 + i];
-    }
-    component r13 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r13.a[i] <== in[13 * 64 + i];
-        r13.b[i] <== in[14 * 64 + i];
-        r13.c[i] <== in[10 * 64 + i];
-    }
-    component r14 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r14.a[i] <== in[14 * 64 + i];
-        r14.b[i] <== in[10 * 64 + i];
-        r14.c[i] <== in[11 * 64 + i];
-    }
-
-    component r15 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r15.a[i] <== in[15 * 64 + i];
-        r15.b[i] <== in[16 * 64 + i];
-        r15.c[i] <== in[17 * 64 + i];
-    }
-    component r16 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r16.a[i] <== in[16 * 64 + i];
-        r16.b[i] <== in[17 * 64 + i];
-        r16.c[i] <== in[18 * 64 + i];
-    }
-    component r17 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r17.a[i] <== in[17 * 64 + i];
-        r17.b[i] <== in[18 * 64 + i];
-        r17.c[i] <== in[19 * 64 + i];
-    }
-    component r18 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r18.a[i] <== in[18 * 64 + i];
-        r18.b[i] <== in[19 * 64 + i];
-        r18.c[i] <== in[15 * 64 + i];
-    }
-    component r19 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r19.a[i] <== in[19 * 64 + i];
-        r19.b[i] <== in[15 * 64 + i];
-        r19.c[i] <== in[16 * 64 + i];
-    }
-
-    component r20 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r20.a[i] <== in[20 * 64 + i];
-        r20.b[i] <== in[21 * 64 + i];
-        r20.c[i] <== in[22 * 64 + i];
-    }
-    component r21 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r21.a[i] <== in[21 * 64 + i];
-        r21.b[i] <== in[22 * 64 + i];
-        r21.c[i] <== in[23 * 64 + i];
-    }
-    component r22 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r22.a[i] <== in[22 * 64 + i];
-        r22.b[i] <== in[23 * 64 + i];
-        r22.c[i] <== in[24 * 64 + i];
-    }
-    component r23 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r23.a[i] <== in[23 * 64 + i];
-        r23.b[i] <== in[24 * 64 + i];
-        r23.c[i] <== in[20 * 64 + i];
-    }
-    component r24 = stepChi();
-    for (var i = 0; i < 64; i++) {
-        r24.a[i] <== in[24 * 64 + i];
-        r24.b[i] <== in[20 * 64 + i];
-        r24.c[i] <== in[21 * 64 + i];
-    }
+    signal r0[64] <== stepChi()(chunkedIn[0], chunkedIn[1], chunkedIn[2]);
+    signal r1[64] <== stepChi()(chunkedIn[1], chunkedIn[2], chunkedIn[3]);
+    signal r2[64] <== stepChi()(chunkedIn[2], chunkedIn[3], chunkedIn[4]);
+    signal r3[64] <== stepChi()(chunkedIn[3], chunkedIn[4], chunkedIn[0]);
+    signal r4[64] <== stepChi()(chunkedIn[4], chunkedIn[0], chunkedIn[1]);
+    signal r5[64] <== stepChi()(chunkedIn[5], chunkedIn[6], chunkedIn[7]);
+    signal r6[64] <== stepChi()(chunkedIn[6], chunkedIn[7], chunkedIn[8]);
+    signal r7[64] <== stepChi()(chunkedIn[7], chunkedIn[8], chunkedIn[9]);
+    signal r8[64] <== stepChi()(chunkedIn[8], chunkedIn[9], chunkedIn[5]);
+    signal r9[64] <== stepChi()(chunkedIn[9], chunkedIn[5], chunkedIn[6]);
+    signal r10[64] <== stepChi()(chunkedIn[10], chunkedIn[11], chunkedIn[12]);
+    signal r11[64] <== stepChi()(chunkedIn[11], chunkedIn[12], chunkedIn[13]);
+    signal r12[64] <== stepChi()(chunkedIn[12], chunkedIn[13], chunkedIn[14]);
+    signal r13[64] <== stepChi()(chunkedIn[13], chunkedIn[14], chunkedIn[10]);
+    signal r14[64] <== stepChi()(chunkedIn[14], chunkedIn[10], chunkedIn[11]);
+    signal r15[64] <== stepChi()(chunkedIn[15], chunkedIn[16], chunkedIn[17]);
+    signal r16[64] <== stepChi()(chunkedIn[16], chunkedIn[17], chunkedIn[18]);
+    signal r17[64] <== stepChi()(chunkedIn[17], chunkedIn[18], chunkedIn[19]);
+    signal r18[64] <== stepChi()(chunkedIn[18], chunkedIn[19], chunkedIn[15]);
+    signal r19[64] <== stepChi()(chunkedIn[19], chunkedIn[15], chunkedIn[16]);
+    signal r20[64] <== stepChi()(chunkedIn[20], chunkedIn[21], chunkedIn[22]);
+    signal r21[64] <== stepChi()(chunkedIn[21], chunkedIn[22], chunkedIn[23]);
+    signal r22[64] <== stepChi()(chunkedIn[22], chunkedIn[23], chunkedIn[24]);
+    signal r23[64] <== stepChi()(chunkedIn[23], chunkedIn[24], chunkedIn[20]);
+    signal r24[64] <== stepChi()(chunkedIn[24], chunkedIn[20], chunkedIn[21]);
 
     for (var i = 0; i < 64; i++) {
-        out[i] <== r0.out[i];
-        out[1 * 64 + i] <== r1.out[i];
-        out[2 * 64 + i] <== r2.out[i];
-        out[3 * 64 + i] <== r3.out[i];
-        out[4 * 64 + i] <== r4.out[i];
-
-        out[5 * 64 + i] <== r5.out[i];
-        out[6 * 64 + i] <== r6.out[i];
-        out[7 * 64 + i] <== r7.out[i];
-        out[8 * 64 + i] <== r8.out[i];
-        out[9 * 64 + i] <== r9.out[i];
-
-        out[10 * 64 + i] <== r10.out[i];
-        out[11 * 64 + i] <== r11.out[i];
-        out[12 * 64 + i] <== r12.out[i];
-        out[13 * 64 + i] <== r13.out[i];
-        out[14 * 64 + i] <== r14.out[i];
-
-        out[15 * 64 + i] <== r15.out[i];
-        out[16 * 64 + i] <== r16.out[i];
-        out[17 * 64 + i] <== r17.out[i];
-        out[18 * 64 + i] <== r18.out[i];
-        out[19 * 64 + i] <== r19.out[i];
-
-        out[20 * 64 + i] <== r20.out[i];
-        out[21 * 64 + i] <== r21.out[i];
-        out[22 * 64 + i] <== r22.out[i];
-        out[23 * 64 + i] <== r23.out[i];
-        out[24 * 64 + i] <== r24.out[i];
+        out[i] <== r0[i];
+        out[1 * 64 + i] <== r1[i];
+        out[2 * 64 + i] <== r2[i];
+        out[3 * 64 + i] <== r3[i];
+        out[4 * 64 + i] <== r4[i];
+        out[5 * 64 + i] <== r5[i];
+        out[6 * 64 + i] <== r6[i];
+        out[7 * 64 + i] <== r7[i];
+        out[8 * 64 + i] <== r8[i];
+        out[9 * 64 + i] <== r9[i];
+        out[10 * 64 + i] <== r10[i];
+        out[11 * 64 + i] <== r11[i];
+        out[12 * 64 + i] <== r12[i];
+        out[13 * 64 + i] <== r13[i];
+        out[14 * 64 + i] <== r14[i];
+        out[15 * 64 + i] <== r15[i];
+        out[16 * 64 + i] <== r16[i];
+        out[17 * 64 + i] <== r17[i];
+        out[18 * 64 + i] <== r18[i];
+        out[19 * 64 + i] <== r19[i];
+        out[20 * 64 + i] <== r20[i];
+        out[21 * 64 + i] <== r21[i];
+        out[22 * 64 + i] <== r22[i];
+        out[23 * 64 + i] <== r23[i];
+        out[24 * 64 + i] <== r24[i];
     }
 }
 

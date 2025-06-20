@@ -101,10 +101,10 @@ template Keccakf() {
 
     // 24 rounds
     component round[24];
-    signal midRound[24*25*64];
+    signal midRound[24 * 25 * 64];
     for (var i = 0; i < 24; i++) {
         round[i] = KeccakfRound(i);
-        if (i==0) {
+        if (i == 0) {
             for (var j = 0; j < 25 * 64; j++) {
                 midRound[j] <== in[j];
             }
@@ -128,20 +128,9 @@ template Keccak(nBlocksIn) {
     signal input in[nBlocksIn * 136 * 8];
     signal input blocks;
     signal output out[32 * 8];
-    var i;
 
-    component f = Final(nBlocksIn);
-    f.blocks <== blocks;
-    for (i=0; i<nBlocksIn * 136 * 8; i++) {
-        f.in[i] <== in[i];
-    }
-    component squeeze = Squeeze(32 * 8);
-    for (i=0; i<25*64; i++) {
-        squeeze.s[i] <== f.out[i];
-    }
-    for (i=0; i<32 * 8; i++) {
-        out[i] <== squeeze.out[i];
-    }
+    signal fin[25 * 64] <== Final(nBlocksIn)(in, blocks);
+    out <== Squeeze(32 * 8)(fin);
 }
 
 
