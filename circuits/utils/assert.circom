@@ -3,7 +3,7 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/comparators.circom";
 include "../circomlib/circuits/bitify.circom";
 
-// Check if all N inputs are binary
+// Assert all N inputs are binary
 template AssertBinary(N) {
     signal input in[N];
     for(var i = 0; i < N; i++) {
@@ -11,6 +11,7 @@ template AssertBinary(N) {
     }
 }
 
+// Assert the input number is less than 2^B 
 template AssertBits(B) {
     signal input a;
     signal bits[B] <== Num2Bits(B)(a);

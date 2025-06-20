@@ -101,6 +101,16 @@ template ReverseArray(N) {
     }
 }
 
+// Returns RLP of an integer up to 31 bytes
+//
+// Example:
+//   in: [0], out: [0x80]
+//   in: [1], out: [0x01]
+//   in: [10], out: [0x0a]
+//   in: [127], out: [0x7f]
+//   in: [128], out: [0x81,0x80]
+//   in: [255], out: [0x81,0xff]
+//   in: [256], out: [0x82,0x01,0x00]
 template RlpInteger(N) {
     signal input in;
     signal output out[N + 1];
@@ -134,12 +144,20 @@ template RlpInteger(N) {
     outLen <== (1 - isSingleByte) + length + isZero;
 }
 
+
+// Returns RLP([NONCE, balance, STORAGE_HASH, CODE_HASH])
+// Where:
+//   NONCE = 0
+//   STORAGE_HASH = 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
+//   CODE_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
 template RlpEmptyAccount(maxBalanceBytes) {
     signal input balance;
+    // [0xf7 + 1, TOTAL_BYTES_LEN, 0x80 (Nonce: 0), BALANCE_BYTES_PREFIX] 
+    //   + BALANCE_BYTES + [0x80 + 32] + STORAGE_HASH + [0x80 + 32] + CODE_HASH
     signal output out[4 + maxBalanceBytes + 66];
     signal output outLen;
 
-    // 4 prefix bytes: [0xf8, TOTAL_BYTES_LEN, 0x80 (Nonce: 0), BALANCE_BYTES_LEN]
+    // 4 prefix bytes: [0xf8, TOTAL_BYTES_LEN, 0x80 (Nonce: 0), BALANCE_BYTES_PREFIX]
     signal prefixedNonceAndBalanceRlp[4 + maxBalanceBytes];
     signal prefixedNonceAndBalanceRlpLen;
     
@@ -239,6 +257,7 @@ template RlpEmptyAccount(maxBalanceBytes) {
     outLen <== concat.outLen;
 }
 
+// Returns RLP(addressHash, RLP([NONCE, balance, STORAGE_HASH, CODE_HASH]))
 template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66; // More info in RlpEmptyAccount gadget
     var maxKeyLen = 1 + maxAddressHashBytes; // Leaf keys are prefixed with 0x20 or 0x3_
