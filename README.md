@@ -6,6 +6,19 @@ It will then iterate through trie nodes and check whether `keccak(layer[i])` is 
 
 Finally it will return the keccak of last layer as the state_root. The account balance and its nullifier are also exposed as public inputs.
 
+## Burn-key
+
+Burn-key is a number you generate in order to start the burn/mint process. It somehow is your "private-key" to the world of EIP-7503.
+
+- Burn-address: MiMC7(burnKey, receiverAddress)
+    The amount can only be minted for the given receiver-address.
+- Nullifier: MiMC7(burnKey, 1)
+    Nullifier prevents us from using the burn-key again.
+- PoW; MiMC7(burnKey, 2) < THRESHOLD
+    Only burn-keys which fit in the equation can be used.
+- Coin: MiMC7(burnKey, amount)
+    A "coin" is an encrypted amount which can be partially withdrawn, resulting in a new coin.
+
 ## Test on ganache
 
 1. Install Rust toolkit
