@@ -42,6 +42,10 @@ template ByteDecompose(N) {
 // Example:
 //   bytes: [3, 0, 1, 4, 2, 0, 0, 0] (3 leading-zeros)
 //   len:   5
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template CountBytes(N) {
     signal input bytes[N];
     signal output len;
@@ -111,6 +115,8 @@ template ReverseArray(N) {
 
 // Returns RLP of an integer up to 31 bytes
 //
+// Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
+//
 // Example:
 //   in: [0], out: [0x80]
 //   in: [1], out: [0x01]
@@ -119,12 +125,22 @@ template ReverseArray(N) {
 //   in: [128], out: [0x81,0x80]
 //   in: [255], out: [0x81,0xff]
 //   in: [256], out: [0x82,0x01,0x00]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template RlpInteger(N) {
     signal input in;
     signal output out[N + 1];
     signal output outLen;
 
-    assert(N <= 31); // Avoid overflows
+    // Avoid overflows.
+    // Also, RLP of all numbers up to 55-bytes start with:
+    //   [0x80 + num_value_bytes]
+    // Instead of:
+    //   [0xb7 + num_len_bytes] (Which is the case where length is above 55 bytes)
+    // Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
+    assert(N <= 31);
 
     // Decompose and reverse: calculate the big-endian version of the balance
     signal bytes[N] <== ByteDecompose(N)(in);
@@ -138,10 +154,14 @@ template RlpInteger(N) {
     signal isSingleByte <== LessThan(N * 8)([in, 128]);
     signal isZero <== IsZero()(in);
     signal firstRlpByte <== Mux1()([0x80 + length, in], isSingleByte);
+
+    // If zero: 0 + 0x80 = 0x80 (Correct)
+    // If below 128: num + 0 = num (Correct)
+    // If greater than or equal 128: 0x80 + length (Correct)
     out[0] <== firstRlpByte + isZero * 0x80;
     
     // If the number is greater than or equal 128, then comes the rest of
-    // the big-endian representation of bytes
+    // the big-endian representation of bytes. Otherwise, everything is 0.
     for (var i = 1; i < N + 1; i++) {
         out[i] <== (1 - isSingleByte) * bigEndian[i - 1];
     }
@@ -158,8 +178,23 @@ template RlpInteger(N) {
 //   NONCE = 0
 //   STORAGE_HASH = 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
 //   CODE_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+//
+// The result is the RLP of a "list" of "bytes" where the total length of the bytes is 
+// always this range: 68 <= length <= 99, which is more than 55, thus RLP prefix of [0xf7 + len] 
+// and less than 256, which allows it to be represented using a single byte)
+// Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
+//
 template RlpEmptyAccount(maxBalanceBytes) {
     signal input balance;
+
+    assert(maxBalanceBytes <= 31); // Avoid overflows
+
+    // Minimum RLP length is 1 (NONCE) + 1 (balance) + 33 (STORAGE_HASH) + 33 (CODE_HASH) = 68 (> 55 bytes)
+    // Maximum RLP length is 1 (NONCE) + 32 (balance) + 33 (STORAGE_HASH) + 33 (CODE_HASH) = 99 (< 256, less than a byte)
+    // So, the two-byte prefix is always [0xf7 + 1, TOTAL_BYTES_LEN] (Given the range: 55 < byte < 256)
+    // (When the number of bytes in a list is less-than-equal 55, then the prefix is [0xc0 + len])
+    // Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
+    
     // [0xf7 + 1, TOTAL_BYTES_LEN, 0x80 (Nonce: 0), BALANCE_BYTES_PREFIX] 
     //   + BALANCE_BYTES + [0x80 + 32] + STORAGE_HASH + [0x80 + 32] + CODE_HASH
     signal output out[4 + maxBalanceBytes + 66];

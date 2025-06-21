@@ -16,6 +16,10 @@ include "./utils/leaf.circom";
 
 
 // Convert a field element to 256-bits
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template FieldToBits() {
     signal input in;
     signal output out[256];
@@ -30,10 +34,11 @@ template FieldToBits() {
 // and zeroes out the last byte of the hash to make it storeable in the field, returning it as a commitment.
 //
 // Example:
-//   blockRoot: [256-bit input]
-//   nullifier: [256-bit input]
+//   blockRoot:        [256-bit input]
+//   nullifier:        [256-bit input]
 //   encryptedBalance: [256-bit input]
-//   fee:              [256-bit input]
+//   fee:              Field-element
+//   receiverAddress:  Field-element
 //   commitment: The resulting commitment after applying the hash and zeroing the last byte.
 template InputsHasher() {
     signal input blockRoot[256];
@@ -128,13 +133,17 @@ template BurnKeyToNullifier() {
 
 
 // Proof-of-Work: MiMC(burnKey, 2) < 2^maxBits
-template ProofOfWorkChecker(maxBits) {
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template ProofOfWorkChecker(powMaxAllowedBits) {
     signal input burnKey;
     signal hash <== Hasher()(burnKey, 2);
-    AssertBits(maxBits)(hash);
+    AssertBits(powMaxAllowedBits)(hash);
 }
 
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powBits) {
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMaxAllowedBits) {
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
     signal input fee; // To be paid to the relayer who actually submits the proof
     signal input balance; // Balance of the burn-address
@@ -151,7 +160,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
     // Check if PoW has been done in order to find burnKey
-    ProofOfWorkChecker(powBits)(burnKey);
+    ProofOfWorkChecker(powMaxAllowedBits)(burnKey);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
