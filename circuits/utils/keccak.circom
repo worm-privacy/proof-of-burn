@@ -6,10 +6,13 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/gates.circom";
 include "selector.circom";
 
-// Keyvan: OK
 // Example:
-// in: [1, 2, 3, 4, 5], n: 3
-// out: [4, 5, 0, 0, 0]
+//   in: [1, 2, 3, 4, 5], n: 3
+//   out: [4, 5, 0, 0, 0]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template ShR(n, r) {
     signal input in[n];
     signal output out[n];
@@ -24,10 +27,13 @@ template ShR(n, r) {
 }
 
 
-// Keyvan: OK
 // Example:
 // in: [1, 2, 3, 4, 5], n: 3
 // out: [0, 0, 0, 1, 2]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template ShL(n, r) {
     signal input in[n];
     signal output out[n];
@@ -41,23 +47,20 @@ template ShL(n, r) {
     }
 }
 
-/* Xor3 function for sha256
-
-a ^ b = a + b - 2ab
-(a ^ b) ^ c = (a + b - 2ab) + c - 2(a + b - 2ab)c = a + b + c - 2ab - 2ac - 2bc + 4abc
-
-out = a ^ b ^ c  =>
-
-out = a+b+c - 2*a*b - 2*a*c - 2*b*c + 4*a*b*c   =>
-
-out = a*( 1 - 2*b - 2*c + 4*b*c ) + b + c - 2*b*c =>
-
-mid = b*c
-out = a*( 1 - 2*b -2*c + 4*mid ) + b + c - 2 * mid
-    = a - 2ab - 2ac + 4abc + b + c - 2bc = a + b + c - 2ab - 2ac -2bc + 4abc
-
-*/
-// Keyvan: OK
+// Xor3 function for sha256
+// Proof:
+//   a ^ b = a + b - 2ab
+//   (a ^ b) ^ c = (a + b - 2ab) + c - 2(a + b - 2ab)c = a + b + c - 2ab - 2ac - 2bc + 4abc
+//   out = a ^ b ^ c  =>
+//   out = a+b+c - 2*a*b - 2*a*c - 2*b*c + 4*a*b*c   =>
+//   out = a*( 1 - 2*b - 2*c + 4*b*c ) + b + c - 2*b*c =>
+//   mid = b*c
+//   out = a*( 1 - 2*b -2*c + 4*mid ) + b + c - 2 * mid
+//       = a - 2ab - 2ac + 4abc + b + c - 2bc = a + b + c - 2ab - 2ac -2bc + 4abc
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Xor3(n) {
     signal input a[n];
     signal input b[n];
@@ -71,7 +74,11 @@ template Xor3(n) {
     }
 }
 
-// Keyvan: OK
+// Xor5 using two Xor3s
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Xor5(n) {
     signal input a[n];
     signal input b[n];
@@ -84,7 +91,11 @@ template Xor5(n) {
     out <== Xor3(n)(xor_abc, d, e);
 }
 
-// Keyvan: OK
+// Array of XORs
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template XorArray(n) {
     signal input a[n];
     signal input b[n];
@@ -95,7 +106,11 @@ template XorArray(n) {
     }
 }
 
-// Keyvan: OK
+// Array of NOTs
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template NotArray(n) {
     signal input a[n];
     signal output out[n];
@@ -104,7 +119,11 @@ template NotArray(n) {
     }
 }
 
-// Keyvan: OK
+// Array of ORs
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template OrArray(n) {
     signal input a[n];
     signal input b[n];
@@ -115,7 +134,11 @@ template OrArray(n) {
     }
 }
 
-// Keyvan: OK
+// Array of ANDs
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template AndArray(n) {
     signal input a[n];
     signal input b[n];
@@ -126,7 +149,13 @@ template AndArray(n) {
     }
 }
 
+// Pick first N elements of a C element array
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Pick(N, C) {
+    assert(N <= C);
     signal input in[N];
     signal output out[C];
     for(var i = 0; i < C; i++) {
@@ -134,10 +163,12 @@ template Pick(N, C) {
     }
 }
 
-// Theta
-
+// d = b[0..64] ^ (a[:64]<<shl | a[0..64]>>shr)
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template D(n, shl, shr) {
-    // d = b ^ (a<<shl | a>>shr)
     signal input a[n];
     signal input b[n];
     signal output out[n];
@@ -150,6 +181,11 @@ template D(n, shl, shr) {
     out <== XorArray(64)(b, aux2);
 }
 
+// Theta
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Theta() {
     signal input in[25][64];
     signal output out[25][64];
@@ -171,10 +207,12 @@ template Theta() {
     }
 }
 
-// RhoPi
-
+// out = a<<shl|a>>shr
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template stepRhoPi(shl, shr) {
-    // out = a<<shl|a>>shr
     signal input a[64];
     signal output out[64];
 
@@ -182,6 +220,12 @@ template stepRhoPi(shl, shr) {
     signal aux1[64] <== ShL(64, shl)(a);
     out <== OrArray(64)(aux0, aux1);
 }
+
+// RhoPi
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template RhoPi() {
     signal input in[25][64];
     signal output out[25][64];
@@ -190,29 +234,35 @@ template RhoPi() {
 
     out[0] <== in[0];
     for(var i = 0; i < 24; i++) {
+        // 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, ...
         var shl = ((i + 1) * (i + 2) \ 2) % 64;
+
         out[rot[i + 1]] <== stepRhoPi(shl, 64 - shl)(in[rot[i]]);
     }
 }
 
 
-// Chi
-
+// out = a ^ (^b) & c
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template stepChi() {
-    // out = a ^ (^b) & c
     signal input a[64];
     signal input b[64];
     signal input c[64];
     signal output out[64];
 
-    // ^b
-    signal bXor[64] <== NotArray(64)(b);
-    // (^b)&c
-    signal bc[64] <== AndArray(64)(bXor, c);
-    // a^(^b)&c
-    out <== XorArray(64)(a, bc);
+    signal bXor[64] <== NotArray(64)(b); // ^b
+    signal bc[64] <== AndArray(64)(bXor, c); // (^b)&c
+    out <== XorArray(64)(a, bc); // a^(^b)&c
 }
 
+// Chi
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Chi() {
     signal input in[25][64];
     signal output out[25][64];
@@ -228,10 +278,16 @@ template Chi() {
     }
 }
 
-// Iota
-
+// RC constants
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template RC(r) {
     signal output out[64];
+
+    assert(r < 24);
+    // 24 * (8 byte = 64-bit) numbers
     var rc[24] = [
         0x0000000000000001, 0x0000000000008082, 0x800000000000808A,
         0x8000000080008000, 0x000000000000808B, 0x0000000080000001,
@@ -247,6 +303,11 @@ template RC(r) {
     }
 }
 
+// Iota
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Iota(r) {
     signal input in[25][64];
     signal output out[25][64];
@@ -259,6 +320,11 @@ template Iota(r) {
     }
 }
 
+// Apply Theta -> Rhopi -> Chi -> Iota
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template KeccakfRound(r) {
     signal input in[25][64];
     signal output out[25][64];

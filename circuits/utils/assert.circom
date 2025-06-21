@@ -3,7 +3,11 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/comparators.circom";
 include "../circomlib/circuits/bitify.circom";
 
-// Assert all N inputs are binary
+// Assert all N inputs are binary//
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template AssertBinary(N) {
     signal input in[N];
     for(var i = 0; i < N; i++) {
@@ -12,11 +16,20 @@ template AssertBinary(N) {
 }
 
 // Assert the input number is less than 2^B 
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template AssertBits(B) {
     signal input a;
     signal bits[B] <== Num2Bits(B)(a);
 }
 
+// Assert a < b
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template AssertLessThan(B) {
     signal input a;
     signal input b;
@@ -26,6 +39,11 @@ template AssertLessThan(B) {
     out === 1;
 }
 
+// Assert a <= b
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template AssertLessEqThan(B) {
     signal input a;
     signal input b;
@@ -35,6 +53,11 @@ template AssertLessEqThan(B) {
     out === 1;
 }
 
+// Assert a >= b
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template AssertGreaterEqThan(B) {
     signal input a;
     signal input b;

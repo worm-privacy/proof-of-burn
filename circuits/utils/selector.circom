@@ -9,6 +9,10 @@ include "./assert.circom";
 // vals:   [10, 20, 30, 40]
 // select: 2
 // out:    30
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Selector(n) {
     signal input vals[n];
     signal input select;

@@ -3,6 +3,10 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/mimcsponge.circom";
 
 // MiMC is a lightweight cryptographic hash function designed for zk-SNARKs
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Hasher() {
     signal input left;
     signal input right;

@@ -11,6 +11,10 @@ include "./assert.circom";
 //   b:   3
 //   out: 3
 //   rem: 1
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Divide(N) {
     signal input a;
     signal input b;
@@ -30,6 +34,10 @@ template Divide(N) {
 }
 
 // Converts an array of binary bits into a number in big-endian format.
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Bits2NumBigEndian(numBytes) {
     signal input in[numBytes * 8];
     signal output out;

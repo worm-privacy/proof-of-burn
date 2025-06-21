@@ -12,6 +12,10 @@ include "./concat.circom";
 //   num:   66051
 //   N:     8
 //   bytes: [3, 2, 1, 0, 0, 0, 0, 0]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template ByteDecompose(N) { 
     signal input num;
     signal output bytes[N];
@@ -79,6 +83,10 @@ template CountBytes(N) {
 // Example:
 //   in:    [1, 2, 3, 4, 5], inLen: 3
 //   output:[3, 2, 1, 0, 0]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template ReverseArray(N) {
     signal input in[N];
     signal input inLen;

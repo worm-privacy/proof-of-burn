@@ -37,6 +37,10 @@ template ShiftLeft(n) {
 // Example:
 //   nibbles: [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
 //   bytes: [0x12, 0x34, 0x56]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template NibblesToBytes(n) {
     signal input nibbles[2 * n];
     signal output bytes[n];
