@@ -9,6 +9,10 @@ include "./assert.circom";
 // Example:
 //   in:  [1, 2, 3, 4, 5], ind: 3
 //   out: [1, 2, 3, 0, 0]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Mask(n) {
     signal input in[n];
     signal input count;
@@ -35,6 +39,10 @@ template Mask(n) {
 // Example:
 //   in:    [1, 2, 3, 4, 5, 6, 7, 8], count: 3
 //   output:[0, 0, 0, 1, 2, 3, 4, 5]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template ShiftRight(n, maxShift) {
     signal input in[n];
     signal input count;
@@ -72,6 +80,10 @@ template ShiftRight(n, maxShift) {
 //   b:      [10, 20, 30, 40, 50], bLen: 2
 //   outLen: 5
 //   out: [1, 2, 3, 10, 20, 0, 0, 0, 0, 0]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Concat(maxLenA, maxLenB) {
     signal input a[maxLenA];
     signal input aLen;
