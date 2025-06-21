@@ -254,5 +254,3 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
     leafBitsLen === lastLayerLenSelector.out;
 }
-
-component main {public [fee]} = ProofOfBurn(4, 4, 5, 20, 31, 250);

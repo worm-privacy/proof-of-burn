@@ -12,12 +12,12 @@ POW_BITS = 250
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
 
 
-def burn(entropy, receiver):
+def burn(burn_key, receiver):
     recv = web3.Web3.to_int(hexstr=receiver)
     account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
-    hashed = w3.to_bytes(mimc7(Field(entropy), Field(recv)).val)
+    hashed = w3.to_bytes(mimc7(Field(burn_key), Field(recv)).val)
     addr = list(hashed[len(hashed)-20:])
     burn_addr = w3.to_checksum_address(bytes(addr))
     tx = {
@@ -33,15 +33,15 @@ def burn(entropy, receiver):
     return burn_addr
 
 import random
-def find_entropy(max_bits):
-    entropy = random.randint(0, FIELD_SIZE - 1)
-    while len(bin(mimc7(Field(entropy), Field(2)).val)[2:]) > max_bits:
-        entropy += 1
-    return entropy
+def find_burn_key(max_bits):
+    burn_key = random.randint(0, FIELD_SIZE - 1)
+    while len(bin(mimc7(Field(burn_key), Field(2)).val)[2:]) > max_bits:
+        burn_key += 1
+    return burn_key
 
-entropy = find_entropy(POW_BITS)
+burn_key = find_burn_key(POW_BITS)
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
-addr = burn(entropy, receiver)
+addr = burn(burn_key, receiver)
 
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
@@ -144,7 +144,7 @@ print(
         {
             "receiverAddress": str(web3.Web3.to_int(hexstr=receiver)),
             "numLeafAddressNibbles": str(addr_term_len),
-            "entropy": str(entropy),
+            "burnKey": str(burn_key),
             "fee": str(fee),
             "balance": str(proof.balance),
             "numLayers": num_layers,

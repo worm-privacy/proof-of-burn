@@ -33,5 +33,3 @@ template Spend(maxAmountBits) {
     coin <== Hasher()(balance, burnKey);
     remainingCoin <== Hasher()(balance - withdrawnBalance, burnKey);
 }
-
-component main {public [withdrawnBalance]} = Spend(200);

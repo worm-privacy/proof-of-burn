@@ -16,6 +16,8 @@ def run(main, test_cases):
         include "utils/substring_check.circom";
         include "utils/utils.circom";
         include "utils/keccak.circom";
+        include "proof_of_burn.circom";
+        include "spend.circom";
         
         """
         f.write(imports + f"component main = {main};")
@@ -96,6 +98,24 @@ def rlp_empty_account(balance, max_balance_bytes):
     predict = predict + [0] * (70 + max_balance_bytes - predict_len) + [predict_len]
     return predict
 
+
+with io.open("test_pob_input.json") as f:
+    proof_of_burn_inp = json.load(f)
+
+# TODO: Write this as keccak
+expected_commitment = (
+    100974767716004228633766963708491751230186697816999479544610492849519273360
+)
+
+run(
+    "ProofOfBurn(4, 4, 5, 20, 31, 250)",
+    [
+        (
+            proof_of_burn_inp,
+            [expected_commitment],
+        )
+    ],
+)
 
 run(
     "ByteDecompose(4)",
