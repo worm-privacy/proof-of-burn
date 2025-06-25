@@ -35,33 +35,38 @@ template FieldToBits() {
 //
 // Example:
 //   blockRoot:        [256-bit input]
-//   nullifier:        [256-bit input]
-//   encryptedBalance: [256-bit input]
+//   nullifier:        Field-element
+//   encryptedBalance: Field-element
 //   fee:              Field-element
 //   receiverAddress:  Field-element
 //   commitment: The resulting commitment after applying the hash and zeroing the last byte.
 template InputsHasher() {
     signal input blockRoot[256];
-    signal input nullifier[256];
-    signal input encryptedBalance[256];
+    signal input nullifier;
+    signal input encryptedBalance;
     signal input fee;
+    signal input spend;
     signal input receiverAddress;
 
     signal output commitment;
 
+    signal nullifierBits[256] <== FieldToBits()(nullifier);
+    signal encryptedBalanceBits[256] <== FieldToBits()(encryptedBalance);
     signal feeBits[256] <== FieldToBits()(fee);
+    signal spendBits[256] <== FieldToBits()(spend);
     signal receiverAddressBits[256] <== FieldToBits()(receiverAddress);
 
-    // Pack the inputs within a 136 byte keccak block
+    // Pack the inputs within a 272 byte keccak block
     signal keccakInputBits[2176];
     for(var i = 0; i < 256; i++) {
         keccakInputBits[i] <== blockRoot[i];
-        keccakInputBits[256 + i] <== nullifier[i];
-        keccakInputBits[512 + i] <== encryptedBalance[i];
+        keccakInputBits[256 + i] <== nullifierBits[i];
+        keccakInputBits[512 + i] <== encryptedBalanceBits[i];
         keccakInputBits[768 + i] <== feeBits[i];
-        keccakInputBits[1024 + i] <== receiverAddressBits[i];
+        keccakInputBits[1024 + i] <== spendBits[i];
+        keccakInputBits[1280 + i] <== receiverAddressBits[i];
     }
-    for(var i = 1280; i < 2176; i++) {
+    for(var i = 1536; i < 2176; i++) {
         keccakInputBits[i] <== 0;
     }
     
@@ -111,26 +116,6 @@ template BurnKeyAndReceiverToAddressHash() {
     }
 }
 
-// Encrypts a balance by applying the MiMC hash function with a given burnKey as the salt. 
-// The burnKey acts as a unique value that ensures different encrypted outputs for the same balance.
-template EncryptBalance() {
-    signal input burnKey;
-    signal input balance;
-    signal output encryptedBalance[256];
-
-    signal hash <== Hasher()(burnKey, balance);
-    encryptedBalance <== FieldToBits()(hash);
-}
-
-// Nullifier: MiMC(burnKey, 1)
-template BurnKeyToNullifier() {
-    signal input burnKey;
-    signal output nullifier[256];
-
-    signal hash <== Hasher()(burnKey, 1);
-    nullifier <== FieldToBits()(hash);
-}
-
 
 // Proof-of-Work: MiMC(burnKey, 2) < 2^maxBits
 //
@@ -147,6 +132,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
     signal input balance; // Balance of the burn-address
     signal input fee; // To be paid to the relayer who actually submits the proof
+    signal input spend; // You can spend part of minted amount upon creation
     signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node
     signal input receiverAddress; // The address which can receive the minted burnt-token
 
@@ -159,7 +145,10 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
 
-    signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
+     // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance, fee, spend, receiverAddress)
+    signal output commitment;
+
+    assert(amountBytes <= 31);
 
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
@@ -169,9 +158,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
 
-    // fee should be less than the amount being minted
+    // fee, spend and (fee + spend) should be less than the amount being minted
+    // (fee + spend) will NOT overflow since balance/fee/spend amounts are limited
+    // to `amountBytes` bytes.
     AssertLessEqThan(amountBytes * 8)(fee, balance);
-
+    AssertLessEqThan(amountBytes * 8)(spend, balance);
+    AssertLessEqThan(amountBytes * 8)(fee + spend, balance);
+    
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
         AssertLessThan(16)(layerBitsLens[i], maxNodeBlocks * 136 * 8);
@@ -182,10 +175,10 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBinary(maxHeaderBlocks * 136 * 8)(blockHeader);
 
     // Calculate encrypted-balance
-    signal encryptedBalance[256] <== EncryptBalance()(burnKey, balance - fee);
+    signal encryptedBalance <== Hasher()(burnKey, balance - fee - spend);
 
     // Calculate nullifier
-    signal nullifier[256] <== BurnKeyToNullifier()(burnKey);
+    signal nullifier <== Hasher()(burnKey, 1);
 
     // Calculate burn-address
     signal addressHashNibbles[64] <== BurnKeyAndReceiverToAddressHash()(burnKey, receiverAddress);
@@ -199,7 +192,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate public commitment
-    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee, receiverAddress);
+    commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee, spend, receiverAddress);
     
     // layerBits[numLayers - 1]
     signal lastLayerBits[maxNodeBlocks * 136 * 8] <== ArraySelector(

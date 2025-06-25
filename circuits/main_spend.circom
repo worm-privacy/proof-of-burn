@@ -2,4 +2,5 @@ pragma circom 2.2.2;
 
 include "./spend.circom";
 
-component main {public [withdrawnBalance]} = Spend(200);
+// Maximum 31 bytes for amounts to avoid field overflows
+component main {public [withdrawnBalance]} = Spend(31);

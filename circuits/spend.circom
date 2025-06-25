@@ -17,19 +17,21 @@ include "./utils/hasher.circom";
 // Example:
 //   balance:           1000
 //   burnKey:           123456
-//   coin:              MiMC(1000, 123456)
+//   coin:              MiMC(123456, 1000)
 //   withdrawnBalance:  200
-//   remainingCoin:     MiMC(800, 123456)
-template Spend(maxAmountBits) {
-    signal input balance;
+//   remainingCoin:     MiMC(123456, 800)
+template Spend(maxAmountBytes) {
     signal input burnKey;
+    signal input balance;
     signal input withdrawnBalance;
 
     signal output coin;
     signal output remainingCoin;
 
-    AssertGreaterEqThan(maxAmountBits)(balance, withdrawnBalance);
+    assert(maxAmountBytes <= 31); // To avoid field overflows
 
-    coin <== Hasher()(balance, burnKey);
-    remainingCoin <== Hasher()(balance - withdrawnBalance, burnKey);
+    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance);
+
+    coin <== Hasher()(burnKey, balance);
+    remainingCoin <== Hasher()(burnKey, balance - withdrawnBalance);
 }
