@@ -235,6 +235,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
             );
 
             // Check substring-ness only when the layer exists
+            // - When layer doesn't exist: (1 - substringChecker) *  0 === 0 (Correct)
+            // - When layer exists: (1 - substringChecker) * 1 === 0 -> substringChecker === 1 (Correct)
             (1 - substringCheckers[i - 1]) * existingLayer[i] === 0;
         }
     }

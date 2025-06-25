@@ -184,6 +184,9 @@ template RlpInteger(N) {
 // and less than 256, which allows it to be represented using a single byte)
 // Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
 //
+// Reviewers:
+//   Keyvan: OK
+//
 template RlpEmptyAccount(maxBalanceBytes) {
     signal input balance;
 
@@ -211,8 +214,8 @@ template RlpEmptyAccount(maxBalanceBytes) {
     }
 
     signal nonceAndBalanceRlpLen; // Without the [0xf8, TOTAL_BYTES_LEN] prefix
-    nonceAndBalanceRlpLen <== 1 + balanceRlpLen; // BALANCE_BYTES_LEN is the only prefix
-    prefixedNonceAndBalanceRlpLen <== 2 + nonceAndBalanceRlpLen; // [0x80 (Nonce: 0), BALANCE_BYTES_LEN] is the prefix
+    nonceAndBalanceRlpLen <== 1 + balanceRlpLen; // Nonce (Len: 1) and then the RLP of balance (Len: balanceRlpLen)
+    prefixedNonceAndBalanceRlpLen <== 2 + nonceAndBalanceRlpLen; // [0xf8, TOTAL_BYTES_LEN] is the prefix
 
     // Concatenated RLP of storage-hash and code-hash of an empty account
     // Storage-hash: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
@@ -300,23 +303,66 @@ template RlpEmptyAccount(maxBalanceBytes) {
     outLen <== concat.outLen;
 }
 
-// Returns RLP(addressHash, RLP([NONCE, balance, STORAGE_HASH, CODE_HASH]))
+// Returns RLP(key, value)
+// Where:
+//   key:   addressHash
+//   value: RLP([NONCE, balance, STORAGE_HASH, CODE_HASH])
+//
+// Read: https://ethereum.org/de/developers/docs/data-structures-and-encoding/patricia-merkle-trie
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
-    var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66; // More info in RlpEmptyAccount gadget
-    var maxKeyLen = 1 + maxAddressHashBytes; // Leaf keys are prefixed with 0x20 or 0x3_
-    var maxPrefixedKeyRlpLen = 3 + maxKeyLen; // Prefix: [0x80 + KEY_LEN, 0xf8, (KEY_LEN + 1) + VALUE_RLP_LEN]
-    var maxValueRlpLen = 2 + maxRlpEmptyAccountLen; // Prefix: [0xb8, VALUE_LEN]
-    var maxOutLen = maxPrefixedKeyRlpLen + maxValueRlpLen;
-
     signal input addressHashNibbles[2 * maxAddressHashBytes];
     signal input addressHashNibblesLen;
     signal input balance;
 
-    // Calculate the MPT leaf key based on the address-hash nibbles
-    signal (key[maxAddressHashBytes + 1], keyLen) <== LeafKey(32)(addressHashNibbles, addressHashNibblesLen);    
+    assert(maxAddressHashBytes <= 32);
+    assert(maxBalanceBytes <= 31);
+
+    // Min length: 4 + 1 + 66 = 71
+    // Max length: 4 + 31 + 66 = 101
+    // The "value" in a leaf node is RLP of an account
+    var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66; // More info in RlpEmptyAccount gadget
+    assert(maxRlpEmptyAccountLen <= 101);
+
+    // Min length: 2 + 71 = 73
+    // Max length: 2 + 101 = 103
+    // Byte-strings of length more than 55 bytes and less than 256 bytes are prefix with:
+    // [0xb7 + 1, STRING_LEN]
+    var maxValueRlpLen = 2 + maxRlpEmptyAccountLen; // Prefix: [0xb7 + 1, VALUE_LEN]
+    assert(maxValueRlpLen <= 103);
+
+    // Leaf keys are prefixed with 0x20 or 0x3_
+    // Read: https://ethereum.org/de/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#specification
+    // Min length: 2 (We later put an AssertGreaterEqThan on the keyLen to avoid keyLens lower than 2)
+    // Max length: 33
+    var maxKeyLen = 1 + maxAddressHashBytes; 
+    assert(maxKeyLen <= 33);
+
+    // keyLen is at least 2 bytes and at most 33 bytes, so [0x80 + keyLen] is the correct prefix
+    // Min length: 3
+    // Max length: 34
+    var maxKeyRlpLen = 1 + maxKeyLen; // Prefix: [0x80 + KEY_LEN]
+    assert(maxKeyLen <= 34);
+
+    // KEY_RLP_LEN + VALUE_RLP_LEN is minimum (3 + 73 = 76) and maximum (34 + 103 = 137) bytes
+    // So the correct prefix is always: [0xf7 + 1, KEY_RLP_LEN + VALUE_RLP_LEN]
+    var maxPrefixedKeyRlpLen = 2 + maxKeyRlpLen;
+    assert(maxKeyRlpLen + maxValueRlpLen <= 137);
+
+    // maxBalanceBytes + maxAddressHashBytes + 76
+    var maxOutLen = maxPrefixedKeyRlpLen + maxValueRlpLen; 
 
     signal output out[maxOutLen * 8];
     signal output outLen;
+
+    // Calculate the MPT leaf key based on the address-hash nibbles
+    signal (key[maxKeyLen], keyLen) <== LeafKey(32)(addressHashNibbles, addressHashNibblesLen);    
+
+    // A minimum of 2 bytes so that the prefix of key is always [0x80 + len]
+    AssertGreaterEqThan(16)(keyLen, 2);
 
     signal (
         rlpEmptyAccount[maxRlpEmptyAccountLen], rlpEmptyAccountLen
@@ -331,7 +377,7 @@ template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     signal valueRlp[maxValueRlpLen];
     signal valueRlpLen;
 
-    valueRlp[0] <== 0xb7 + 1; 
+    valueRlp[0] <== 0xb7 + 1;
     valueRlp[1] <== rlpEmptyAccountLen;
     for(var i = 0; i < maxRlpEmptyAccountLen; i++) {
         valueRlp[i + 2] <== rlpEmptyAccount[i];

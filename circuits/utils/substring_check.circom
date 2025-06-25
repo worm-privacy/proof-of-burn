@@ -4,13 +4,20 @@ include "./utils.circom";
 include "./assert.circom";
 
 
-// Checks whether the array `subInput` is a contiguous substring of `mainInput`.
+// Checks whether the binary array `subInput` is a contiguous substring of `mainInput`.
 //
 // Example:
-//   mainInput: [1, 2, 3, 4, 5, 6, 7, 0, 0, 0]
+//   mainInput: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+//   mainLen:   6
+//   subInput:  [0, 0, 1]
+//   out:       0
+//
+// Example:
+//   mainInput: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0]
 //   mainLen:   7
-//   subInput:  [3, 4, 5]
+//   subInput:  [0, 0, 1]
 //   out:       1
+//
 template SubstringCheck(maxMainLen, subLen) {
     signal input mainInput[maxMainLen];
     signal input mainLen;
@@ -30,7 +37,8 @@ template SubstringCheck(maxMainLen, subLen) {
     signal subInputNum <== Bits2Num(subLen)(subInput);
 
     // M[i] = Number representation of the first i bits
-    // M[i] = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^(i-1)*mainInput[i-1]
+    // If i = 0 --> M[i] = 0
+    // If i > 0 --> M[i] = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^(i-1)*mainInput[i-1]
     signal M[maxMainLen + 1];
     M[0] <== 0;
     for (var i = 0; i < maxMainLen; i++) {
@@ -54,6 +62,8 @@ template SubstringCheck(maxMainLen, subLen) {
     //    Thus, all the bits in M[i..i + subLen] has to be equal with subInput
     // 2. Also subInput's length is limited to 248 bits, so subInputNum will not overflow
     //    and we won't have unexpected/fancy bugs here.
+
+    
     // Existence flags. When exists[i] is 1 it means that:
     // mainInput[i..i + subLen] == subInput
     signal exists[maxMainLen - subLen + 1];
