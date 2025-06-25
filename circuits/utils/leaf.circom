@@ -9,6 +9,10 @@ include "./assert.circom";
 //   in:    [1, 2, 3, 4, 5]
 //   count: 2
 //   out:   [3, 4, 5, 0, 0]
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template ShiftLeft(n) {
     signal input in[n];
     signal input count;
