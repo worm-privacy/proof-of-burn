@@ -28,18 +28,29 @@ The flow will be like this:
  - The web application will ask the user to sign `"\x19Ethereum Signed Message:\n" + "EIP-7503`` string which will then return a deterministic signature. ***THIS SIGNATURE SHOULD NEVER BECOME PUBLIC***
  - The scalar components of the signature may be used as an entropy for finding unlimited burn-keys.
 
-## Test on ganache
+## Test Locally
+
+> [!NOTE]
+> Optionally, use `nix-shell` and then skip to step 3.
+>
+> Or, use the Dockerfile
 
 1. Install Rust toolkit
     - `curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh`
 2. Install Circom
     - `git clone https://github.com/iden3/circom.git`
     - `cd circom && cargo install --path circom`
-3. Start a Ganache server
-    - `ganache -d`
-4. Clone this repo and run the Makefile
+3. Clone this repo
     - `git clone --recurse-submodules https://github.com/worm-privacy/proof-of-burn`
     - `cd proof-of-burn`
+4. Install Python dependencies
+    - `python -m venv venv`
+    - `source venv/bin/activate`
+    - `pip install -r requirements.txt`
+5. Start Ganache *or* Anvil (Foundry) server
+    - `ganache -d`
+    - `anvil --mnemonic "myth like bonus scare over problem client lizard pioneer submit female collect"`
+6. Run the Makefile
     - `make`
 
 After running `make`, the `main.py` script will first initiate a transfer to a burn-address and will then generate an input file for the circuit. Then it will try to generate a witness file through the Circom-generated C program.
