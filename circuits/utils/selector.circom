@@ -35,3 +35,34 @@ template Selector(n) {
 
     out <== sum[n];
 }
+
+
+// Selects the array at the given index `select` from an MxN array of arrays `arrays`.
+//
+// Example:
+// arrays: [[11, 21, 31, 41],
+//          [12, 22, 32, 42],
+//          [13, 23, 33, 43],
+//          [14, 24, 34, 44]]
+// select: 2
+// out:    [13, 23, 33, 43]
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template ArraySelector(m, n) {
+    signal input arrays[m][n];
+    signal input select;
+    signal output out[n];
+
+    signal arraysT[n][m]; // Transposed
+    for(var i = 0; i < m; i++) {
+        for(var j = 0; j < n; j++) {
+            arraysT[j][i] <== arrays[i][j];
+        }
+    }
+
+    for(var i = 0; i < n; i++) {
+        out[i] <== Selector(m)(arraysT[i], select);
+    }
+}

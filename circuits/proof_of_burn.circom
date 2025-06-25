@@ -145,15 +145,19 @@ template ProofOfWorkChecker(powMaxAllowedBits) {
 
 template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMaxAllowedBits) {
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
-    signal input fee; // To be paid to the relayer who actually submits the proof
     signal input balance; // Balance of the burn-address
+    signal input fee; // To be paid to the relayer who actually submits the proof
+    signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node
+    signal input receiverAddress; // The address which can receive the minted burnt-token
+
+    // Merkle-Patricia-Trie nodes data
     signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
     signal input layerBitsLens[maxNumLayers]; // Bit length of MPT nodes
     signal input numLayers; // Number of MPT nodes
+
+    // Block-header data
     signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
-    signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node
-    signal input receiverAddress; // The address which can receive the minted burnt-token
 
     signal output commitment; // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance)
 
@@ -197,24 +201,12 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Calculate public commitment
     commitment <== InputsHasher()(blockRoot, nullifier, encryptedBalance, fee, receiverAddress);
     
-    // Fetch the last layer (layerBits[numLayers - 1]) bits
-    component lastLayerBitsSelectors[maxNodeBlocks * 136 * 8];
-    for(var j = 0; j < maxNodeBlocks * 136 * 8; j++) {
-        lastLayerBitsSelectors[j] = Selector(maxNumLayers);
-        lastLayerBitsSelectors[j].select <== numLayers - 1;
-    }
-    for(var i = 0; i < maxNumLayers; i++) {
-        for(var j = 0; j < 4 * 136 * 8; j++) {
-            lastLayerBitsSelectors[j].vals[i] <== layerBits[i][j];
-        }
-    }
-
-    // Fetch the last layer (layerBitsLens[numLayers - 1]) len
-    component lastLayerLenSelector = Selector(maxNumLayers);
-    lastLayerLenSelector.select <== numLayers - 1;
-    for(var i = 0; i < maxNumLayers; i++) {
-        lastLayerLenSelector.vals[i] <== layerBitsLens[i];
-    }
+    // layerBits[numLayers - 1]
+    signal lastLayerBits[maxNodeBlocks * 136 * 8] <== ArraySelector(
+        maxNumLayers, maxNodeBlocks * 136 * 8)(layerBits, numLayers - 1);
+    
+    // lastLayerBits[numLayer - 1]
+    signal lastLayerLen <== Selector(maxNumLayers)(layerBitsLens, numLayers - 1);
 
     // Calculate keccaks of all layers and check if the keccak of each
     // layer is substring of the upper layer
@@ -259,7 +251,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     
     // Make sure the calculated leaf-layer is equal with the last-layer
     for(var i = 0; i < 1112; i++) {
-        leafBits[i] === lastLayerBitsSelectors[i].out;
+        leafBits[i] === lastLayerBits[i];
     }
-    leafBitsLen === lastLayerLenSelector.out;
+    leafBitsLen === lastLayerLen;
 }
