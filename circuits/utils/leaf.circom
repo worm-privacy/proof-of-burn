@@ -1,5 +1,6 @@
 pragma circom 2.2.2;
 
+include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
 include "./assert.circom";
 
@@ -94,38 +95,45 @@ template NibblesToBytes(n) {
 //   len:    0
 //   out:    [0x20, 0x00, 0x00]
 //   outLen: 1
-template LeafKey(N) {
-    signal input addressHashNibbles[2 * N];
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template LeafKey(addressHashBytes) {
+    signal input addressHashNibbles[2 * addressHashBytes];
     signal input addressHashNibblesLen;
-    signal output out[N + 1];
+    signal output out[addressHashBytes + 1];
     signal output outLen;
 
-    signal (div, rem) <== Divide(16)(addressHashNibblesLen, 2);
+    // addressHash is at most 32 bytes (64 nibbles) so 6 bits
+    signal (div, rem) <== Divide(6)(addressHashNibblesLen, 2);
 
-    // Shift left (2 * N - addressHashNibblesLen) times so that
+    // Shift left (2 * addressHashBytes - addressHashNibblesLen) times so that
     // the last addressHashNibblesLen nibbles remain
-    signal shifted[2 * N] <== ShiftLeft(2 * N)(addressHashNibbles, 2 * N - addressHashNibblesLen);
+    signal shifted[2 * addressHashBytes] <== ShiftLeft(2 * addressHashBytes)(
+        addressHashNibbles, 2 * addressHashBytes - addressHashNibblesLen);
 
-    signal outNibbles[2 * N + 2];
+    signal outNibbles[2 * addressHashBytes + 2];
     // 2 if even number of nibbles, 3 if odd number of nibbles
     outNibbles[0] <== 2 + rem;
 
     // If odd number of nibbles, the second nibble of the result 
     // should be the first nibble of the remaining value
+    // If even number of nibbles, the second nibble is 0
     outNibbles[1] <== rem * shifted[0]; 
 
-    signal temp[2 * N - 1];
+    signal temp[2 * addressHashBytes - 1];
 
     // If odd number of nibbles, shift-right by one
-    for(var i = 0; i < 2 * N; i++) {
-        if(i < 2 * N - 1) {
-            temp[i] <== rem * shifted[i + 1];
-            outNibbles[i + 2] <== (1 - rem) * shifted[i] + temp[i];
+    for(var i = 0; i < 2 * addressHashBytes; i++) {
+        if(i < 2 * addressHashBytes - 1) {
+            outNibbles[i + 2] <== Mux1()([shifted[i], shifted[i + 1]], rem);
         } else {
+            // Avoid index out of bound
             outNibbles[i + 2] <== (1 - rem) * shifted[i];
         }
     }
 
-    out <== NibblesToBytes(N + 1)(outNibbles);
+    out <== NibblesToBytes(addressHashBytes + 1)(outNibbles);
     outLen <== 1 + div;
 }
