@@ -6,3 +6,4 @@ yarn-error.log
 inp.json
 *_cpp
 __pycache__
+circuits/test.circom
