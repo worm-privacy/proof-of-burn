@@ -149,13 +149,13 @@ template AndArray(n) {
     }
 }
 
-// Pick first N elements of a C element array
+// Pick first C elements of a N element array
 //
 // Reviewers:
 //   Keyvan: OK
 //
 template Pick(N, C) {
-    assert(N <= C);
+    assert(C <= N);
     signal input in[N];
     signal output out[C];
     for(var i = 0; i < C; i++) {
@@ -368,53 +368,27 @@ template Absorb() {
     }
 }
 
+// Final
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Final(nBlocksIn) {
-    signal input in[nBlocksIn * 136 * 8];
+    signal input in[nBlocksIn][136 * 8];
     signal input blocks;
     signal output out[25 * 64];
     var blockSize = 136 * 8;
 
-    component abs[nBlocksIn];
-
+    signal s[nBlocksIn + 1][25 * 64];
+    for(var i = 0; i < 25 * 64; i++) {
+        s[0][i] <== 0;
+    }
+    
     for (var b = 0; b < nBlocksIn; b++) {
-        abs[b] = Absorb();
-        if (b == 0) {
-            for (var i = 0; i < 25 * 64; i++) {
-                abs[b].s[i] <== 0;
-            }
-        } else {
-            for (var i = 0; i < 25 * 64; i++) {
-                abs[b].s[i] <== abs[b - 1].out[i];
-            }
-        }
-        for (var i = 0; i < blockSize; i++) {
-            abs[b].block[i] <== in[b * 136 * 8 + i];
-        }
+        s[b + 1] <== Absorb()(s[b], in[b]);
     }
 
-    component selectors[25 * 64];
-
-    for (var i = 0; i < 25 * 64; i++) {
-        selectors[i] = Selector(nBlocksIn);
-        selectors[i].select <== blocks - 1;
-        for(var j = 0; j < nBlocksIn; j++) {
-            selectors[i].vals[j] <== abs[j].out[i];
-        }
-        out[i] <== selectors[i].out;
-    }
-}
-
-template Squeeze(nBits) {
-    signal input s[25 * 64];
-    signal output out[nBits];
-
-    for (var i = 0; i < 25; i++) {
-        for (var j = 0; j < 64; j++) {
-            if (i * 64 + j < nBits) {
-                out[i * 64 + j] <== s[i * 64 + j];
-            }
-        }
-    }
+    out <== ArraySelector(nBlocksIn + 1, 25 * 64)(s, blocks);
 }
 
 template Keccakf() {
@@ -438,13 +412,18 @@ template Keccakf() {
     out <== round[23].out;
 }
 
+// Keccak of prepared input
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Keccak(nBlocksIn) {
-    signal input in[nBlocksIn * 136 * 8];
+    signal input in[nBlocksIn][136 * 8];
     signal input blocks;
     signal output out[32 * 8];
 
-    signal fin[25 * 64] <== Final(nBlocksIn)(in, blocks);
-    out <== Squeeze(32 * 8)(fin);
+    signal state[25 * 64] <== Final(nBlocksIn)(in, blocks);
+    out <== Pick(25 * 64, 32 * 8)(state);
 }
 
 
@@ -493,5 +472,13 @@ template KeccakBits(maxBlocks) {
     signal (
         padded[maxBlocks * 136 * 8], numBlocks
     ) <== BitPad(maxBlocks, 136 * 8)(inBits, inBitsLen);
-    out <== Keccak(maxBlocks)(padded, numBlocks);
+
+    signal paddedBlocks[maxBlocks][136 * 8];
+    for(var i = 0; i < maxBlocks; i++) {
+        for(var j = 0; j < 136 * 8; j++) {
+            paddedBlocks[i][j] <== padded[i * 136 * 8 + j];
+        }
+    }
+
+    out <== Keccak(maxBlocks)(paddedBlocks, numBlocks);
 }
