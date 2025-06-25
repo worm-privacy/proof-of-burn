@@ -147,6 +147,7 @@ print(
             "burnKey": str(burn_key),
             "fee": str(fee),
             "balance": str(proof.balance),
+            "spend": str(proof.balance - fee),
             "numLayers": num_layers,
             "layerBits": layers,
             "layerBitsLens": layer_lens,
