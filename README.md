@@ -31,7 +31,7 @@ The flow will be like this:
 ## Test Locally
 
 > [!NOTE]
-> Optionally, use `nix-shell` and then skip to step 3.
+> Optionally, use `nix-shell` and then skip to step 5.
 >
 > Or, use the Dockerfile
 
