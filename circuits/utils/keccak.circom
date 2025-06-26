@@ -47,15 +47,15 @@ template ShL(n, r) {
     }
 }
 
-// Xor3 function for sha256
+// Array of 3-input XORs (Uses less linear-constraints than 2 XorArrays)
 // Proof:
 //   a ^ b = a + b - 2ab
 //   (a ^ b) ^ c = (a + b - 2ab) + c - 2(a + b - 2ab)c = a + b + c - 2ab - 2ac - 2bc + 4abc
 //   out = a ^ b ^ c  =>
-//   out = a+b+c - 2*a*b - 2*a*c - 2*b*c + 4*a*b*c   =>
-//   out = a*( 1 - 2*b - 2*c + 4*b*c ) + b + c - 2*b*c =>
-//   mid = b*c
-//   out = a*( 1 - 2*b -2*c + 4*mid ) + b + c - 2 * mid
+//   out = a + b + c - 2ab - 2ac - 2bc + 4abc   =>
+//   out = a(1 - 2b - 2c + 4bc) + b + c - 2bc =>
+//   mid = bc
+//   out = a(1 - 2b - 2c + 4mid) + b + c - 2mid
 //       = a - 2ab - 2ac + 4abc + b + c - 2bc = a + b + c - 2ab - 2ac -2bc + 4abc
 //
 // Reviewers:
@@ -163,7 +163,7 @@ template Pick(N, C) {
     }
 }
 
-// d = b[0..64] ^ (a[:64]<<shl | a[0..64]>>shr)
+// d = b[0..64] ^ (a[0..64] << shl | a[0..64] >> shr)
 //
 // Reviewers:
 //   Keyvan: OK
@@ -207,7 +207,7 @@ template Theta() {
     }
 }
 
-// out = a<<shl|a>>shr
+// out = a << shl | a >> shr
 //
 // Reviewers:
 //   Keyvan: OK
@@ -356,6 +356,7 @@ template Absorb() {
             aux[i] <== s[i];
         }
     }
+
     out <== Keccakf()(aux);
 }
 
@@ -420,53 +421,92 @@ template Keccak(nBlocksIn) {
     }
 }
 
-
+// Pads the last block of theinput with 1000...0001 according to the number 
+// of blocks needed
+//
+// Example (maxBlocks: 3, blockSize: 4):
+//   in:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+//
+//   numBlocks = ((inLen + 1) / blockSize) + 1
+//
+//   inLen: 0 out: [1. 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0] numBlocks: 1
+//   inLen: 1 out: [1. 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0] numBlocks: 1
+//   inLen: 2 out: [1. 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0] numBlocks: 1
+//   inLen: 3 out: [1. 2, 3, 1, 0, 0, 0, 1, 0, 0, 0, 0] numBlocks: 2
+//   inLen: 4 out: [1. 2, 3, 4, 1, 0, 0, 1, 0, 0, 0, 0] numBlocks: 2
+//   inLen: 5 out: [1. 2, 3, 4, 5, 1, 0, 1, 0, 0, 0, 0] numBlocks: 2
+//   inLen: 6 out: [1. 2, 3, 4, 5, 6, 1, 1, 0, 0, 0, 0] numBlocks: 2
+//   inLen: 7 out: [1. 2, 3, 4, 5, 6, 7, 1, 0, 0, 0, 1] numBlocks: 3
+//   inLen: 8 out: [1. 2, 3, 4, 5, 6, 7, 1, 0, 0, 0, 1] numBlocks: 3
+//   inLen: 9 out: [1. 2, 3, 4, 5, 6, 7, 8, 1, 0, 0, 1] numBlocks: 3
+//   inLen: 10 out: [1. 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 1] numBlocks: 3
+//   inLen: 11 (Cannot generate proof, because ((11 + 1) / blockSize + 1) > maxBlocks)
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template BitPad(maxBlocks, blockSize) {
     var maxBits = maxBlocks * blockSize;
     signal input in[maxBits];
-    signal input ind;
+    signal input inLen;
 
     signal output out[maxBits];
     signal output numBlocks;
 
-    signal (div, rem) <== Divide(16)(ind + 1, blockSize);
+    signal (div, rem) <== Divide(16)(inLen + 1, blockSize);
     numBlocks <== div + 1;
 
-    AssertLessThan(16)(div, maxBlocks);
+    AssertLessEqThan(16)(numBlocks, maxBlocks);
 
-    signal eqs[maxBits + 1];
-    eqs[0] <== 1;
-    signal eqcomps[maxBits];
+    // Create a 1, 1, ..., 1, 1, 0, 0, ..., 0, 0 filter
+    // Where the first `inLen` bits are 1
+    signal filter[maxBits + 1];
+    filter[0] <== 1;
+    signal isEq[maxBits];
     for(var i = 0; i < maxBits; i++) {
-        eqcomps[i] <== IsEqual()([i, ind]);
-        eqs[i + 1] <== eqs[i] * (1 - eqcomps[i]);
+        isEq[i] <== IsEqual()([i, inLen]);
+        filter[i + 1] <== filter[i] * (1 - isEq[i]);
     }
 
     signal isLast[maxBits];
     for(var i = 0; i < maxBits; i++) {
         isLast[i] <== IsEqual()([i, numBlocks * blockSize - 1]);
-        out[i] <== in[i] * eqs[i + 1] + eqcomps[i] + isLast[i];
+
+        // Due to the filter, only the first `inLen` bits are kept
+        // +1 if we are on the last bit of data
+        // +1 if we are on the last bit of last block
+        // (isLast and isEq cannot happen at the same time so we won't have a +2)
+        // Effectively adding a 1000..0001 postfix to the data
+        out[i] <== in[i] * filter[i + 1] + isEq[i] + isLast[i];
     }
 }
 
-
+// Keccak of arbitrary number of bits.
+// Padding is done automatically and only required number of blocks are used.
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template KeccakBits(maxBlocks) {
     signal input inBits[maxBlocks * 136 * 8];
     signal input inBitsLen;
     signal output out[256];
 
     // Make sure inBitsLen is divisible by 8.
+    // We only have byte-string inputs, not bits!
     signal rem;
     (_, rem) <== Divide(16)(inBitsLen, 8);
     rem === 0;
 
-    // Give some space for padding
+    // Give some space for padding (10000001)
     AssertLessEqThan(16)(inBitsLen, maxBlocks * 136 * 8 - 8);
 
+    // Add 1000...0001 padding to the input bits
     signal (
         padded[maxBlocks * 136 * 8], numBlocks
     ) <== BitPad(maxBlocks, 136 * 8)(inBits, inBitsLen);
 
+    // Put the bits in blocks of 17x64-bit arrays
     signal paddedBlocks[maxBlocks][17][64];
     for(var i = 0; i < maxBlocks; i++) {
         for(var j = 0; j < 17; j++) {
