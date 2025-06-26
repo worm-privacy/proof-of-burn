@@ -3,7 +3,7 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/comparators.circom";
 include "../circomlib/circuits/bitify.circom";
 
-// Assert all N inputs are binary//
+// Assert all N inputs are binary
 //
 // Reviewers:
 //   Keyvan: OK
