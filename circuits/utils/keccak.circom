@@ -47,34 +47,7 @@ template ShL(n, r) {
     }
 }
 
-// Array of 3-input XORs (Uses less linear-constraints than 2 XorArrays)
-// Proof:
-//   a ^ b = a + b - 2ab
-//   (a ^ b) ^ c = (a + b - 2ab) + c - 2(a + b - 2ab)c = a + b + c - 2ab - 2ac - 2bc + 4abc
-//   out = a ^ b ^ c  =>
-//   out = a + b + c - 2ab - 2ac - 2bc + 4abc   =>
-//   out = a(1 - 2b - 2c + 4bc) + b + c - 2bc =>
-//   mid = bc
-//   out = a(1 - 2b - 2c + 4mid) + b + c - 2mid
-//       = a - 2ab - 2ac + 4abc + b + c - 2bc = a + b + c - 2ab - 2ac -2bc + 4abc
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template Xor3(n) {
-    signal input a[n];
-    signal input b[n];
-    signal input c[n];
-    signal output out[n];
-    signal mid[n];
-
-    for (var k = 0; k < n; k++) {
-        mid[k] <== b[k] * c[k];
-        out[k] <== a[k] * (1 - 2 * b[k] - 2 * c[k] + 4 * mid[k]) + b[k] + c[k] - 2 * mid[k];
-    }
-}
-
-// Xor5 using two Xor3s
+// Xor5 using four Xor arrays
 //
 // Reviewers:
 //   Keyvan: OK
@@ -87,8 +60,10 @@ template Xor5(n) {
     signal input e[n];
     signal output out[n];
     
-    signal xor_abc[n] <== Xor3(n)(a, b, c);
-    out <== Xor3(n)(xor_abc, d, e);
+    signal xor_ab[n] <== XorArray(n)(a, b);
+    signal xor_abc[n] <== XorArray(n)(xor_ab, c);
+    signal xor_abcd[n] <== XorArray(n)(xor_abc, d);
+    out <== XorArray(n)(xor_abcd, e);
 }
 
 // Array of XORs
@@ -115,7 +90,7 @@ template NotArray(n) {
     signal input a[n];
     signal output out[n];
     for (var i = 0; i < n; i++) {
-        out[i] <== NOT()(a[i]);
+        out[i] <== 1 - a[i];
     }
 }
 
