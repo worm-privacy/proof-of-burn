@@ -44,8 +44,8 @@ The flow will be like this:
     - `git clone --recurse-submodules https://github.com/worm-privacy/proof-of-burn`
     - `cd proof-of-burn`
 4. Install Python dependencies
-    - `python -m venv venv`
-    - `source venv/bin/activate`
+    - `python -m venv .venv`
+    - `source .venv/bin/activate`
     - `pip install -r requirements.txt`
 5. Start Ganache *or* Anvil (Foundry) server
     - `ganache -d`
