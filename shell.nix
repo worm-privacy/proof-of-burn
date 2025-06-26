@@ -1,16 +1,32 @@
 { pkgs ? import <nixpkgs> {} }:
 
+let
+  python-with-packages = pkgs.python3.withPackages (ps: with ps; [ pip virtualenv ]);
+in
+
 pkgs.mkShell {
   buildInputs = [
-    pkgs.gcc              # The compiler
-    pkgs.nlohmann_json    # The header-only json.hpp
-    pkgs.gmp              # The GMP library (headers + libgmp)
+    pkgs.gcc
+    pkgs.nlohmann_json
+    pkgs.gmp
     pkgs.rustc
     pkgs.circom
     pkgs.gnumake
-    pkgs.gcc
     pkgs.foundry
     pkgs.nasm
-    pkgs.python3
+    python-with-packages
   ];
+
+  shellHook = ''
+    if [ ! -d ".venv" ]; then
+      echo "Creating Python virtual environment..."
+      python -m venv .venv
+    fi
+    source .venv/bin/activate
+    if [ -f requirements.txt ]; then
+      echo "Installing Python dependencies..."
+      pip install -r requirements.txt
+    fi
+  '';
 }
+

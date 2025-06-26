@@ -1,4 +1,4 @@
-venv
+.venv
 target
 Prover.toml
 node_modules
