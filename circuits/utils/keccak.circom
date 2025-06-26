@@ -334,82 +334,72 @@ template KeccakfRound(r) {
     out <== Iota(r)(chi);
 }
 
+// Absorb phase
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Absorb() {
     var blockSizeBytes = 136;
+    var blockSize64BitChunks = blockSizeBytes / 8; // 17
 
-    signal input s[25 * 64];
-    signal input block[blockSizeBytes * 8];
-    signal output out[25 * 64];
+    signal input s[25][64];
+    signal input block[blockSize64BitChunks][64];
+    signal output out[25][64];
 
-    component aux[blockSizeBytes / 8];
-    component newS = Keccakf();
+    signal aux[25][64];
 
-    for (var i = 0; i < blockSizeBytes / 8; i++) {
-        aux[i] = XorArray(64);
-        for (var j = 0; j < 64; j++) {
-            aux[i].a[j] <== s[i * 64 + j];
-            aux[i].b[j] <== block[i * 64 + j];
-        }
-        for (var j = 0; j < 64; j++) {
-            newS.in[i][j] <== aux[i].out[j];
-        }
-    }
-    // fill the missing s that was not covered by the loop over
-    // blockSizeBytes/8
-    for (var i=(blockSizeBytes / 8); i < 25; i++) {
-        for(var j = 0; j < 64; j++) {
-            newS.in[i][j] <== s[i * 64 + j];
-        }
-    }
     for (var i = 0; i < 25; i++) {
-        for(var j = 0; j < 64; j++) {
-            out[i * 64 + j] <== newS.out[i][j];
+        if(i < blockSize64BitChunks) {
+            aux[i] <== XorArray(64)(s[i], block[i]);
+        } else {
+            aux[i] <== s[i];
         }
     }
+    out <== Keccakf()(aux);
 }
 
-// Final
+// Final phase
 //
 // Reviewers:
 //   Keyvan: OK
 //
 template Final(nBlocksIn) {
-    signal input in[nBlocksIn][136 * 8];
+    signal input in[nBlocksIn][17][64];
     signal input blocks;
-    signal output out[25 * 64];
+    signal output out[25][64];
     var blockSize = 136 * 8;
 
-    signal s[nBlocksIn + 1][25 * 64];
-    for(var i = 0; i < 25 * 64; i++) {
-        s[0][i] <== 0;
+    signal s[nBlocksIn + 1][25][64];
+    for(var i = 0; i < 25; i++) {
+        for(var j = 0; j < 64; j++) {
+            s[0][i][j] <== 0;
+        }
     }
     
     for (var b = 0; b < nBlocksIn; b++) {
         s[b + 1] <== Absorb()(s[b], in[b]);
     }
 
-    out <== ArraySelector(nBlocksIn + 1, 25 * 64)(s, blocks);
+    out <== Array2DSelector(nBlocksIn + 1, 25, 64)(s, blocks);
 }
 
+// Apply 24 rounds of KeccakfRound
+//
+// Reviewers:
+//   Keyvan: OK
+//
 template Keccakf() {
     signal input in[25][64];
     signal output out[25][64];
 
-    // 24 rounds
-    component round[24];
-    signal midRound[24][25][64];
+    signal midRound[25][25][64];
+    midRound[0] <== in;
     for (var i = 0; i < 24; i++) {
-        round[i] = KeccakfRound(i);
-        if (i == 0) {
-            midRound[0] <== in;
-        }
-        round[i].in <== midRound[i];
-        if (i < 23) {
-            midRound[i + 1] <== round[i].out;
-        }
+        midRound[i + 1] <== KeccakfRound(i)(midRound[i]);
     }
 
-    out <== round[23].out;
+    out <== midRound[24];
 }
 
 // Keccak of prepared input
@@ -418,12 +408,16 @@ template Keccakf() {
 //   Keyvan: OK
 //
 template Keccak(nBlocksIn) {
-    signal input in[nBlocksIn][136 * 8];
+    signal input in[nBlocksIn][17][64];
     signal input blocks;
     signal output out[32 * 8];
 
-    signal state[25 * 64] <== Final(nBlocksIn)(in, blocks);
-    out <== Pick(25 * 64, 32 * 8)(state);
+    signal finalState[25][64] <== Final(nBlocksIn)(in, blocks);
+
+    // Squeeze
+    for(var i = 0; i < 32 * 8; i++) {
+        out[i] <== finalState[i \ 64][i % 64];
+    }
 }
 
 
@@ -473,10 +467,12 @@ template KeccakBits(maxBlocks) {
         padded[maxBlocks * 136 * 8], numBlocks
     ) <== BitPad(maxBlocks, 136 * 8)(inBits, inBitsLen);
 
-    signal paddedBlocks[maxBlocks][136 * 8];
+    signal paddedBlocks[maxBlocks][17][64];
     for(var i = 0; i < maxBlocks; i++) {
-        for(var j = 0; j < 136 * 8; j++) {
-            paddedBlocks[i][j] <== padded[i * 136 * 8 + j];
+        for(var j = 0; j < 17; j++) {
+            for(var k = 0; k < 64; k++) {
+                paddedBlocks[i][j][k] <== padded[i * 17 * 64 + j * 64 + k];
+            }
         }
     }
 

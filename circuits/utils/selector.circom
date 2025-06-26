@@ -66,3 +66,37 @@ template ArraySelector(m, n) {
         out[i] <== Selector(m)(arraysT[i], select);
     }
 }
+
+// Selects the 2D array at the given index `select` from an MxPxQ array of arrays `arrays`.
+//
+// Example:
+// arrays: [[[1, 2],[3, 4]],
+//          [[2, 4],[6, 8]],
+//          [[3, 6],[9, 12]]]
+// select: 1
+// out:    [[2, 4],[6, 8]]
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template Array2DSelector(m, p, q) {
+    signal input arrays[m][p][q];
+    signal input select;
+    signal output out[p][q];
+
+    signal arraysT[p][q][m]; // Transposed
+    for(var i = 0; i < m; i++) {
+        for(var j = 0; j < p; j++) {
+            for(var k = 0; k < q; k++) {
+                arraysT[j][k][i] <== arrays[i][j][k];
+            }
+        }
+    }
+
+    for(var i = 0; i < p; i++) {
+        for(var j = 0; j < q; j++) {
+            out[i][j] <== Selector(m)(arraysT[i][j], select);
+        }
+    }
+}
+
