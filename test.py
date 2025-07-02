@@ -8,6 +8,7 @@ def run(main, test_cases):
         imports = """
         pragma circom 2.2.2;
         
+        include "utils/commit.circom";
         include "utils/concat.circom";
         include "utils/hasher.circom";
         include "utils/leaf.circom";
@@ -99,12 +100,66 @@ def rlp_empty_account(balance, max_balance_bytes):
     return predict
 
 
-with io.open("test_pob_input.json") as f:
-    proof_of_burn_inp = json.load(f)
+# Number to 256-bit little-endian list
+def field_to_bits(elem):
+    return [int(a) for a in reversed(format(elem, "#0258b")[2:])]
 
-# TODO: Write this as keccak
-expected_commitment = (
-    206891522913071013864921211521492201089030221491063794142506042130158250876
+
+run(
+    "FieldToBits()",
+    [
+        ({"in": 123}, field_to_bits(123)),
+        ({"in": 0}, field_to_bits(0)),
+        ({"in": 1}, field_to_bits(1)),
+        ({"in": str(3**150)}, field_to_bits(3**150)),
+        ({"in": str(2**250)}, field_to_bits(2**250)),
+    ],
+)
+
+from eth_abi import packed
+
+
+def expected_commitment(vals):
+    concat_bytes = []
+    for v in vals:
+        concat_bytes.extend(int.to_bytes(v, 32, "big"))
+    concat_bits = bytes_to_bits(concat_bytes)
+
+    expected = int.from_bytes(
+        web3.Web3.keccak(packed.encode_packed(["uint256"] * len(vals), vals))[1:], "big"
+    )
+    return (
+        {"in": concat_bits},
+        [expected],
+    )
+
+
+run(
+    "PublicCommitment(1)",
+    [
+        expected_commitment([0]),
+        expected_commitment([123456]),
+        expected_commitment([2**256 - 1]),
+    ],
+)
+
+run(
+    "PublicCommitment(2)",
+    [
+        expected_commitment([0, 1]),
+        expected_commitment([123456, 2345678]),
+        expected_commitment([987654321, 2**256 - 1]),
+        expected_commitment([2**256 - 1, 2**256 - 1]),
+    ],
+)
+
+run(
+    "PublicCommitment(6)",
+    [
+        expected_commitment([0, 1, 2, 3, 4, 5]),
+        expected_commitment([v * 3**100 for v in [0, 1, 2, 3, 4, 5]]),
+        expected_commitment([2**256 - 1] * 6),
+    ],
 )
 
 run(
@@ -139,6 +194,14 @@ run(
             None,
         ),
     ],
+)
+
+with io.open("test_pob_input.json") as f:
+    proof_of_burn_inp = json.load(f)
+
+# TODO: Write this as keccak
+expected_commitment = (
+    206891522913071013864921211521492201089030221491063794142506042130158250876
 )
 
 run(

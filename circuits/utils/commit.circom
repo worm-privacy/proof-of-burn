@@ -30,12 +30,11 @@ template PublicCommitment(N) {
     signal input in[N][256];
     signal output out;
 
-    // Just to make sure the gadget is being used for only 6 elements
-    assert(N == 6);
-
     // Number of keccak-blocks needed to store N 32-byte elements
     // numBlocks = Ceil(N * 32 / 136)
     var numBlocks = N * 32 \ 136 + (N * 32 % 136 != 0);
+
+    assert(numBlocks * 136 - N * 32 >= 1); // Reserve at least one byte for padding!
 
     signal bits[numBlocks * 136 * 8];
     for(var i = 0; i < N; i++) {
