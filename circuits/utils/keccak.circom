@@ -253,12 +253,12 @@ template Chi() {
     }
 }
 
-// RC constants
+// Round constants
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template RC(r) {
+template RoundConstants(r) {
     signal output out[64];
 
     assert(r < 24);
@@ -287,9 +287,9 @@ template Iota(r) {
     signal input in[25][64];
     signal output out[25][64];
 
-    component rc = RC(r);
+    signal roundConstants[64] <== RoundConstants(r)();
 
-    out[0] <== XorArray(64)(in[0], rc.out);
+    out[0] <== XorArray(64)(in[0], roundConstants);
     for (var i = 1; i < 25; i++) {
         out[i] <== in[i];
     }
@@ -357,6 +357,7 @@ template Final(nBlocksIn) {
         s[b + 1] <== Absorb()(s[b], in[b]);
     }
 
+    // Return the state after applying `blocks` absorbs: s[blocks]
     out <== Array2DSelector(nBlocksIn + 1, 25, 64)(s, blocks);
 }
 
