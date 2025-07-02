@@ -42,7 +42,7 @@ template PublicCommitment(N) {
             bits[i * 256 + j] <== in[i][j];
         }
     }
-    // The rest of the bits are set tot zero
+    // The rest of the bits are set to zero
     for(var i = N * 256; i < numBlocks * 136 * 8; i++) {
         bits[i] <== 0;
     }

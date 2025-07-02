@@ -53,23 +53,28 @@ template BitsToNibbles(N) {
     }
 }
 
-// Takes an burnKey input and generates a burn address represented as 64 4-bit nibbles 
-// using the MiMC hash function, creating a unique address hash.
+// Takes an burnKey input and generates a burn-address-hash represented as 64 4-bit nibbles 
+// using the MiMC hash function, creating a unique address-hash with no known private-key
 //
-// Example:
-//   burnKey: [A single field number]
-//   addressHashNibbles: [64 nibbles, each 4 bits, resulting from MiMC(burnKey, 0)
+// Reviewers:
+//   Keyvan: OK
 //
 template BurnKeyAndReceiverToAddressHash() {
     signal input burnKey;
-    signal input receiver;
+    signal input receiverAddress;
     signal output addressHashNibbles[64];
 
-    signal hash <== Hasher()(burnKey, receiver);
+    // Take the first 160-bits of MiMC7(burnKey, receiverAddress) as a burn-address
+    signal hash <== Hasher()(burnKey, receiverAddress);
     signal hashBits[256] <== FieldToBits()(hash);
     signal addressBits[160] <== Fit(256, 160)(hashBits);
+
+    // Feed the address-bytes in the big-endian form to keccak in order to take the 
+    // address-hash which will be used as the key of the MPT leaf
     signal addressBitsReversed[160] <== ReverseBytes(20)(addressBits);
     signal addressBitsReversedBlock[8 * 136] <== Fit(160, 8 * 136)(addressBitsReversed);
     signal addressHash[256] <== KeccakBits(1)(addressBitsReversedBlock, 160);
+
+    // Convert the burn-address-hash to 64 4-bit nibbles
     addressHashNibbles <== BitsToNibbles(32)(addressHash);
 }

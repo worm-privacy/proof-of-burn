@@ -17,15 +17,27 @@ include "./utils/commit.circom";
 include "./utils/proof_of_work.circom";
 include "./utils/burn_address.circom";
 
-// Proves that there is an account in a certain Ethereum block's state-root, containing `balance` amount of ETH,
-// such that its address is equal with MiMC7(burnKey, receiverAddress), revealing some publicly verifiable inputs:
-//   1. A `nullifier`: MiMC7(burnKey, 1) to
-//   2. In case we are going to mint a 1:1 ERC-20 coin for the burnt ETH:
-//     * A `fee` so that the proof-submitter (Which is not neccessarily the burner) gets part of the minted ERC-20 coin as a fee
-//     * A `spend` so that the actual 
-//     * An encrypted version of the rest of the balance: MiMC7(burnKey, balance - fee - spend)
-//     * A `receiverAddress` to commit to the address which is allowed to received the 1:1 tokens (Otherwise anyone who submits the proof on the contract will be able to mint and get the 1:1 tokens for himself)
+// Proves that there exists an account in a certain Ethereum block's state root, with a `balance` amount of ETH,
+// such that its address equals the first 160 bits of MiMC7(burnKey, receiverAddress). This is achieved by revealing
+// some publicly verifiable inputs through a *single* public input — the Keccak hash of 6 elements:
+//
+//   1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
+//   2. A `nullifier`: MiMC7(burnKey, 1), used to prevent revealing the same burn address more than once.
+//   *** In the case of minting a 1:1 ERC-20 token in exchange for burnt ETH: ***
+//   3. An encrypted representation of the remaining balance: MiMC7(burnKey, balance - fee - spend).
+//   4. A `fee`: so that the proof submitter (not necessarily the burner) receives part of the minted ERC-20 tokens as compensation.
+//   5. A `spend`: an amount from the minted balance that is directly withdrawn to the `receiverAddress`.
+//   6. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
+//
 template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMaxAllowedBits) {
+
+    /***************************/
+    /* START OF IN/OUT SIGNALS */
+    /***************************/
+
+    // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance, fee, spend, receiverAddress)
+    signal output commitment;
+
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
     signal input balance; // Balance of the burn-address
 
@@ -53,8 +65,9 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bits
 
-     // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance, fee, spend, receiverAddress)
-    signal output commitment;
+    /*************************/
+    /* END OF IN/OUT SIGNALS */
+    /*************************/
 
     assert(amountBytes <= 31);
 

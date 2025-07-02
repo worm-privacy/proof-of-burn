@@ -77,7 +77,162 @@ def bytes_to_bits(bytes):
     return out
 
 
+run(
+    "AssertLessThan(3)",
+    [
+        ({"a": 0, "b": 1}, []),
+        ({"a": 1, "b": 0}, None),
+        ({"a": 3, "b": 6}, []),
+        ({"a": 6, "b": 3}, None),
+        ({"a": 4, "b": 5}, []),
+        ({"a": 5, "b": 4}, None),
+        ({"a": 6, "b": 7}, []),
+        ({"a": 7, "b": 6}, None),
+        ({"a": 0, "b": 0}, None),
+        ({"a": 1, "b": 1}, None),
+        ({"a": 3, "b": 3}, None),
+        ({"a": 7, "b": 7}, None),
+        ({"a": 6, "b": 8}, None),
+        ({"a": 8, "b": 6}, None),
+    ],
+)
+
+run(
+    "AssertLessEqThan(3)",
+    [
+        ({"a": 0, "b": 1}, []),
+        ({"a": 1, "b": 0}, None),
+        ({"a": 3, "b": 6}, []),
+        ({"a": 6, "b": 3}, None),
+        ({"a": 4, "b": 5}, []),
+        ({"a": 5, "b": 4}, None),
+        ({"a": 6, "b": 7}, []),
+        ({"a": 7, "b": 6}, None),
+        ({"a": 0, "b": 0}, []),
+        ({"a": 1, "b": 1}, []),
+        ({"a": 3, "b": 3}, []),
+        ({"a": 7, "b": 7}, []),
+        ({"a": 6, "b": 8}, None),
+        ({"a": 8, "b": 6}, None),
+    ],
+)
+
+run(
+    "AssertGreaterEqThan(3)",
+    [
+        ({"a": 0, "b": 1}, None),
+        ({"a": 1, "b": 0}, []),
+        ({"a": 3, "b": 6}, None),
+        ({"a": 6, "b": 3}, []),
+        ({"a": 4, "b": 5}, None),
+        ({"a": 5, "b": 4}, []),
+        ({"a": 6, "b": 7}, None),
+        ({"a": 7, "b": 6}, []),
+        ({"a": 0, "b": 0}, []),
+        ({"a": 1, "b": 1}, []),
+        ({"a": 3, "b": 3}, []),
+        ({"a": 7, "b": 7}, []),
+        ({"a": 6, "b": 8}, None),
+        ({"a": 8, "b": 6}, None),
+    ],
+)
+
+run(
+    "AssertBinary(3)",
+    [
+        ({"in": [0, 0, 0]}, []),
+        ({"in": [0, 0, 1]}, []),
+        ({"in": [0, 1, 1]}, []),
+        ({"in": [1, 0, 1]}, []),
+        ({"in": [1, 1, 1]}, []),
+        ({"in": [1, 2, 1]}, None),
+    ],
+)
+
+run(
+    "AssertBits(3)",
+    [
+        ({"in": 0}, []),
+        ({"in": 1}, []),
+        ({"in": 2}, []),
+        ({"in": 3}, []),
+        ({"in": 4}, []),
+        ({"in": 5}, []),
+        ({"in": 6}, []),
+        ({"in": 7}, []),
+        ({"in": 8}, None),
+        ({"in": 9}, None),
+        ({"in": 20}, None),
+        ({"in": 2**100}, None),
+    ],
+)
+
+from mimc7 import mimc7, Field
 import rlp, web3
+
+
+def burn_addr_calc(burn_key, recv_addr):
+    res = web3.Web3.keccak(
+        bytes.fromhex(hex(mimc7(Field(burn_key), Field(recv_addr)).val)[-40:])
+    ).hex()
+    return [int(ch, base=16) for ch in res]
+
+
+run(
+    "BurnKeyAndReceiverToAddressHash()",
+    [
+        (
+            {"burnKey": 123, "receiverAddress": 2345},
+            burn_addr_calc(123, 2345),
+        ),
+        (
+            {"burnKey": str(7**40), "receiverAddress": str(3**150)},
+            burn_addr_calc(7**40, 3**150),
+        ),
+    ],
+)
+
+run(
+    "BitsToNibbles(3)",
+    [
+        ({"in": bytes_to_bits([0xAB, 0x12, 0xF5])}, [0xA, 0xB, 0x1, 0x2, 0xF, 0x5]),
+    ],
+)
+
+run(
+    "ReverseBytes(3)",
+    [
+        ({"in": bytes_to_bits([1, 2, 3])}, bytes_to_bits([3, 2, 1])),
+        ({"in": bytes_to_bits([123, 234, 56])}, bytes_to_bits([56, 234, 123])),
+    ],
+)
+
+run(
+    "Fit(5, 3)",
+    [
+        ({"in": [1, 2, 3, 4, 5]}, [1, 2, 3]),
+    ],
+)
+
+run(
+    "Fit(3, 5)",
+    [
+        ({"in": [1, 2, 3]}, [1, 2, 3, 0, 0]),
+    ],
+)
+
+run(
+    "Hasher()",
+    [
+        ({"left": 1, "right": 2}, [mimc7(Field(1), Field(2)).val]),
+        ({"left": 1, "right": 3}, [mimc7(Field(1), Field(3)).val]),
+        ({"left": 2, "right": 3}, [mimc7(Field(2), Field(3)).val]),
+        (
+            {"left": str(3**150), "right": str(7**40)},
+            [mimc7(Field(3**150), Field(7**40)).val],
+        ),
+    ],
+)
 
 
 def rlp_empty_account(balance, max_balance_bytes):

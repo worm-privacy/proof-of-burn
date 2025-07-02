@@ -3,6 +3,7 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/mimcsponge.circom";
 
 // MiMC is a lightweight cryptographic hash function designed for zk-SNARKs
+// TornadoCash also uses this for its merkle-tree implementation
 //
 // Reviewers:
 //   Keyvan: OK

@@ -21,8 +21,8 @@ template AssertBinary(N) {
 //   Keyvan: OK
 //
 template AssertBits(B) {
-    signal input a;
-    signal bits[B] <== Num2Bits(B)(a);
+    signal input in;
+    signal bits[B] <== Num2Bits(B)(in);
 }
 
 // Assert a < b
