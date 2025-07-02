@@ -25,7 +25,7 @@ We need a secret entropy other than the actual private-key of your Ethereum acco
 
 The flow will be like this:
 
- - The web application will ask the user to sign `"\x19Ethereum Signed Message:\n" + "EIP-7503`` string which will then return a deterministic signature. ***THIS SIGNATURE SHOULD NEVER BECOME PUBLIC***
+ - The web application will ask the user to sign `"\x19Ethereum Signed Message:\n" + "EIP-7503"` string which will then return a deterministic signature. ***THIS SIGNATURE SHOULD NEVER BECOME PUBLIC***
  - The scalar components of the signature may be used as an entropy for finding unlimited burn-keys.
 
 ## Test Locally
