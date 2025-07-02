@@ -18,6 +18,9 @@ include "./assert.circom";
 //   subInput:  [0, 0, 1]
 //   out:       1
 //
+// Reviewers:
+//   Keyvan: OK
+//
 template SubstringCheck(maxMainLen, subLen) {
     signal input mainInput[maxMainLen];
     signal input mainLen;
