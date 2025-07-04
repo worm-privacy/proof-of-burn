@@ -144,9 +144,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         layerKeccaks[i] <== KeccakBits(maxNodeBlocks)(layerBits[i], layerBitsLens[i]);
 
         // Ignore the last byte of keccak so that the bits fit in a field element
-        for(var j = 0; j < 248; j++) {
-            reducedLayerKeccaks[i][j] <== layerKeccaks[i][j];
-        }
+        reducedLayerKeccaks[i] <== Fit(256, 248)(layerKeccaks[i]);
 
         if(i > 0) {
             substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136 * 8, 248)(

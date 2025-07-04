@@ -3,6 +3,23 @@ pragma circom 2.2.2;
 
 include "./assert.circom";
 
+// Fits a M-element array in a N-element block
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template Fit(M, N) {
+    signal input in[M];
+    signal output out[N];
+    for(var i = 0; i < N; i++) {
+        if(i < M) {
+            out[i] <== in[i];
+        } else {
+            out[i] <== 0;
+        }
+    }
+}
+
 // Computes the quotient and remainder for the division of a by b:
 // a === out * b + rem
 //

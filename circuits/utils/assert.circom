@@ -22,6 +22,7 @@ template AssertBinary(N) {
 //
 template AssertBits(B) {
     signal input in;
+    assert(B < 254); // For bit-length of 254 Num2Bits_strict() should be used
     signal bits[B] <== Num2Bits(B)(in);
 }
 

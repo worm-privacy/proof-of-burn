@@ -5,6 +5,7 @@ pragma circom 2.2.2;
 
 include "../circomlib/circuits/gates.circom";
 include "selector.circom";
+include "utils.circom";
 
 // Example:
 //   in: [1, 2, 3, 4, 5], n: 3
@@ -124,20 +125,6 @@ template AndArray(n) {
     }
 }
 
-// Pick first C elements of a N element array
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template Pick(N, C) {
-    assert(C <= N);
-    signal input in[N];
-    signal output out[C];
-    for(var i = 0; i < C; i++) {
-        out[i] <== in[i];
-    }
-}
-
 // d = b[0..64] ^ (a[0..64] << shl | a[0..64] >> shr)
 //
 // Reviewers:
@@ -148,8 +135,8 @@ template D(n, shl, shr) {
     signal input b[n];
     signal output out[n];
 
-    signal a64[64] <== Pick(n, 64)(a);
-    signal b64[64] <== Pick(n, 64)(b);
+    signal a64[64] <== Fit(n, 64)(a);
+    signal b64[64] <== Fit(n, 64)(b);
     signal aux0[64] <== ShR(64, shr)(a);
     signal aux1[64] <== ShL(64, shl)(a);
     signal aux2[64] <== OrArray(64)(aux0, aux1);

@@ -1,21 +1,6 @@
 pragma circom 2.2.2;
 
-// Fits a M-element array in a N-element block
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template Fit(M, N) {
-    signal input in[M];
-    signal output out[N];
-    for(var i = 0; i < N; i++) {
-        if(i < M) {
-            out[i] <== in[i];
-        } else {
-            out[i] <== 0;
-        }
-    }
-}
+include "./utils.circom";
 
 // Accepts N bytes (As 8xN bits) and outputs N bytes (As 8xN bits) where bytes are reversed
 //
