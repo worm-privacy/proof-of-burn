@@ -14,9 +14,33 @@ template FieldToBits() {
     signal output out[256];
 
     signal bitsStrict[254] <== Num2Bits_strict()(in);
-    for(var i = 0; i < 254; i++) out[i] <== bitsStrict[i];
-    out[254] <== 0;
-    out[255] <== 0;
+    out <== Fit(254, 256)(bitsStrict); // Set the 2 remaining bytes to zero
+}
+
+// Converts an array of binary bits into a number in big-endian format.
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template Bits2NumBigEndian(numBytes) {
+    signal input in[numBytes * 8];
+    signal output out;
+
+    assert(numBytes <= 31); // Avoid overflows
+
+    var result = 0;
+    var step = 1;
+
+    // Big-endian (Byte-level)
+    for (var i = numBytes - 1; i >= 0; i--) {
+        // Little-endian (Bit-level)
+        for (var j = 0; j < 8; j++) {
+            result += in[i * 8 + j] * step;
+            step *= 2;
+        }
+    }
+
+    out <== result;
 }
 
 // Calculate keccak(abi.encodePacked(in[0], in[1], ..., in[N-1]))
@@ -36,23 +60,12 @@ template PublicCommitment(N) {
 
     assert(numBlocks * 136 - N * 32 >= 1); // Reserve at least one byte for padding!
 
-    signal bits[numBlocks * 136 * 8];
-    for(var i = 0; i < N; i++) {
-        for(var j = 0; j < 256; j++) {
-            bits[i * 256 + j] <== in[i][j];
-        }
-    }
-    // The rest of the bits are set to zero
-    for(var i = N * 256; i < numBlocks * 136 * 8; i++) {
-        bits[i] <== 0;
-    }
-
+    // Fit the 256-bit numbers in the keccak blocks and calculate the hash
+    signal flattenIn[N * 256] <== Flatten(N, 256)(in);
+    signal bits[numBlocks * 136 * 8] <== Fit(N * 256, numBlocks * 136 * 8)(flattenIn);
     signal hash[256] <== KeccakBits(numBlocks)(bits, N * 256);
-
-    // Ignore the last byte while converting keccak to field element
-    component bitsToNum = Bits2NumBigEndian(31);
-    for(var i = 0; i < 31 * 8; i++) {
-        bitsToNum.in[i] <== hash[i + 8];
-    }
-    out <== bitsToNum.out;
+    
+    // Ignore the least-significant byte while converting keccak to field element
+    signal reducedHash[248] <== Fit(256, 248)(hash);
+    out <== Bits2NumBigEndian(31)(reducedHash);
 }
