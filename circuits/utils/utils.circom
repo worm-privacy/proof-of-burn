@@ -64,3 +64,32 @@ template Divide(N) {
 
     out * b + rem === a;
 }
+
+// Accepts N bytes (As 8xN bits) and outputs N bytes (As 8xN bits) where bytes are reversed
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template ReverseBytes(N) {
+    signal input in[N * 8];
+    signal output out[N * 8];
+    for(var i = 0; i < N; i++) {
+        for(var j = 0; j < 8; j++) {
+            out[8 * i + j] <== in[8 * (N - 1 - i) + j];
+        }
+    }
+}
+
+// Convert a field element to 256-bits
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template FieldToBigEndianBits() {
+    signal input in;
+    signal output out[256];
+
+    signal bitsStrict[254] <== Num2Bits_strict()(in);
+    signal bits[256] <== Fit(254, 256)(bitsStrict); // Set the 2 remaining bytes to zero
+    out <== ReverseBytes(32)(bits);
+}

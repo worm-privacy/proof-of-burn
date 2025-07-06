@@ -4,19 +4,6 @@ include "../circomlib/circuits/bitify.circom";
 include "./keccak.circom";
 include "./utils.circom";
 
-// Convert a field element to 256-bits
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template FieldToBits() {
-    signal input in;
-    signal output out[256];
-
-    signal bitsStrict[254] <== Num2Bits_strict()(in);
-    out <== Fit(254, 256)(bitsStrict); // Set the 2 remaining bytes to zero
-}
-
 // Converts an array of binary bits into a number in big-endian format.
 //
 // Reviewers:

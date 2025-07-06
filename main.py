@@ -18,7 +18,7 @@ def burn(burn_key, receiver):
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
     hashed = w3.to_bytes(mimc7(Field(burn_key), Field(recv)).val)
-    addr = list(hashed[len(hashed)-20:])
+    addr = list(hashed[:20])
     burn_addr = w3.to_checksum_address(bytes(addr))
     tx = {
         "nonce": nonce,
@@ -46,7 +46,6 @@ addr = burn(burn_key, receiver)
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
 block = w3.eth.get_block(blknum)
-
 
 addr_hash = w3.keccak(hexstr=addr)
 leaf = proof.accountProof[-1]
@@ -132,13 +131,13 @@ while len(layers) < MAX_NUM_LAYERS:
     layers.append([0] * (4 * 136 * 8))
     layer_lens.append(256)
 import io
-with io.open("details.json", 'w') as f:
-    json.dump({
-        "addr": addr,
-        "addrHash": w3.keccak(hexstr=addr).hex()
-    }, f)
 
 fee = 123
+spend = 234
+with io.open("details.json", 'w') as f:
+    json.dump([
+        block.hash.hex(),
+        ], f)
 print(
     json.dumps(
         {
@@ -147,7 +146,7 @@ print(
             "burnKey": str(burn_key),
             "fee": str(fee),
             "balance": str(proof.balance),
-            "spend": str(proof.balance - fee),
+            "spend": str(spend),
             "numLayers": num_layers,
             "layerBits": layers,
             "layerBitsLens": layer_lens,

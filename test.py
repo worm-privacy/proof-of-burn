@@ -77,20 +77,79 @@ def bytes_to_bits(bytes):
     return out
 
 
+from eth_abi import packed
+from mimc7 import mimc7, Field, FIELD_SIZE
+import rlp, web3
+
+
+# Number to 256-bit little-endian list
+def field_to_be_bits(elem):
+    s = ""
+    for b in int.to_bytes(elem, 32, "big"):
+        s += "".join(reversed(format(b, "#010b")[2:]))
+    return [int(a) for a in s]
+
+
+run(
+    "FieldToBigEndianBits()",
+    [
+        ({"in": 123}, field_to_be_bits(123)),
+        ({"in": 0}, field_to_be_bits(0)),
+        ({"in": 1}, field_to_be_bits(1)),
+        ({"in": str(3**150)}, field_to_be_bits(3**150)),
+        ({"in": str(FIELD_SIZE - 10)}, field_to_be_bits(FIELD_SIZE - 10)),
+        ({"in": str(FIELD_SIZE - 1)}, field_to_be_bits(FIELD_SIZE - 1)),
+    ],
+)
+
+
+def expected_commitment(vals):
+    concat_bytes = []
+    for v in vals:
+        concat_bytes.extend(int.to_bytes(v, 32, "big"))
+    concat_bits = bytes_to_bits(concat_bytes)
+
+    expected = int.from_bytes(
+        web3.Web3.keccak(packed.encode_packed(["uint256"] * len(vals), vals))[:31],
+        "big",
+    )
+    return (
+        {"in": concat_bits},
+        [expected],
+    )
+
+
 with io.open("test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
-# TODO: Write this as keccak
-expected_commitment = (
-    274855820893676853346693020072659580578292658947521986159078454716064455757
-)
+burn_key = 3925895942906518495321919261957660649885209513768405321765450701641105255609
+
+pob_expected_commitment = expected_commitment(
+    [
+        int.from_bytes(
+            bytes.fromhex(
+                "82c1fddb4becdec72676a020ab79df2f3a6c9c62ed3d62643494b50c65303f08"
+            ),
+            "big",
+        ),  # Block root
+        mimc7(Field(burn_key), Field(1)).val,  # Nullifier,
+        mimc7(
+            Field(burn_key), Field(1000000000000000000 - 123 - 234)
+        ).val,  # Encrypted balance
+        123,  # Fee
+        234,  # Spend
+        web3.Web3.to_int(
+            hexstr="0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
+        ),  # Receiver
+    ]
+)[1][0]
 
 run(
     "ProofOfBurn(4, 4, 5, 20, 31, 250)",
     [
         (
             proof_of_burn_inp,
-            [expected_commitment],
+            [pob_expected_commitment],
         )
     ],
 )
@@ -192,13 +251,10 @@ run(
     ],
 )
 
-from mimc7 import mimc7, Field
-import rlp, web3
-
 
 def burn_addr_calc(burn_key, recv_addr):
     res = web3.Web3.keccak(
-        bytes.fromhex(hex(mimc7(Field(burn_key), Field(recv_addr)).val)[-40:])
+        int.to_bytes(mimc7(Field(burn_key), Field(recv_addr)).val, 32, "big")[:20]
     ).hex()
     return [int(ch, base=16) for ch in res]
 
@@ -278,40 +334,6 @@ def rlp_empty_account(balance, max_balance_bytes):
     predict_len = len(predict)
     predict = predict + [0] * (70 + max_balance_bytes - predict_len) + [predict_len]
     return predict
-
-
-# Number to 256-bit little-endian list
-def field_to_bits(elem):
-    return [int(a) for a in reversed(format(elem, "#0258b")[2:])]
-
-
-run(
-    "FieldToBits()",
-    [
-        ({"in": 123}, field_to_bits(123)),
-        ({"in": 0}, field_to_bits(0)),
-        ({"in": 1}, field_to_bits(1)),
-        ({"in": str(3**150)}, field_to_bits(3**150)),
-        ({"in": str(2**250)}, field_to_bits(2**250)),
-    ],
-)
-
-from eth_abi import packed
-
-
-def expected_commitment(vals):
-    concat_bytes = []
-    for v in vals:
-        concat_bytes.extend(int.to_bytes(v, 32, "big"))
-    concat_bits = bytes_to_bits(concat_bytes)
-
-    expected = int.from_bytes(
-        web3.Web3.keccak(packed.encode_packed(["uint256"] * len(vals), vals))[:31], "big"
-    )
-    return (
-        {"in": concat_bits},
-        [expected],
-    )
 
 
 run(
