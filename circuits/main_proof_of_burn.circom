@@ -7,6 +7,8 @@ component main = ProofOfBurn(
         // Number of MPT nodes in account proofs of 100 richest addresses as of July 2nd 2025: Min: 8 Max: 10 Avg: 8.69
     
     4,  // maxNodeBlocks (Keccak blocks are 136 bytes. Merkle-Patricia-Trie nodes are maximum 532 bytes ~ 3.91 blocks)
+        // Length of MPT nodes in accounts proofs of 100 richest addresses as of July 7th 2025: Min: 35 Max: 532 Avg: 432.23
+
     8,  // maxHeaderBlocks (Average header len of the last 100 blocks as of July 2nd 2025 is 643 bytes ~ 4.72 blocks)
 
     50, // minLeafAddressNibbles (4 ^ 50 = 2 ^ 100 bits of security)
