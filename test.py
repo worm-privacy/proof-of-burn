@@ -77,6 +77,24 @@ def bytes_to_bits(bytes):
     return out
 
 
+with io.open("test_pob_input.json") as f:
+    proof_of_burn_inp = json.load(f)
+
+# TODO: Write this as keccak
+expected_commitment = (
+    274855820893676853346693020072659580578292658947521986159078454716064455757
+)
+
+run(
+    "ProofOfBurn(4, 4, 5, 20, 31, 250)",
+    [
+        (
+            proof_of_burn_inp,
+            [expected_commitment],
+        )
+    ],
+)
+
 run(
     "Flatten(2, 3)",
     [
@@ -288,7 +306,7 @@ def expected_commitment(vals):
     concat_bits = bytes_to_bits(concat_bytes)
 
     expected = int.from_bytes(
-        web3.Web3.keccak(packed.encode_packed(["uint256"] * len(vals), vals))[1:], "big"
+        web3.Web3.keccak(packed.encode_packed(["uint256"] * len(vals), vals))[:31], "big"
     )
     return (
         {"in": concat_bits},
@@ -355,24 +373,6 @@ run(
             },
             None,
         ),
-    ],
-)
-
-with io.open("test_pob_input.json") as f:
-    proof_of_burn_inp = json.load(f)
-
-# TODO: Write this as keccak
-expected_commitment = (
-    72536837793382353857766664600029564596379343648020771091641483823512744933
-)
-
-run(
-    "ProofOfBurn(4, 4, 5, 20, 31, 250)",
-    [
-        (
-            proof_of_burn_inp,
-            [expected_commitment],
-        )
     ],
 )
 
