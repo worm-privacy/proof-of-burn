@@ -6,7 +6,7 @@ from mimc7 import mimc7, Field, FIELD_SIZE
 
 MAX_HEADER_BITS = 5 * 136 * 8
 MAX_NUM_LAYERS = 4
-POW_BITS = 250
+POW_MIN_ZERO_BYTES = 2
 
 
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
@@ -33,13 +33,13 @@ def burn(burn_key, receiver):
     return burn_addr
 
 import random
-def find_burn_key(max_bits):
+def find_burn_key(min_zero_bytes):
     burn_key = random.randint(0, FIELD_SIZE - 1)
-    while len(bin(mimc7(Field(burn_key), Field(2)).val)[2:]) > max_bits:
+    while any(w3.keccak(int.to_bytes(burn_key, 32, 'big'))[:min_zero_bytes]):
         burn_key += 1
     return burn_key
 
-burn_key = find_burn_key(POW_BITS)
+burn_key = find_burn_key(POW_MIN_ZERO_BYTES)
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
 addr = burn(burn_key, receiver)
 

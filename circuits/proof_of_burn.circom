@@ -29,7 +29,7 @@ include "./utils/burn_address.circom";
 //   5. A `spend`: an amount from the minted balance that is directly withdrawn to the `receiverAddress`.
 //   6. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
 //
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMaxAllowedBits) {
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMinimumZeroBytes) {
 
     /***************************/
     /* START OF IN/OUT SIGNALS */
@@ -74,7 +74,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
     // Check if PoW has been done in order to find burnKey
-    ProofOfWorkChecker(powMaxAllowedBits)(burnKey);
+    ProofOfWorkChecker(powMinimumZeroBytes)(burnKey);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);

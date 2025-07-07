@@ -8,6 +8,7 @@ component main = ProofOfBurn(
     
     4,  // maxNodeBlocks (Keccak blocks are 136 bytes. Merkle-Patricia-Trie nodes are maximum 532 bytes ~ 3.91 blocks)
         // Length of MPT nodes in accounts proofs of 100 richest addresses as of July 7th 2025: Min: 35 Max: 532 Avg: 432.23
+        // Maximum lengths are for branch nodes with 16 non-empty slots: len(rlp.encode([keccak(...)] * 16 + [0])) == 532
 
     8,  // maxHeaderBlocks (Average header len of the last 100 blocks as of July 2nd 2025 is 643 bytes ~ 4.72 blocks)
 
@@ -17,6 +18,6 @@ component main = ProofOfBurn(
 
     31, // amountBytes (248-bits to disallow field overflows)
 
-    250 // powMaxAllowedBits (Fields are 254 bits. So approximately 2^254 / 2^250 number of MiMC7 hashes required)
-        // This is to add extra security bits to disallow conflicts
+    2   // powMinimumZeroBytes (Adds 8 * powMinimumZeroBytes extra bits of security)
+        // This is to disallow conflicts
 );
