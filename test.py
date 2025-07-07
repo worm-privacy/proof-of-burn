@@ -78,7 +78,7 @@ def bytes_to_bits(bytes):
 
 
 from eth_abi import packed
-from mimc7 import mimc7, Field, FIELD_SIZE
+from poseidon2 import poseidon2, Field, FIELD_SIZE
 import rlp, web3
 
 
@@ -122,18 +122,18 @@ def expected_commitment(vals):
 with io.open("test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
-burn_key = 15408079336069325040656344802311996180605155453933714728759821582560962414793
+burn_key = 12336586695674029747352179840198770862560841258449271034094068084264148909942
 
 pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "7a8d18cda3761795fa71bcb5010dd40c32d321a5bdca7ce067e5fe62d7128667"
+                "5c1033df1284304419c972cbb5adcf53662329fee56adf51b0058575629daf55"
             ),
             "big",
         ),  # Block root
-        mimc7(Field(burn_key), Field(1)).val,  # Nullifier,
-        mimc7(
+        poseidon2(Field(burn_key), Field(1)).val,  # Nullifier,
+        poseidon2(
             Field(burn_key), Field(1000000000000000000 - 123 - 234)
         ).val,  # Encrypted balance
         123,  # Fee
@@ -254,7 +254,7 @@ run(
 
 def burn_addr_calc(burn_key, recv_addr):
     res = web3.Web3.keccak(
-        int.to_bytes(mimc7(Field(burn_key), Field(recv_addr)).val, 32, "big")[:20]
+        int.to_bytes(poseidon2(Field(burn_key), Field(recv_addr)).val, 32, "big")[:20]
     ).hex()
     return [int(ch, base=16) for ch in res]
 
@@ -305,12 +305,12 @@ run(
 run(
     "Hasher()",
     [
-        ({"left": 1, "right": 2}, [mimc7(Field(1), Field(2)).val]),
-        ({"left": 1, "right": 3}, [mimc7(Field(1), Field(3)).val]),
-        ({"left": 2, "right": 3}, [mimc7(Field(2), Field(3)).val]),
+        ({"left": 1, "right": 2}, [poseidon2(Field(1), Field(2)).val]),
+        ({"left": 1, "right": 3}, [poseidon2(Field(1), Field(3)).val]),
+        ({"left": 2, "right": 3}, [poseidon2(Field(2), Field(3)).val]),
         (
             {"left": str(3**150), "right": str(7**40)},
-            [mimc7(Field(3**150), Field(7**40)).val],
+            [poseidon2(Field(3**150), Field(7**40)).val],
         ),
     ],
 )
