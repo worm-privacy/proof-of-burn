@@ -26,7 +26,7 @@ template AssertBits(B) {
     signal bits[B] <== Num2Bits(B)(in);
 }
 
-// Assert a < b
+// Assert a < b (Where a and b are at most B bits long)
 //
 // Reviewers:
 //   Keyvan: OK
@@ -40,7 +40,7 @@ template AssertLessThan(B) {
     out === 1;
 }
 
-// Assert a <= b
+// Assert a <= b (Where a and b are at most B bits long)
 //
 // Reviewers:
 //   Keyvan: OK
@@ -54,7 +54,7 @@ template AssertLessEqThan(B) {
     out === 1;
 }
 
-// Assert a >= b
+// Assert a >= b (Where a and b are at most B bits long)
 //
 // Reviewers:
 //   Keyvan: OK
