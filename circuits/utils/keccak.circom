@@ -390,57 +390,58 @@ template Keccak(nBlocksIn) {
 // Example (maxBlocks: 3, blockSize: 4):
 //   in:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 //
-//   numBlocks = ((inLen + 1) / blockSize) + 1
+//   numBlocks = (inLen / blockSize) + 1
 //
-//   inLen: 0 out: [1. 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0] numBlocks: 1
-//   inLen: 1 out: [1. 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0] numBlocks: 1
-//   inLen: 2 out: [1. 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0] numBlocks: 1
-//   inLen: 3 out: [1. 2, 3, 1, 0, 0, 0, 1, 0, 0, 0, 0] numBlocks: 2
-//   inLen: 4 out: [1. 2, 3, 4, 1, 0, 0, 1, 0, 0, 0, 0] numBlocks: 2
-//   inLen: 5 out: [1. 2, 3, 4, 5, 1, 0, 1, 0, 0, 0, 0] numBlocks: 2
-//   inLen: 6 out: [1. 2, 3, 4, 5, 6, 1, 1, 0, 0, 0, 0] numBlocks: 2
-//   inLen: 7 out: [1. 2, 3, 4, 5, 6, 7, 1, 0, 0, 0, 1] numBlocks: 3
-//   inLen: 8 out: [1. 2, 3, 4, 5, 6, 7, 1, 0, 0, 0, 1] numBlocks: 3
-//   inLen: 9 out: [1. 2, 3, 4, 5, 6, 7, 8, 1, 0, 0, 1] numBlocks: 3
-//   inLen: 10 out: [1. 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 1] numBlocks: 3
-//   inLen: 11 (Cannot generate proof, because ((11 + 1) / blockSize + 1) > maxBlocks)
+//   inLen: 0 out:  [0x01, 0,    0,    0x80, 0,    0,    0,    0,    0,    0,    0,    0]    numBlocks: 1
+//   inLen: 1 out:  [1,    0x01, 0,    0x80, 0,    0,    0,    0,    0,    0,    0,    0]    numBlocks: 1
+//   inLen: 2 out:  [1,    2,    0x01, 0x80, 0,    0,    0,    0,    0,    0,    0,    0]    numBlocks: 1
+//   inLen: 3 out:  [1,    2,    3,    0x81, 0,    0,    0,    0,    0,    0,    0,    0]    numBlocks: 1
+//   inLen: 4 out:  [1,    2,    3,    4,    0x01, 0,    0,    0x80, 0,    0,    0,    0]    numBlocks: 2
+//   inLen: 5 out:  [1,    2,    3,    4,    5,    0x01, 0,    0x80, 0,    0,    0,    0]    numBlocks: 2
+//   inLen: 6 out:  [1,    2,    3,    4,    5,    6,    0x01, 0x80, 0,    0,    0,    0]    numBlocks: 2
+//   inLen: 7 out:  [1,    2,    3,    4,    5,    6,    7,    0x81, 0,    0,    0,    0]    numBlocks: 2
+//   inLen: 8 out:  [1,    2,    3,    4,    5,    6,    7,    8,    0x01, 0,    0,    0x80] numBlocks: 3
+//   inLen: 9 out:  [1,    2,    3,    4,    5,    6,    7,    8,    9,    0x01, 0,    0x80] numBlocks: 3
+//   inLen: 10 out: [1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   0x01, 0x80] numBlocks: 3
+//   inLen: 11 out: [1,    2,    3,    4,    5,    6,    7,    8,    9,    10,   11,   0x81] numBlocks: 3
+//   inLen: 12 (Cannot generate proof, because (12 / blockSize + 1) > maxBlocks)
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template BitPad(maxBlocks, blockSize) {
-    var maxBits = maxBlocks * blockSize;
-    signal input in[maxBits];
+template Pad(maxBlocks, blockSize) {
+    var maxBytes = maxBlocks * blockSize;
+    signal input in[maxBytes];
     signal input inLen;
 
-    signal output out[maxBits];
+    signal output out[maxBytes];
     signal output numBlocks;
 
-    signal (div, rem) <== Divide(16)(inLen + 1, blockSize);
+    signal (div, rem) <== Divide(16)(inLen, blockSize);
     numBlocks <== div + 1;
 
     AssertLessEqThan(16)(numBlocks, maxBlocks);
 
     // Create a 1, 1, ..., 1, 1, 0, 0, ..., 0, 0 filter
     // Where the first `inLen` bits are 1
-    signal filter[maxBits + 1];
+    signal filter[maxBytes + 1];
     filter[0] <== 1;
-    signal isEq[maxBits];
-    for(var i = 0; i < maxBits; i++) {
+    signal isEq[maxBytes];
+    for(var i = 0; i < maxBytes; i++) {
         isEq[i] <== IsEqual()([i, inLen]);
         filter[i + 1] <== filter[i] * (1 - isEq[i]);
     }
 
-    signal isLast[maxBits];
-    for(var i = 0; i < maxBits; i++) {
+    signal isLast[maxBytes];
+    for(var i = 0; i < maxBytes; i++) {
         isLast[i] <== IsEqual()([i, numBlocks * blockSize - 1]);
 
         // Due to the filter, only the first `inLen` bits are kept
-        // +1 if we are on the last bit of data
-        // +1 if we are on the last bit of last block
-        // (isLast and isEq cannot happen at the same time so we won't have a +2)
+        // +0x01 if we are on the last bit of data
+        // +0x80 if we are on the last bit of last block
+        // +0x81 when both
         // Effectively adding a 1000..0001 postfix to the data
-        out[i] <== in[i] * filter[i + 1] + isEq[i] + isLast[i];
+        out[i] <== in[i] * filter[i + 1] + 0x01 * isEq[i] + 0x80 * isLast[i];
     }
 }
 
@@ -455,32 +456,32 @@ template KeccakBytes(maxBlocks) {
     signal input inLen;
     signal output out[32];
 
+    // Give some space for at least a single-byte padding (0x81 == 0b10000001)
+    AssertLessThan(16)(inLen, maxBlocks * 136);
+
+    // Add 1000...0001 padding to the input bytes
+    signal (
+        padded[maxBlocks * 136], numBlocks
+    ) <== Pad(maxBlocks, 136)(in, inLen);
+
     signal inBitsArray[maxBlocks * 136][8];
     for(var i = 0; i < maxBlocks * 136; i++) {
-        inBitsArray[i] <== Num2Bits(8)(in[i]);
+        inBitsArray[i] <== Num2Bits(8)(padded[i]);
     }
     signal inBits[maxBlocks * 136 * 8] <== Flatten(maxBlocks * 136, 8)(inBitsArray);
     signal inBitsLen <== 8 * inLen;
 
-    // Give some space for padding (10000001)
-    AssertLessEqThan(16)(inBitsLen, maxBlocks * 136 * 8 - 8);
-
-    // Add 1000...0001 padding to the input bits
-    signal (
-        padded[maxBlocks * 136 * 8], numBlocks
-    ) <== BitPad(maxBlocks, 136 * 8)(inBits, inBitsLen);
-
     // Put the bits in blocks of 17x64-bit arrays
-    signal paddedBlocks[maxBlocks][17][64];
+    signal inBlocks[maxBlocks][17][64];
     for(var i = 0; i < maxBlocks; i++) {
         for(var j = 0; j < 17; j++) {
             for(var k = 0; k < 64; k++) {
-                paddedBlocks[i][j][k] <== padded[i * 17 * 64 + j * 64 + k];
+                inBlocks[i][j][k] <== inBits[i * 17 * 64 + j * 64 + k];
             }
         }
     }
 
-    signal outBits[256] <== Keccak(maxBlocks)(paddedBlocks, numBlocks);
+    signal outBits[256] <== Keccak(maxBlocks)(inBlocks, numBlocks);
     signal outBytes[32][8] <== Reshape(32, 8)(outBits);
     for(var i = 0; i < 32; i++) {
         out[i] <== Bits2Num(8)(outBytes[i]);
