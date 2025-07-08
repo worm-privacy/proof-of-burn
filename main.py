@@ -39,7 +39,7 @@ import random
 
 def find_burn_key(min_zero_bytes):
     burn_key = random.randint(0, FIELD_SIZE - 1)
-    while any(w3.keccak(int.to_bytes(burn_key, 32, "big"))[:min_zero_bytes]):
+    while any(w3.keccak(int.to_bytes(burn_key, 32, "big") + b"EIP-7503")[:min_zero_bytes]):
         burn_key += 1
     return burn_key
 
