@@ -76,7 +76,7 @@ template RlpInteger(N) {
     // Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
     assert(N <= 31);
 
-    // Decompose and reverse: calculate the big-endian version of the balance
+    // Calculate the big-endian version of the balance without the leading zeros
     signal bytes[N] <== Num2BytesBigEndian(N)(in);
     signal length <== CountBytes(N)(bytes);
     signal bigEndian[N] <== ShiftLeft(N)(bytes, N - length);
