@@ -91,7 +91,7 @@ def field_to_be_bits(elem):
 
 
 run(
-    "FieldToBigEndianBytes()",
+    "Num2BytesBigEndian()",
     [
         ({"in": 123}, field_to_be_bits(123)),
         ({"in": 0}, field_to_be_bits(0)),
@@ -121,13 +121,13 @@ def expected_commitment(vals):
 with io.open("test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
-burn_key = 13370812891245539833895173605101217533655453411993022546134955363129364081550
+burn_key = 17811643316338151075295314352767214105755121893950671077428177503508367209479
 
 pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "e914f3f03ed0d6d946eb4205dbc59d6a9783400270e4d5ac04780d01e2aaab5c"
+                "3e19cd70ddf4202d99a999a33c5a5e4212980afceaf7b527639c2a3c83d0dbf3"
             ),
             "big",
         ),  # Block root
@@ -273,14 +273,14 @@ run(
 )
 
 run(
-    "BytesToNibbles(3)",
+    "Bytes2Nibbles(3)",
     [
         ({"in": [0xAB, 0x12, 0xF5]}, [0xA, 0xB, 0x1, 0x2, 0xF, 0x5]),
     ],
 )
 
 run(
-    "ReverseBytes(3)",
+    "Reverse(3)",
     [
         ({"in": [1, 2, 3]}, [3, 2, 1]),
         ({"in": [123, 234, 56]}, [56, 234, 123]),
@@ -398,7 +398,7 @@ run(
 )
 
 run(
-    "ByteDecompose(4)",
+    "Num2Bytes(4)",
     [
         ({"num": [0x00]}, [0, 0, 0, 0]),
         ({"num": [0xDE]}, [0xDE, 0, 0, 0]),
@@ -733,7 +733,7 @@ run(
 )
 
 run(
-    "NibblesToBytes(2)",
+    "Nibbles2Bytes(2)",
     [
         ({"nibbles": [1, 2, 3, 4]}, [0x12, 0x34]),
         ({"nibbles": [15, 2, 3, 4]}, [0xF2, 0x34]),
