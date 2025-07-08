@@ -423,7 +423,7 @@ template Pad(maxBlocks, blockSize) {
     AssertLessEqThan(16)(numBlocks, maxBlocks);
 
     // Create a 1, 1, ..., 1, 1, 0, 0, ..., 0, 0 filter
-    // Where the first `inLen` bits are 1
+    // Where the first `inLen` elements are 1
     signal filter[maxBytes + 1];
     filter[0] <== 1;
     signal isEq[maxBytes];
@@ -436,7 +436,7 @@ template Pad(maxBlocks, blockSize) {
     for(var i = 0; i < maxBytes; i++) {
         isLast[i] <== IsEqual()([i, numBlocks * blockSize - 1]);
 
-        // Due to the filter, only the first `inLen` bits are kept
+        // Due to the filter, only the first `inLen` bytes are kept
         // +0x01 if we are on the last bit of data
         // +0x80 if we are on the last bit of last block
         // +0x81 when both
@@ -445,7 +445,7 @@ template Pad(maxBlocks, blockSize) {
     }
 }
 
-// Keccak of arbitrary number of bits.
+// Keccak of arbitrary number of bytes.
 // Padding is done automatically and only required number of blocks are used.
 //
 // Reviewers:
