@@ -469,7 +469,6 @@ template KeccakBytes(maxBlocks) {
         inBitsArray[i] <== Num2Bits(8)(padded[i]);
     }
     signal inBits[maxBlocks * 136 * 8] <== Flatten(maxBlocks * 136, 8)(inBitsArray);
-    signal inBitsLen <== 8 * inLen;
 
     // Put the bits in blocks of 17x64-bit arrays
     signal inBlocks[maxBlocks][17][64];
