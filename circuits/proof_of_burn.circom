@@ -166,13 +166,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate leaf-layer through address-hash and its balance
-    signal (leafBytes[139], leafBytesLen) <== LeafCalculator(32, amountBytes)(
+    signal (leaf[139], leafLen) <== RlpMerklePatriciaTrieLeaf(32, amountBytes)(
         addressHashNibbles, numLeafAddressNibbles, balance
     );
     
     // Make sure the calculated leaf-layer is equal with the last-layer
     for(var i = 0; i < 139; i++) {
-        leafBytes[i] === lastLayer[i];
+        leaf[i] === lastLayer[i];
     }
-    leafBytesLen === lastLayerLen;
+    leafLen === lastLayerLen;
 }

@@ -247,7 +247,7 @@ template RlpEmptyAccount(maxBalanceBytes) {
 // Reviewers:
 //   Keyvan: OK
 //
-template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
+template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
     signal input addressHashNibbles[2 * maxAddressHashBytes];
     signal input addressHashNibblesLen;
     signal input balance;
