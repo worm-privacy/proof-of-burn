@@ -104,6 +104,8 @@ template Bytes2Num(N) {
 
     assert(N <= 31); // Avoid overflows
 
+    AssertByteString(N)(in);
+
     var lc = 0;
     for(var i = 0; i < N; i++) {
         lc += (256 ** i) * in[i];
@@ -125,7 +127,24 @@ template Bytes2NumBigEndian(N) {
     out <== Bytes2Num(N)(inReversed);
 }
 
-// Decomposes an input number `num` into an array of `N` bytes.
+// Decompose the input number into arbitrary number of bits. Uses Num2Bits_strict when necessary.
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template Num2BitsSafe(N) {
+    signal input in;
+    signal output out[N];
+
+    if(N >= 254) {
+        signal bitsStrict[254] <== Num2Bits_strict()(in);
+        out <== Fit(254, N)(bitsStrict); // Set the remaining bytes to zero
+    } else {
+        out <== Num2Bits(N)(in);
+    }
+}
+
+// Decomposes an input number `num` into an array of `N` little-endian bytes.
 // Each byte represents 8 bits of the number starting from the least significant byte.
 //
 // Example:
@@ -137,43 +156,32 @@ template Bytes2NumBigEndian(N) {
 //   Keyvan: OK
 //
 template Num2Bytes(N) { 
-    signal input num;
-    signal output bytes[N];
+    signal input in;
+    signal output out[N];
 
-    assert(N <= 31); // Avoid overflows
+    assert(N <= 32); // Avoid overflows
 
     // Decompose into bits and arrange them into 8-bit chunks
-    signal bits[N * 8] <== Num2Bits(N * 8)(num);
-    signal byteBits[N][8];
-    for (var i = 0; i < N; i++) {
-        for(var j = 0; j < 8; j++) {
-            byteBits[i][j] <== bits[8 * i + j];
-        }
-    }
+    signal bits[N * 8] <== Num2BitsSafe(N * 8)(in);
+    signal byteArrays[N][8] <== Reshape(N, 8)(bits);
 
     // Convert 8-bit chunks to bytes
     for (var i = 0; i < N; i++) {
-        bytes[i] <== Bits2Num(8)(byteBits[i]);
+        out[i] <== Bits2Num(8)(byteArrays[i]);
     }
 }
 
-// Convert a field element to 256-bits
+// Convert a field element to 32 big-endian bytes
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template Num2BytesBigEndian() {
+template Num2BytesBigEndian(N) {
     signal input in;
-    signal output out[32];
+    signal output out[N];
 
-    signal bitsStrict[254] <== Num2Bits_strict()(in);
-    signal bits[256] <== Fit(254, 256)(bitsStrict); // Set the 2 remaining bytes to zero
-    signal byteArrays[32][8] <== Reshape(32, 8)(bits);
-    signal bytes[32];
-    for(var i = 0; i < 32; i++) {
-        bytes[i] <== Bits2Num(8)(byteArrays[i]);
-    }
-    out <== Reverse(32)(bytes);
+    signal littleEndian[N] <== Num2Bytes(N)(in);
+    out <== Reverse(N)(littleEndian);
 }
 
 // Accepts N bytes and outputs 2xN nibbles (As a list of 4-bit numbers)
@@ -188,7 +196,7 @@ template Bytes2Nibbles(N) {
     signal inDecomposed[N][8];
 
     for(var i = 0; i < N; i++) {
-        inDecomposed[i] <== Num2Bits(8)(in[i]);
+        inDecomposed[i] <== Num2Bits(8)(in[i]); // Also asserts if in[i] is a byte
         var higher = 0;
         var lower = 0;
         for(var j = 0; j < 4; j++) {

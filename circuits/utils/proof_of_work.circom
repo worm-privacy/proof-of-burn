@@ -10,7 +10,7 @@ include "./assert.circom";
 //
 template ProofOfWorkChecker(powMinimumZeroBytes) {
     signal input burnKey;
-    signal burnKeyBytes[32] <== Num2BytesBigEndian()(burnKey);
+    signal burnKeyBytes[32] <== Num2BytesBigEndian(32)(burnKey);
     signal burnKeyBlock[136] <== Fit(32, 136)(burnKeyBytes);
     signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, 32);
 
