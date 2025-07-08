@@ -4,6 +4,9 @@ import json
 
 
 def run(main, test_cases):
+    print()
+    print(f"Testing {main}")
+    print("=" * 20)
     with io.open("circuits/test.circom", "w") as f:
         imports = """
         pragma circom 2.2.2;
@@ -84,14 +87,11 @@ import rlp, web3
 
 # Number to 256-bit little-endian list
 def field_to_be_bits(elem):
-    s = ""
-    for b in int.to_bytes(elem, 32, "big"):
-        s += "".join(reversed(format(b, "#010b")[2:]))
-    return [int(a) for a in s]
+    return list(int.to_bytes(elem, 32, "big"))
 
 
 run(
-    "FieldToBigEndianBits()",
+    "FieldToBigEndianBytes()",
     [
         ({"in": 123}, field_to_be_bits(123)),
         ({"in": 0}, field_to_be_bits(0)),
@@ -107,14 +107,13 @@ def expected_commitment(vals):
     concat_bytes = []
     for v in vals:
         concat_bytes.extend(int.to_bytes(v, 32, "big"))
-    concat_bits = bytes_to_bits(concat_bytes)
 
     expected = int.from_bytes(
         web3.Web3.keccak(packed.encode_packed(["uint256"] * len(vals), vals))[:31],
         "big",
     )
     return (
-        {"in": concat_bits},
+        {"in": concat_bytes},
         [expected],
     )
 
@@ -122,13 +121,13 @@ def expected_commitment(vals):
 with io.open("test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
-burn_key = 12336586695674029747352179840198770862560841258449271034094068084264148909942
+burn_key = 13370812891245539833895173605101217533655453411993022546134955363129364081550
 
 pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "5c1033df1284304419c972cbb5adcf53662329fee56adf51b0058575629daf55"
+                "e914f3f03ed0d6d946eb4205dbc59d6a9783400270e4d5ac04780d01e2aaab5c"
             ),
             "big",
         ),  # Block root
@@ -222,14 +221,14 @@ run(
 )
 
 run(
-    "AssertBinary(3)",
+    "AssertByteString(3)",
     [
-        ({"in": [0, 0, 0]}, []),
-        ({"in": [0, 0, 1]}, []),
+        ({"in": [100, 200, 250]}, []),
+        ({"in": [250, 0, 1]}, []),
         ({"in": [0, 1, 1]}, []),
-        ({"in": [1, 0, 1]}, []),
-        ({"in": [1, 1, 1]}, []),
-        ({"in": [1, 2, 1]}, None),
+        ({"in": [123, 255, 255]}, []),
+        ({"in": [255, 255, 255]}, []),
+        ({"in": [1, 256, 1]}, None),
     ],
 )
 
@@ -274,17 +273,17 @@ run(
 )
 
 run(
-    "BitsToNibbles(3)",
+    "BytesToNibbles(3)",
     [
-        ({"in": bytes_to_bits([0xAB, 0x12, 0xF5])}, [0xA, 0xB, 0x1, 0x2, 0xF, 0x5]),
+        ({"in": [0xAB, 0x12, 0xF5]}, [0xA, 0xB, 0x1, 0x2, 0xF, 0x5]),
     ],
 )
 
 run(
     "ReverseBytes(3)",
     [
-        ({"in": bytes_to_bits([1, 2, 3])}, bytes_to_bits([3, 2, 1])),
-        ({"in": bytes_to_bits([123, 234, 56])}, bytes_to_bits([56, 234, 123])),
+        ({"in": [1, 2, 3]}, [3, 2, 1]),
+        ({"in": [123, 234, 56]}, [56, 234, 123]),
     ],
 )
 
@@ -586,16 +585,16 @@ run(
 )
 
 run(
-    "Bits2NumBigEndian(2)",
+    "Bytes2NumBigEndian(2)",
     [
-        ({"in": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, [0]),
-        ({"in": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]}, [1]),
-        ({"in": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, [256]),
-        ({"in": [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]}, [257]),
-        ({"in": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}, [128]),
-        ({"in": [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]}, [128 * 256]),
-        ({"in": [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1]}, [128 * 256 + 128]),
-        ({"in": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]}, [397306]),
+        ({"in": [0, 0]}, [0]),
+        ({"in": [0, 1]}, [1]),
+        ({"in": [1, 0]}, [256]),
+        ({"in": [1, 1]}, [257]),
+        ({"in": [0, 128]}, [128]),
+        ({"in": [128, 0]}, [128 * 256]),
+        ({"in": [128, 128]}, [128 * 256 + 128]),
+        ({"in": [12345, 23456]}, [3183776]),
     ],
 )
 
@@ -851,17 +850,41 @@ run(
     [
         (
             {
-                "mainInput": [1, 0, 3, 1, 1, 0, 0, 0, 1, 0],
+                "mainInput": [1, 123, 256, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 3,
-                "subInput": [1, 0, 1],
+                "subInput": [1, 123, 256],
             },
             None,
+        ),
+        (
+            {
+                "mainInput": [1, 123, 255, 1, 1, 0, 0, 0, 1, 0],
+                "mainLen": 3,
+                "subInput": [1, 123, 255],
+            },
+            [1],
+        ),
+        (
+            {
+                "mainInput": [1, 0, 3, 1, 1, 0, 0, 0, 1, 0],
+                "mainLen": 3,
+                "subInput": [1, 0, 3],
+            },
+            [1],
         ),
         (
             {
                 "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
                 "mainLen": 3,
                 "subInput": [1, 0, 3],
+            },
+            [0],
+        ),
+        (
+            {
+                "mainInput": [1, 0, 1, 1, 1, 0, 0, 0, 1, 0],
+                "mainLen": 3,
+                "subInput": [1, 0, 256],
             },
             None,
         ),
@@ -942,33 +965,34 @@ run(
 
 
 def keccak(inp):
-    return bytes_to_bits(web3.Web3.keccak(inp))
+    return list(web3.Web3.keccak(inp))
 
 
 def blockify(inp, blks):
-    bits = bytes_to_bits(inp)
-    return bits + [0] * (blks * 136 * 8 - len(bits))
+    return list(inp) + [0] * (blks * 136 - len(inp))
 
 
 run(
-    "KeccakBits(1)",
+    "KeccakBytes(1)",
     [
-        ({"inBits": blockify(b"", 1), "inBitsLen": 0}, keccak(b"")),
-        ({"inBits": blockify(b"salam", 1), "inBitsLen": 5 * 8}, keccak(b"salam")),
-        ({"inBits": blockify(b"a" * 135, 1), "inBitsLen": 135 * 8}, keccak(b"a" * 135)),
-        ({"inBits": blockify(b"a" * 136, 1), "inBitsLen": 136 * 8}, None),
+        ({"in": blockify(b"", 1), "inLen": 0}, keccak(b"")),
+        ({"in": blockify(b"salam", 1), "inLen": 5}, keccak(b"salam")),
+        ({"in": blockify(b"salam", 1), "inLen": 4}, keccak(b"sala")),
+        ({"in": blockify(b"a" * 135, 1), "inLen": 135}, keccak(b"a" * 135)),
+        ({"in": blockify(b"a" * 136, 1), "inLen": 136}, None),
     ],
 )
 
 run(
-    "KeccakBits(2)",
+    "KeccakBytes(2)",
     [
-        ({"inBits": blockify(b"", 2), "inBitsLen": 0}, keccak(b"")),
-        ({"inBits": blockify(b"salam", 2), "inBitsLen": 5 * 8}, keccak(b"salam")),
-        ({"inBits": blockify(b"a" * 135, 2), "inBitsLen": 135 * 8}, keccak(b"a" * 135)),
-        ({"inBits": blockify(b"a" * 136, 2), "inBitsLen": 136 * 8}, keccak(b"a" * 136)),
-        ({"inBits": blockify(b"a" * 137, 2), "inBitsLen": 137 * 8}, keccak(b"a" * 137)),
-        ({"inBits": blockify(b"a" * 271, 2), "inBitsLen": 271 * 8}, keccak(b"a" * 271)),
-        ({"inBits": blockify(b"a" * 272, 2), "inBitsLen": 272 * 8}, None),
+        ({"in": blockify(b"", 2), "inLen": 0}, keccak(b"")),
+        ({"in": blockify(b"salam", 2), "inLen": 5}, keccak(b"salam")),
+        ({"in": blockify(b"a" * 135, 2), "inLen": 135}, keccak(b"a" * 135)),
+        ({"in": blockify(b"a" * 136, 2), "inLen": 136}, keccak(b"a" * 136)),
+        ({"in": blockify(b"a" * 136, 2), "inLen": 130}, keccak(b"a" * 130)),
+        ({"in": blockify(b"a" * 137, 2), "inLen": 137}, keccak(b"a" * 137)),
+        ({"in": blockify(b"a" * 271, 2), "inLen": 271}, keccak(b"a" * 271)),
+        ({"in": blockify(b"a" * 272, 2), "inLen": 272}, None),
     ],
 )

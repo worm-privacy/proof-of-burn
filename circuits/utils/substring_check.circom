@@ -4,7 +4,7 @@ include "./utils.circom";
 include "./assert.circom";
 
 
-// Checks whether the binary array `subInput` is a contiguous substring of `mainInput`.
+// Checks whether the byte-string `subInput` is a contiguous substring of `mainInput`.
 //
 // Example:
 //   mainInput: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0]
@@ -27,43 +27,43 @@ template SubstringCheck(maxMainLen, subLen) {
     signal input subInput[subLen];
     signal output out;
 
-    assert(subLen <= 248); // So that subInput fits in a field element
+    assert(subLen <= 31); // So that subInput fits in a field element
 
-    // Substring-checker works with binary inputs
-    AssertBinary(subLen)(subInput);
-    AssertBinary(maxMainLen)(mainInput);
+    // Substring-checker works with byte-string inputs
+    AssertByteString(subLen)(subInput);
+    AssertByteString(maxMainLen)(mainInput);
 
     AssertLessEqThan(16)(mainLen, maxMainLen);
     AssertLessEqThan(16)(subLen, mainLen);
 
     // Convert the sub-input into a field-element
-    signal subInputNum <== Bits2Num(subLen)(subInput);
+    signal subInputNum <== Bytes2Num(subLen)(subInput);
 
-    // M[i] = Number representation of the first i bits
+    // M[i] = Number representation of the first i bytes
     // If i = 0 --> M[i] = 0
-    // If i > 0 --> M[i] = 2^0*mainInput[0] + 2^1*mainInput[1] + ... + 2^(i-1)*mainInput[i-1]
+    // If i > 0 --> M[i] = 256^0*mainInput[0] + 256^1*mainInput[1] + ... + 256^(i-1)*mainInput[i-1]
     signal M[maxMainLen + 1];
     M[0] <== 0;
     for (var i = 0; i < maxMainLen; i++) {
-        M[i + 1] <== mainInput[i] * (2 ** i) + M[i];
+        M[i + 1] <== mainInput[i] * (256 ** i) + M[i];
     }
-    // M[i + N] - M[i] = 2^i.mainInput[i] + ... + 2^(i+N-1).mainInput[i+N-1]
-    //                 = 2^i.(2^0.mainInput[i] + ... + 2^(N-1).mainInput[i+N-1])
-    //                 = 2^i.(Number representation of M[i..i + N])
+    // M[i + N] - M[i] = 256^i.mainInput[i] + ... + 256^(i+N-1).mainInput[i+N-1]
+    //                 = 256^i.(256^0.mainInput[i] + ... + 256^(N-1).mainInput[i+N-1])
+    //                 = 256^i.(Number representation of M[i..i + N])
     //
     // Substring-ness Equation: Substring exists if there is `i` where:
-    // (2 ^ i) * subInputNum == M[i + subLen] - M[i]
+    // (256 ^ i) * subInputNum == M[i + subLen] - M[i]
     //
     // Reasons this is safe:
     // 1. If this holds:
-    //      (2 ^ i) * subInputNum == M[i + subLen] - M[i]
+    //      (256 ^ i) * subInputNum == M[i + subLen] - M[i]
     //    Then:
-    //      (2 ^ i) * subInputNum == 2^i.(2^0.mainInput[i] + ... + 2^(N-1).mainInput[i+N-1])
+    //      (256 ^ i) * subInputNum == 256^i.(256^0.mainInput[i] + ... + 256^(N-1).mainInput[i+N-1])
     //    Which means:
-    //      subInputNum == 2^0.mainInput[i] + ... + 2^(N-1).mainInput[i+N-1]
+    //      subInputNum == 256^0.mainInput[i] + ... + 256^(N-1).mainInput[i+N-1]
     //    That's because in a prime-field, when `ab == ac`, then we can conclude that `b == c`
-    //    Thus, all the bits in M[i..i + subLen] has to be equal with subInput
-    // 2. Also subInput's length is limited to 248 bits, so subInputNum will not overflow
+    //    Thus, all the bytes in M[i..i + subLen] has to be equal with subInput
+    // 2. Also subInput's length is limited to 31 bytes, so subInputNum will not overflow
     //    and we won't have unexpected/fancy bugs here.
 
     
@@ -88,7 +88,7 @@ template SubstringCheck(maxMainLen, subLen) {
         allowed[i + 1] <== allowed[i] * (1 - isLastIndex[i]);
 
         // Existence check
-        exists[i] <== IsEqual()([subInputNum * (2 ** i), M[i + subLen] - M[i]]);
+        exists[i] <== IsEqual()([subInputNum * (256 ** i), M[i + subLen] - M[i]]);
 
         // Existence flag is accumulated in the sum only when we are in the allowed region
         sums[i + 1] <== sums[i] + allowed[i + 1] * exists[i];

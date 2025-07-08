@@ -18,7 +18,7 @@ include "./utils/proof_of_work.circom";
 include "./utils/burn_address.circom";
 
 // Proves that there exists an account in a certain Ethereum block's state root, with a `balance` amount of ETH,
-// such that its address equals the first 160 bits of MiMC7(burnKey, receiverAddress). This is achieved by revealing
+// such that its address equals the first 20 bytes of MiMC7(burnKey, receiverAddress). This is achieved by revealing
 // some publicly verifiable inputs through a *single* public input — the Keccak hash of 6 elements:
 //
 //   1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
@@ -51,19 +51,19 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node (< 64)
 
     // Merkle-Patricia-Trie nodes data where:
-    //   1. keccak(layerBits[0]) === stateRoot
-    //   2. layerBits[numLayers - 1] ===
+    //   1. keccak(layers[0]) === stateRoot
+    //   2. layers[numLayers - 1] ===
     //        Rlp(
     //          addressHashNibbles[-numLeafAddressNibble:],
     //          Rlp(NONCE, balance, EMPTY_STORAGE_HASH, EMPTY_CODE_HASH)
     //        )
-    signal input layerBits[maxNumLayers][maxNodeBlocks * 136 * 8]; // MPT nodes in bits
-    signal input layerBitsLens[maxNumLayers]; // Bit length of MPT nodes
+    signal input layers[maxNumLayers][maxNodeBlocks * 136]; // MPT nodes in bytes
+    signal input layerLens[maxNumLayers]; // Byte length of MPT nodes
     signal input numLayers; // Number of MPT nodes
 
     // Block-header data where: keccak(blockHeader) == blockRoot
-    signal input blockHeader[maxHeaderBlocks * 136 * 8]; // Block header bits which should be hashed into blockRoot
-    signal input blockHeaderLen; // Length of block header in bits
+    signal input blockHeader[maxHeaderBlocks * 136]; // Block header bytes which should be hashed into blockRoot
+    signal input blockHeaderLen; // Length of block header in bytes
 
     /*************************/
     /* END OF IN/OUT SIGNALS */
@@ -88,12 +88,12 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
-        AssertLessThan(16)(layerBitsLens[i], maxNodeBlocks * 136 * 8);
-        AssertBinary(maxNodeBlocks * 136 * 8)(layerBits[i]);
+        AssertLessThan(16)(layerLens[i], maxNodeBlocks * 136 * 8);
+        AssertByteString(maxNodeBlocks * 136)(layers[i]);
     }
     // Check block-header len is less than maximum length
     AssertLessThan(16)(blockHeaderLen, maxHeaderBlocks * 136 * 8);
-    AssertBinary(maxHeaderBlocks * 136 * 8)(blockHeader);
+    AssertByteString(maxHeaderBlocks * 136)(blockHeader);
 
     // Calculate encrypted-balance
     signal encryptedBalance <== Hasher()(burnKey, balance - fee - spend);
@@ -106,51 +106,51 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal addressHashBytes[32] <== NibblesToBytes(32)(addressHashNibbles);
 
     // Fetch stateRoot and stateRoot from block-header
-    signal blockRoot[256] <== KeccakBits(maxHeaderBlocks)(blockHeader, blockHeaderLen);
-    signal stateRoot[256];
-    for(var i = 0; i < 256; i++) {
-        stateRoot[i] <== blockHeader[91 * 8 + i];
+    signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
+    signal stateRoot[32];
+    for(var i = 0; i < 32; i++) {
+        stateRoot[i] <== blockHeader[91 + i];
     }
 
     // Calculate public commitment
-    signal nullifierBits[256] <== FieldToBigEndianBits()(nullifier);
-    signal encryptedBalanceBits[256] <== FieldToBigEndianBits()(encryptedBalance);
-    signal feeBits[256] <== FieldToBigEndianBits()(fee);
-    signal spendBits[256] <== FieldToBigEndianBits()(spend);
-    signal receiverAddressBits[256] <== FieldToBigEndianBits()(receiverAddress);
+    signal nullifierBytes[32] <== FieldToBigEndianBytes()(nullifier);
+    signal encryptedBalanceBytes[32] <== FieldToBigEndianBytes()(encryptedBalance);
+    signal feeBytes[32] <== FieldToBigEndianBytes()(fee);
+    signal spendBytes[32] <== FieldToBigEndianBytes()(spend);
+    signal receiverAddressBytes[32] <== FieldToBigEndianBytes()(receiverAddress);
     commitment <== PublicCommitment(6)(
-        [blockRoot, nullifierBits, encryptedBalanceBits, feeBits, spendBits, receiverAddressBits]
+        [blockRoot, nullifierBytes, encryptedBalanceBytes, feeBytes, spendBytes, receiverAddressBytes]
     );
     
-    // layerBits[numLayers - 1]
-    signal lastLayerBits[maxNodeBlocks * 136 * 8] <== ArraySelector(
-        maxNumLayers, maxNodeBlocks * 136 * 8)(layerBits, numLayers - 1);
+    // layers[numLayers - 1]
+    signal lastLayer[maxNodeBlocks * 136] <== ArraySelector(
+        maxNumLayers, maxNodeBlocks * 136)(layers, numLayers - 1);
     
-    // lastLayerBits[numLayer - 1]
-    signal lastLayerLen <== Selector(maxNumLayers)(layerBitsLens, numLayers - 1);
+    // layers[numLayer - 1]
+    signal lastLayerLen <== Selector(maxNumLayers)(layerLens, numLayers - 1);
 
     // Calculate keccaks of all layers and check if the keccak of each
     // layer is substring of the upper layer
     signal existingLayer[maxNumLayers];
     signal substringCheckers[maxNumLayers - 1];
-    signal layerKeccaks[maxNumLayers][256];
-    signal reducedLayerKeccaks[maxNumLayers][248];
+    signal layerKeccaks[maxNumLayers][32];
+    signal reducedLayerKeccaks[maxNumLayers][31];
 
     for(var i = 0; i < maxNumLayers; i++) {
         // Layer exists if: i < numLayers
         existingLayer[i] <== LessThan(16)([i, numLayers]);
 
         // Calculate keccak of this layer
-        layerKeccaks[i] <== KeccakBits(maxNodeBlocks)(layerBits[i], layerBitsLens[i]);
+        layerKeccaks[i] <== KeccakBytes(maxNodeBlocks)(layers[i], layerLens[i]);
 
-        // Ignore the last byte of keccak so that the bits fit in a field element
-        reducedLayerKeccaks[i] <== Fit(256, 248)(layerKeccaks[i]);
+        // Ignore the last byte of keccak so that the bytes fit in a field element
+        reducedLayerKeccaks[i] <== Fit(32, 31)(layerKeccaks[i]);
 
         if(i > 0) {
-            substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136 * 8, 248)(
+            substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136, 31)(
                 subInput <== reducedLayerKeccaks[i],
-                mainLen <== layerBitsLens[i - 1],
-                mainInput <== layerBits[i - 1]
+                mainLen <== layerLens[i - 1],
+                mainInput <== layers[i - 1]
             );
 
             // Check substring-ness only when the layer exists
@@ -161,18 +161,18 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Keccak of the top layer should be equal with the claimed state-root
-    for(var i = 0; i < 256; i++) {
+    for(var i = 0; i < 32; i++) {
         layerKeccaks[0][i] === stateRoot[i];
     }
 
     // Calculate leaf-layer through address-hash and its balance
-    signal (leafBits[1112], leafBitsLen) <== LeafCalculator(32, amountBytes)(
+    signal (leafBytes[139], leafBytesLen) <== LeafCalculator(32, amountBytes)(
         addressHashNibbles, numLeafAddressNibbles, balance
     );
     
     // Make sure the calculated leaf-layer is equal with the last-layer
-    for(var i = 0; i < 1112; i++) {
-        leafBits[i] === lastLayerBits[i];
+    for(var i = 0; i < 139; i++) {
+        leafBytes[i] === lastLayer[i];
     }
-    leafBitsLen === lastLayerLen;
+    leafBytesLen === lastLayerLen;
 }

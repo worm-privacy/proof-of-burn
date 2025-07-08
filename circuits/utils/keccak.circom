@@ -450,16 +450,17 @@ template BitPad(maxBlocks, blockSize) {
 // Reviewers:
 //   Keyvan: OK
 //
-template KeccakBits(maxBlocks) {
-    signal input inBits[maxBlocks * 136 * 8];
-    signal input inBitsLen;
-    signal output out[256];
+template KeccakBytes(maxBlocks) {
+    signal input in[maxBlocks * 136];
+    signal input inLen;
+    signal output out[32];
 
-    // Make sure inBitsLen is divisible by 8.
-    // We only have byte-string inputs, not bits!
-    signal rem;
-    (_, rem) <== Divide(16)(inBitsLen, 8);
-    rem === 0;
+    signal inBitsArray[maxBlocks * 136][8];
+    for(var i = 0; i < maxBlocks * 136; i++) {
+        inBitsArray[i] <== Num2Bits(8)(in[i]);
+    }
+    signal inBits[maxBlocks * 136 * 8] <== Flatten(maxBlocks * 136, 8)(inBitsArray);
+    signal inBitsLen <== 8 * inLen;
 
     // Give some space for padding (10000001)
     AssertLessEqThan(16)(inBitsLen, maxBlocks * 136 * 8 - 8);
@@ -479,5 +480,9 @@ template KeccakBits(maxBlocks) {
         }
     }
 
-    out <== Keccak(maxBlocks)(paddedBlocks, numBlocks);
+    signal outBits[256] <== Keccak(maxBlocks)(paddedBlocks, numBlocks);
+    signal outBytes[32][8] <== Deflatten(32, 8)(outBits);
+    for(var i = 0; i < 32; i++) {
+        out[i] <== Bits2Num(8)(outBytes[i]);
+    }
 }

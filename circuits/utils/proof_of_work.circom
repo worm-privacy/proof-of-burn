@@ -10,16 +10,14 @@ include "./assert.circom";
 //
 template ProofOfWorkChecker(powMinimumZeroBytes) {
     signal input burnKey;
-    signal burnKeyBits[256] <== FieldToBigEndianBits()(burnKey);
-    signal burnKeyBlock[136 * 8] <== Fit(256, 136 * 8)(burnKeyBits);
-    signal burnKeyKeccak[256] <== KeccakBits(1)(burnKeyBlock, 256);
+    signal burnKeyBytes[32] <== FieldToBigEndianBytes()(burnKey);
+    signal burnKeyBlock[136] <== Fit(32, 136)(burnKeyBytes);
+    signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, 32);
 
     assert(powMinimumZeroBytes <= 32);
 
     // Assert the first powMinimumZeroBytes of keccak is zero
     for(var i = 0; i < powMinimumZeroBytes; i++) {
-        for(var j = 0; j < 8; j++) {
-            burnKeyKeccak[i * 8 + j] === 0;
-        }
+        burnKeyKeccak[i] === 0;
     }
 }

@@ -355,7 +355,7 @@ template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     // maxBalanceBytes + maxAddressHashBytes + 76
     var maxOutLen = maxPrefixedKeyRlpLen + maxValueRlpLen; 
 
-    signal output out[maxOutLen * 8];
+    signal output out[maxOutLen];
     signal output outLen;
 
     // Calculate the MPT leaf key based on the address-hash nibbles
@@ -394,21 +394,10 @@ template LeafCalculator(maxAddressHashBytes, maxBalanceBytes) {
     }
     prefixedKeyRlpLen <== 3 + keyLen;
 
-    signal (leafBytes[maxOutLen], leafBytesLen) <== Concat(maxPrefixedKeyRlpLen, maxValueRlpLen)(
+    (out, outLen) <== Concat(maxPrefixedKeyRlpLen, maxValueRlpLen)(
         a <== prefixedKeyRlp,
         aLen <== prefixedKeyRlpLen,
         b <== valueRlp,
         bLen <== valueRlpLen
     );
-
-    // Convert output to bits
-    outLen <== leafBytesLen * 8;
-    component decomp[maxOutLen];
-    for(var i = 0; i < maxOutLen; i++) {
-        decomp[i] = Num2Bits(8);
-        decomp[i].in <== leafBytes[i];
-        for(var j = 0; j < 8; j++) {
-            out[i * 8 + j] <== decomp[i].out[j];
-        }
-    }
 }
