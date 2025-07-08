@@ -7,15 +7,15 @@ include "./assert.circom";
 // Checks whether the byte-string `subInput` is a contiguous substring of `mainInput`.
 //
 // Example:
-//   mainInput: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+//   mainInput: [12, 23, 34, 45, 56, 67, 78, 89, 98, 87]
 //   mainLen:   6
-//   subInput:  [0, 0, 1]
+//   subInput:  [56, 67, 78]
 //   out:       0
 //
 // Example:
-//   mainInput: [1, 1, 0, 1, 0, 0, 1, 0, 0, 0]
+//   mainInput: [12, 23, 34, 45, 56, 67, 78, 89, 98, 87]
 //   mainLen:   7
-//   subInput:  [0, 0, 1]
+//   subInput:  [56, 67, 78]
 //   out:       1
 //
 // Reviewers:

@@ -5,38 +5,6 @@ include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
 include "./concat.circom";
 
-// Decomposes an input number `num` into an array of `N` bytes.
-// Each byte represents 8 bits of the number starting from the least significant byte.
-//
-// Example:
-//   num:   66051
-//   N:     8
-//   bytes: [3, 2, 1, 0, 0, 0, 0, 0]
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template ByteDecompose(N) { 
-    signal input num;
-    signal output bytes[N];
-
-    assert(N <= 31); // Avoid overflows
-
-    // Decompose into bits and arrange them into 8-bit chunks
-    signal bits[N * 8] <== Num2Bits(N * 8)(num);
-    signal byteBits[N][8];
-    for (var i = 0; i < N; i++) {
-        for(var j = 0; j < 8; j++) {
-            byteBits[i][j] <== bits[8 * i + j];
-        }
-    }
-
-    // Convert 8-bit chunks to bytes
-    for (var i = 0; i < N; i++) {
-        bytes[i] <== Bits2Num(8)(byteBits[i]);
-    }
-}
-
 // Counts the number of bytes required to store the number (i.e., ignores leading zeros).
 //
 // Example:
@@ -143,7 +111,7 @@ template RlpInteger(N) {
     assert(N <= 31);
 
     // Decompose and reverse: calculate the big-endian version of the balance
-    signal bytes[N] <== ByteDecompose(N)(in);
+    signal bytes[N] <== Num2Bytes(N)(in);
     signal length <== CountBytes(N)(bytes);
     signal bigEndian[N] <== ReverseArray(N)(bytes, length);
 

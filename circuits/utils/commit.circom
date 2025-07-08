@@ -4,29 +4,6 @@ include "../circomlib/circuits/bitify.circom";
 include "./keccak.circom";
 include "./utils.circom";
 
-// Converts an array of bytes into a number in big-endian format.
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template Bytes2NumBigEndian(numBytes) {
-    signal input in[numBytes];
-    signal output out;
-
-    assert(numBytes <= 31); // Avoid overflows
-
-    var result = 0;
-    var step = 1;
-
-    // Big-endian (Byte-level)
-    for (var i = numBytes - 1; i >= 0; i--) {
-        result += in[i] * step;
-        step *= 256;
-    }
-
-    out <== result;
-}
-
 // Calculate keccak(abi.encodePacked(in[0], in[1], ..., in[N-1]))
 // Where inputs are 32-byte data
 // The last byte of output is truncated in order to make the result fit in a field element

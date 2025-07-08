@@ -35,30 +35,6 @@ template ShiftLeft(n) {
     }
 }
 
-
-// Converts an array of nibbles (4-bit values) into an array of bytes (8-bit values).
-// Each byte is formed by combining two nibbles (4 bits each).
-//
-// Example:
-//   nibbles: [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
-//   bytes: [0x12, 0x34, 0x56]
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template NibblesToBytes(n) {
-    signal input nibbles[2 * n];
-    signal output bytes[n];
-    for(var i = 0; i < n; i++) {
-        // Check if all nibbles are maximum 4-bit long
-        AssertBits(4)(nibbles[2 * i]);
-        AssertBits(4)(nibbles[2 * i + 1]);
-
-        bytes[i] <== nibbles[2 * i] * 16 + nibbles[2 * i + 1];
-    }
-}
-
-
 // Takes `N` nibbles and shifts them left by `count` with this pattern:
 //
 //   1. If even number of nibbles is remaining: [0x20, rest_of_the_nibbles_as_bytes]
@@ -134,6 +110,6 @@ template LeafKey(addressHashBytes) {
         }
     }
 
-    out <== NibblesToBytes(addressHashBytes + 1)(outNibbles);
+    out <== Nibbles2Bytes(addressHashBytes + 1)(outNibbles);
     outLen <== 1 + div;
 }

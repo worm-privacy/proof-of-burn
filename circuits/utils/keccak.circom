@@ -481,7 +481,7 @@ template KeccakBytes(maxBlocks) {
     }
 
     signal outBits[256] <== Keccak(maxBlocks)(paddedBlocks, numBlocks);
-    signal outBytes[32][8] <== Deflatten(32, 8)(outBits);
+    signal outBytes[32][8] <== Reshape(32, 8)(outBits);
     for(var i = 0; i < 32; i++) {
         out[i] <== Bits2Num(8)(outBytes[i]);
     }

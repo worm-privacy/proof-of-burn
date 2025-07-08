@@ -103,7 +103,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate burn-address
     signal addressHashNibbles[64] <== BurnKeyAndReceiverToAddressHash()(burnKey, receiverAddress);
-    signal addressHashBytes[32] <== NibblesToBytes(32)(addressHashNibbles);
+    signal addressHashBytes[32] <== Nibbles2Bytes(32)(addressHashNibbles);
 
     // Fetch stateRoot and stateRoot from block-header
     signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
@@ -113,11 +113,11 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate public commitment
-    signal nullifierBytes[32] <== FieldToBigEndianBytes()(nullifier);
-    signal encryptedBalanceBytes[32] <== FieldToBigEndianBytes()(encryptedBalance);
-    signal feeBytes[32] <== FieldToBigEndianBytes()(fee);
-    signal spendBytes[32] <== FieldToBigEndianBytes()(spend);
-    signal receiverAddressBytes[32] <== FieldToBigEndianBytes()(receiverAddress);
+    signal nullifierBytes[32] <== Num2BytesBigEndian()(nullifier);
+    signal encryptedBalanceBytes[32] <== Num2BytesBigEndian()(encryptedBalance);
+    signal feeBytes[32] <== Num2BytesBigEndian()(fee);
+    signal spendBytes[32] <== Num2BytesBigEndian()(spend);
+    signal receiverAddressBytes[32] <== Num2BytesBigEndian()(receiverAddress);
     commitment <== PublicCommitment(6)(
         [blockRoot, nullifierBytes, encryptedBalanceBytes, feeBytes, spendBytes, receiverAddressBytes]
     );
