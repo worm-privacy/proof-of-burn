@@ -5,10 +5,10 @@ include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
 include "./concat.circom";
 
-// Counts the number of bytes required to store the number (i.e., ignores leading zeros).
+// Counts the number of bytes required to store the big-endian number (i.e., ignores leading zeros).
 //
 // Example:
-//   bytes: [3, 0, 1, 4, 2, 0, 0, 0] (3 leading-zeros)
+//   bytes: [0, 0, 0, 3, 0, 1, 4, 2] (3 leading-zeros)
 //   len:   5
 //
 // Reviewers:
@@ -19,14 +19,13 @@ template CountBytes(N) {
     signal output len;
 
     // Example:
-    // bytes: [3, 0, 1, 4, 2, 0, 0, 0]
+    // bytes: [0, 0, 0, 3, 0, 1, 4, 2]
 
     // Checking zero-ness of each byte
-    // isZero (Reversed):   [0, 1, 0, 0, 0, 1, 1, 1]
-    // isZero:              [1, 1, 1, 0, 0, 0, 1, 0]
+    // isZero:              [1, 1, 1, 0, 1, 0, 0, 0]
     signal isZero[N];
     for (var i = 0; i < N; i++) {
-        isZero[i] <== IsZero()(bytes[N - i - 1]);
+        isZero[i] <== IsZero()(bytes[i]);
     }
 
     // Accumulating 1s until we reach a zero
@@ -46,39 +45,6 @@ template CountBytes(N) {
 
     // Number of effective bytes = N - number of leading-zeros
     len <== N - leadingZeros;
-}
-
-
-// Reverses the first `inLen` elements of the input array `in`
-// Elements beyond `inLen` are zero-padded.
-//
-// Example:
-//   in:    [1, 2, 3, 4, 5], inLen: 3
-//   output:[3, 2, 1, 0, 0]
-//
-// Reviewers:
-//   Keyvan: OK
-//
-template ReverseArray(N) {
-    signal input in[N];
-    signal input inLen;
-    signal output out[N];
-
-    AssertLessEqThan(16)(inLen, N);
-
-    // Example:
-    //   in:    [1, 2, 3, 4, 5], inLen: 3
-
-    // Shift-right by `N - inLen` to put the elements at the last of
-    // a 2 * N element array.
-    // shifted: [0, 0, 0, 0, 0, 0, 0, 1, 2, 3]
-    signal shifted[2 * N] <== ShiftRight(N, N)(in, N - inLen);
-
-    // Reverse the whole thing and only keep the last N elements
-    // out: [3, 2, 1, 0, 0]
-    for(var i = 0; i < N; i++) {
-        out[i] <== shifted[N - i - 1];
-    }
 }
 
 // Returns RLP of an integer up to 31 bytes
@@ -111,9 +77,9 @@ template RlpInteger(N) {
     assert(N <= 31);
 
     // Decompose and reverse: calculate the big-endian version of the balance
-    signal bytes[N] <== Num2Bytes(N)(in);
+    signal bytes[N] <== Num2BytesBigEndian(N)(in);
     signal length <== CountBytes(N)(bytes);
-    signal bigEndian[N] <== ReverseArray(N)(bytes, length);
+    signal bigEndian[N] <== ShiftLeft(N)(bytes, N - length);
 
     // If the number is below 128, then the first byte is the number itself
     // Except when the number is zero, in that case the first byte is 0x80
