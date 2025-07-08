@@ -3,7 +3,7 @@ pragma circom 2.2.2;
 include "./keccak.circom";
 include "./assert.circom";
 
-// Proof-of-Work: Assert keccak(burnKey) < 2 ^ (256 - 8 * powMinimumZeroBytes)
+// Proof-of-Work: Assert keccak(burnKey + 'EIP-7503') < 2 ^ (256 - 8 * powMinimumZeroBytes)
 //
 // Reviewers:
 //   Keyvan: OK
