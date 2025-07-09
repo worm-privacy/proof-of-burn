@@ -3,13 +3,15 @@ pragma circom 2.2.2;
 include "./keccak.circom";
 include "./assert.circom";
 
-// Proof-of-Work: Assert keccak(burnKey + 'EIP-7503') < 2 ^ (256 - 8 * powMinimumZeroBytes)
+// Proof-of-Work: Assert keccak(burnKey + 'EIP-7503') < 2 ^ (256 - 8 * minimumZeroBytes)
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template ProofOfWorkChecker(powMinimumZeroBytes) {
+template ProofOfWorkChecker() {
     signal input burnKey;
+    signal input minimumZeroBytes;
+
     signal burnKeyBytes[32] <== Num2BytesBigEndian(32)(burnKey);
 
     signal burnKeyBytesPostfixed[40];
@@ -30,10 +32,12 @@ template ProofOfWorkChecker(powMinimumZeroBytes) {
     signal burnKeyBlock[136] <== Fit(40, 136)(burnKeyBytesPostfixed);
     signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, 40);
 
-    assert(powMinimumZeroBytes <= 32);
+    signal shouldBeZero[32] <== Filter(32)(minimumZeroBytes);
 
     // Assert the first powMinimumZeroBytes bytes of keccak is zero
-    for(var i = 0; i < powMinimumZeroBytes; i++) {
-        burnKeyKeccak[i] === 0;
+    for(var i = 0; i < 32; i++) {
+        // If shouldBeZero[i] is 1, then burnKeyKeccak[i] should be zero
+        // Otherwise it can obtain any value
+        burnKeyKeccak[i] * shouldBeZero[i] === 0;
     }
 }
