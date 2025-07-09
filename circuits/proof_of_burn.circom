@@ -65,6 +65,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input blockHeader[maxHeaderBlocks * 136]; // Block header bytes which should be hashed into blockRoot
     signal input blockHeaderLen; // Length of block header in bytes
 
+    signal input byteSecurityRelax; // Relax the minLeafAddressNibbles by increasing PoW zero bytes
+
     /*************************/
     /* END OF IN/OUT SIGNALS */
     /*************************/
@@ -76,16 +78,18 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
     // Check if PoW has been done in order to find burnKey
-    ProofOfWorkChecker()(burnKey, powMinimumZeroBytes);
+    ProofOfWorkChecker()(burnKey, powMinimumZeroBytes + byteSecurityRelax);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
-    AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles);
+    // The prover can relax the security by doing more PoW
+    AssertLessEqThan(16)(byteSecurityRelax * 2, minLeafAddressNibbles);
+    AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles - byteSecurityRelax * 2);
 
-    // fee, spend and (fee + spend) should be less than the amount being minted
+    // (fee + spend) should be less than the amount being minted
     // (fee + spend) will NOT overflow since balance/fee/spend amounts are limited
-    // to `amountBytes` bytes.
-    AssertLessEqThan(amountBytes * 8)(fee, balance);
-    AssertLessEqThan(amountBytes * 8)(spend, balance);
+    // to `amountBytes` bytes which is <= 31.
+    AssertBits(amountBytes * 8)(fee);
+    AssertBits(amountBytes * 8)(spend);
     AssertLessEqThan(amountBytes * 8)(fee + spend, balance);
     
     for(var i = 0; i < maxNumLayers; i++) {
