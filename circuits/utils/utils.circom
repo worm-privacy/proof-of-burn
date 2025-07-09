@@ -3,6 +3,40 @@ pragma circom 2.2.2;
 
 include "./assert.circom";
 
+// Generates an array where first `in` elements are one and the rest are zero
+//
+// Example Filter(5):
+//   in:  0
+//   out: [0, 0, 0, 0, 0]
+//
+//   in:  1
+//   out: [1, 0, 0, 0, 0]
+//
+//   in:  3
+//   out: [1, 1, 1, 0, 0]
+//
+//   in:  10
+//   out: [1, 1, 1, 1, 1]
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template Filter(N) {
+    signal input in;
+    signal output out[N];
+
+    signal isEq[N];
+    for(var i = 0; i < N; i++) {
+        isEq[i] <== IsEqual()([i, in]);
+        if(i > 0) {
+            out[i] <== out[i - 1] * (1 - isEq[i]);
+        }
+        else {
+            out[i] <== (1 - isEq[i]);
+        }
+    }
+}
+
 // Fits a M-element array in a N-element block
 //
 // Reviewers:

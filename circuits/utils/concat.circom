@@ -18,18 +18,12 @@ template Mask(n) {
     signal input count;
     signal output out[n];
 
-    // Generate filter: [1, 1, 1, ..., 1, 1, 0, 0, 0, ..., 0, 0]
-    signal filter[n + 1];
-    filter[0] <== 1;
-    signal isEq[n];
-    for(var i = 0; i < n; i++) {
-        isEq[i] <== IsEqual()([i, count]);
-        filter[i + 1] <== filter[i] * (1 - isEq[i]);
-    }
+    // Generate filter: [1, 1, ..., 1, 1, 0, 0, ..., 0, 0]
+    signal filter[n] <== Filter(n)(count);
 
     // Apply filter
     for(var i = 0; i < n; i++) {
-        out[i] <== in[i] * filter[i + 1];
+        out[i] <== in[i] * filter[i];
     }
 }
 
