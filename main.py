@@ -159,6 +159,7 @@ print(
             "layerLens": layer_lens,
             "blockHeader": header_bytes,
             "blockHeaderLen": header_bytes_len,
+            "byteSecurityRelax": 0,
         },
     )
 )

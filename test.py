@@ -144,7 +144,7 @@ pob_expected_commitment = expected_commitment(
 )[1][0]
 
 run(
-    "ProofOfBurn(4, 4, 5, 20, 31, 2, 10 * 18)",
+    "ProofOfBurn(4, 4, 5, 20, 31, 2, 10 ** 18)",
     [
         (
             proof_of_burn_inp,
