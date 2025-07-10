@@ -24,3 +24,7 @@ jobs:
       - name: Compile and deploy
         run: |
           circuitscan deploy:circom circuits/main_proof_of_burn.circom sepolia -v v2.2.2 -i 256
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
+          
