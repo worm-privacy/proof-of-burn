@@ -1,8 +1,7 @@
 name: Deploy on Circuitscan
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -25,7 +24,14 @@ jobs:
         run: |
           circuitscan login ${{ secrets.CIRCUITSCAN_API_KEY }}
 
-      - name: Compile and deploy
+      - name: Deploy Spend circuit
+        run: |
+          circuitscan deploy:circom circuits/main_spend.circom sepolia -v v2.2.2 -i 256
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          ETHERSCAN_KEY: ${{ secrets.ETHERSCAN_KEY }}
+
+      - name: Deploy Proof-Of-Burn circuit
         run: |
           circuitscan deploy:circom circuits/main_proof_of_burn.circom sepolia -v v2.2.2 -i 256
         env:
