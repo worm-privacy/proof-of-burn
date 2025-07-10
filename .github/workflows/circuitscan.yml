@@ -23,4 +23,4 @@ jobs:
 
       - name: Compile and deploy
         run: |
-          circuitscan --version
+          circuitscan deploy:circom circuits/main_proof_of_burn.circom sepolia -v v2.2.2 -i 256
