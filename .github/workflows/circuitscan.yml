@@ -21,6 +21,10 @@ jobs:
         run: |
           npm install -g circuitscan
 
+      - name: Login to Circuitscan
+        run: |
+          circuitscan login ${{ secrets.CIRCUITSCAN_API_KEY }}
+
       - name: Compile and deploy
         run: |
           circuitscan deploy:circom circuits/main_proof_of_burn.circom sepolia -v v2.2.2 -i 256
