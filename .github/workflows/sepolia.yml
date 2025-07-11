@@ -19,7 +19,7 @@ jobs:
 
       - name: Download params from Circuitscan
         run: |
-          wget https://circuitscan-artifacts.s3.us-west-2.amazonaws.com/build/proofofburn-unconscious-sapphire-gorilla/pkg.zip
+          wget -q https://circuitscan-artifacts.s3.us-west-2.amazonaws.com/build/proofofburn-unconscious-sapphire-gorilla/pkg.zip
       
       - name: Unzip params
         run: |
