@@ -15,7 +15,7 @@ jobs:
 
       - name: Install deps
         run: |
-          apt-get install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4 git
+          sudo apt update && sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4 git
 
       - name: Clone Rapidsnark
         run: |
