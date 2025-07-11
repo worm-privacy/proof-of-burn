@@ -24,6 +24,10 @@ jobs:
       - name: Unzip params
         run: |
           mkdir params && mv pkg.zip params && cd params && unzip pkg.zip
+        
+      - name: Make witness-generator
+        run: |
+          cd params/build/verify_circuit/verify_circuit_cpp && make
 
       - name: Clone Rapidsnark
         run: |
