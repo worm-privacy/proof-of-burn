@@ -23,7 +23,7 @@ jobs:
       
       - name: Unzip params
         run: |
-          mkdir params && cd params && unzip pkg.zip
+          mkdir params && mv pkg.zip params && cd params && unzip pkg.zip
 
       - name: Clone Rapidsnark
         run: |
