@@ -17,17 +17,13 @@ jobs:
         run: |
           sudo apt update && sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4 git wget unzip
 
-      - name: Download params from Circuitscan
+      - name: Clone witness-generators
         run: |
-          wget -q https://circuitscan-artifacts.s3.us-west-2.amazonaws.com/build/proofofburn-unconscious-sapphire-gorilla/pkg.zip
-      
-      - name: Unzip params
-        run: |
-          mkdir params && mv pkg.zip params && cd params && unzip pkg.zip
+          git clone https://github.com/worm-privacy/witness
         
       - name: Make witness-generator
         run: |
-          cd params/build/verify_circuit/verify_circuit_cpp && make
+          cd witness && make
 
       - name: Clone Rapidsnark
         run: |
