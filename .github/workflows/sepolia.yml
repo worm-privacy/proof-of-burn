@@ -1,0 +1,31 @@
+name: Gather requirements
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    environment: Circuitscan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Install deps
+        run: |
+          apt-get install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4 git
+
+      - name: Clone Rapidsnark
+        run: |
+          git clone --recurse-submodules https://github.com/iden3/rapidsnark
+
+      - name: Make GMP
+        run: |
+          cd rapidsnark && ./build_gmp.sh host
+
+      - name: Make Rapidsnark
+        run: |
+          cd rapidsnark && make
+          
