@@ -15,7 +15,7 @@ jobs:
 
       - name: Install deps
         run: |
-          sudo apt update && sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4 git wget unzip
+          sudo apt update && sudo apt install -y build-essential cmake libgmp-dev libsodium-dev nasm curl m4 git wget unzip nlohmann-json3-dev
 
       - name: Clone witness-generators
         run: |
