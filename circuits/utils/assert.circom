@@ -7,6 +7,7 @@ include "../circomlib/circuits/bitify.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template AssertBits(B) {
     signal input in;
@@ -18,6 +19,7 @@ template AssertBits(B) {
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template AssertByteString(N) {
     signal input in[N];
@@ -30,6 +32,7 @@ template AssertByteString(N) {
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template AssertLessThan(B) {
     signal input a;
@@ -44,6 +47,7 @@ template AssertLessThan(B) {
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template AssertLessEqThan(B) {
     signal input a;
@@ -58,6 +62,7 @@ template AssertLessEqThan(B) {
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template AssertGreaterEqThan(B) {
     signal input a;

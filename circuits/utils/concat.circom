@@ -12,6 +12,7 @@ include "./assert.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template Mask(n) {
     signal input in[n];
