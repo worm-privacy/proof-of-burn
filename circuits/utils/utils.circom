@@ -20,6 +20,7 @@ include "./assert.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template Filter(N) {
     signal input in;

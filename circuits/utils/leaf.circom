@@ -13,6 +13,7 @@ include "./assert.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template ShiftLeft(n) {
     signal input in[n];

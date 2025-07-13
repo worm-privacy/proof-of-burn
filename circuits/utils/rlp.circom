@@ -13,6 +13,7 @@ include "./concat.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template CountBytes(N) {
     signal input bytes[N];

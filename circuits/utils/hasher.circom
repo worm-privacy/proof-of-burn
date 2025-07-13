@@ -6,6 +6,7 @@ include "../circomlib/circuits/poseidon.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
 //
 template Hasher() {
     signal input left;

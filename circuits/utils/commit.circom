@@ -10,6 +10,8 @@ include "./utils.circom";
 //
 // Reviewers:
 //   Keyvan: OK
+//   Shahriar: OK
+//      - Comment: Since it is being used indirectly by the spend.circom, there is no need to check that `in[n][32]` values are indeed `bytes`. This must always be eforced by the wrapper circuit that calls this.
 //
 template PublicCommitment(N) {
     signal input in[N][32];
