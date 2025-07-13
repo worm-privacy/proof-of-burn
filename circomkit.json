@@ -1,1 +1,1 @@
-{"cWitness": true, "skipWasm": true}
+{"cWitness": true, "wasmWitness": false}
