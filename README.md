@@ -54,3 +54,8 @@ The flow will be like this:
     - `make`
 
 After running `make`, the `main.py` script will first initiate a transfer to a burn-address and will then generate an input file for the circuit. Then it will try to generate a witness file through the Circom-generated C program.
+
+## TODO
+
+- [ ] The Proof-of-Work mechanism may have vulenrability.
+- [ ] More reviewers needed for the circuits.
