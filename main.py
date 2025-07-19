@@ -37,15 +37,20 @@ def burn(burn_key, receiver):
 import random
 
 
-def find_burn_key(min_zero_bytes):
+def find_burn_key(receiver_address, min_zero_bytes):
+    receiver_address_bytes = int.to_bytes(receiver_address, 20, "big")
     burn_key = random.randint(0, FIELD_SIZE - 1)
-    while any(w3.keccak(int.to_bytes(burn_key, 32, "big") + b"EIP-7503")[:min_zero_bytes]):
+    while any(
+        w3.keccak(
+            int.to_bytes(burn_key, 32, "big") + receiver_address_bytes + b"EIP-7503"
+        )[:min_zero_bytes]
+    ):
         burn_key += 1
     return burn_key
 
 
-burn_key = find_burn_key(POW_MIN_ZERO_BYTES)
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
+burn_key = find_burn_key(int(receiver[2:], 16), POW_MIN_ZERO_BYTES)
 addr = burn(burn_key, receiver)
 
 blknum = w3.eth.block_number

@@ -78,7 +78,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
     // Check if PoW has been done in order to find burnKey
-    ProofOfWorkChecker()(burnKey, powMinimumZeroBytes + byteSecurityRelax);
+    ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     // The prover can relax the security by doing more PoW

@@ -3,34 +3,39 @@ pragma circom 2.2.2;
 include "./keccak.circom";
 include "./assert.circom";
 
-// Proof-of-Work: Assert keccak(burnKey + 'EIP-7503') < 2 ^ (256 - 8 * minimumZeroBytes)
+// Proof-of-Work: Assert keccak(burnKey | receiverAddress | 'EIP-7503') < 2 ^ (256 - 8 * minimumZeroBytes)
 //
 // Reviewers:
 //   Keyvan: OK
 //
 template ProofOfWorkChecker() {
     signal input burnKey;
+    signal input receiverAddress;
     signal input minimumZeroBytes;
 
     signal burnKeyBytes[32] <== Num2BytesBigEndian(32)(burnKey);
+    signal addressBytes[20] <== Num2BytesBigEndian(20)(receiverAddress);
 
-    signal burnKeyBytesPostfixed[40];
+    signal hasherInput[60]; // 32 (burnKeyBytes) + 20 (addressBytes) + 8 (EIP-7503 postfix)
     for(var i = 0; i < 32; i++) {
-        burnKeyBytesPostfixed[i] <== burnKeyBytes[i];
+        hasherInput[i] <== burnKeyBytes[i];
+    }
+    for(var i = 0; i < 20; i++) {
+        hasherInput[32 + i] <== addressBytes[i];
     }
 
     // Postfix the burn-key with string "EIP-7503" to prevent rainbow tables
-    burnKeyBytesPostfixed[32] <== 69; // 'E'
-    burnKeyBytesPostfixed[33] <== 73; // 'I'
-    burnKeyBytesPostfixed[34] <== 80; // 'P'
-    burnKeyBytesPostfixed[35] <== 45; // '-'
-    burnKeyBytesPostfixed[36] <== 55; // '7'
-    burnKeyBytesPostfixed[37] <== 53; // '5'
-    burnKeyBytesPostfixed[38] <== 48; // '0'
-    burnKeyBytesPostfixed[39] <== 51; // '3'
+    hasherInput[52] <== 69; // 'E'
+    hasherInput[53] <== 73; // 'I'
+    hasherInput[54] <== 80; // 'P'
+    hasherInput[55] <== 45; // '-'
+    hasherInput[56] <== 55; // '7'
+    hasherInput[57] <== 53; // '5'
+    hasherInput[58] <== 48; // '0'
+    hasherInput[59] <== 51; // '3'
 
-    signal burnKeyBlock[136] <== Fit(40, 136)(burnKeyBytesPostfixed);
-    signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, 40);
+    signal burnKeyBlock[136] <== Fit(60, 136)(hasherInput);
+    signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, 60);
 
     signal shouldBeZero[32] <== Filter(32)(minimumZeroBytes);
 

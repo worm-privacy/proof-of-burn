@@ -121,13 +121,13 @@ def expected_commitment(vals):
 with io.open("test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
-burn_key = 20615728996108507012247633598804393039420317165659513483865090248589612027786
+burn_key = 21035303386439287829942036907482139051955357549905982701836682443911172083388
 
 pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "5308f44ce9d08d419874251d95bc9674080a516960ad3220f3a1201fab77e48f"
+                "eb0fc126a53b3ca7236b5a0fd4047d0ac9b3046fe4bc4d457a882d63a1e6f372"
             ),
             "big",
         ),  # Block root
