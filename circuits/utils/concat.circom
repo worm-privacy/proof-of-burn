@@ -13,6 +13,7 @@ include "./assert.circom";
 // Reviewers:
 //   Keyvan: OK
 //   Shahriar: OK
+//   Sarah: OK
 //
 template Mask(n) {
     signal input in[n];
@@ -32,11 +33,14 @@ template Mask(n) {
 // filling the leftmost `count` positions with zeros.
 //
 // Example:
-//   in:    [1, 2, 3, 4, 5, 6, 7, 8], count: 3
-//   output:[0, 0, 0, 1, 2, 3, 4, 5]
+//   maxShift: 5 
+//   count: 3
+//   in:    [1, 2, 3, 4, 5, 6, 7, 8]
+//   output:[0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0]
 //
 // Reviewers:
 //   Keyvan: OK
+//   Sarah: OK
 //
 template ShiftRight(n, maxShift) {
     signal input in[n];
@@ -78,6 +82,7 @@ template ShiftRight(n, maxShift) {
 //
 // Reviewers:
 //   Keyvan: OK
+//   Sarah: OK
 //
 template Concat(maxLenA, maxLenB) {
     signal input a[maxLenA];
@@ -102,7 +107,7 @@ template Concat(maxLenA, maxLenB) {
     // maskedB: [10, 20, 0, 0, 0]
     signal maskedB[maxLenB] <== Mask(maxLenB)(b, bLen);
 
-    // shiftedB: [0, 0, 0, 10, 20, 0, 0, 0]
+    // shiftedB: [0, 0, 0, 10, 20, 0, 0, 0, 0, 0]
     signal shiftedB[maxLenA + maxLenB] <== ShiftRight(maxLenB, maxLenA)(maskedB, aLen);
     
     // out = maskedA + shiftedB
