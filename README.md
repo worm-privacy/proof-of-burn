@@ -10,13 +10,13 @@ Finally it will return the keccak of last layer as the state_root. The account b
 
 Burn-key is a number you generate in order to start the burn/mint process. It somehow is your "private-key" to the world of EIP-7503.
 
-- Burn-address: Poseidon2(burnKey, receiverAddress)
+- Burn-address: `Poseidon2(burnKey, receiverAddress)`
     The amount can only be minted for the given receiver-address.
-- PoW; Keccak(burnKey | receiverAddress | "EIP-7503") < THRESHOLD
+- PoW: `Keccak(burnKey | receiverAddress | "EIP-7503") < THRESHOLD`
     Only burn-keys which fit in the equation can be used.
-- Nullifier: Poseidon2(burnKey, 1)
+- Nullifier: `Poseidon2(burnKey, 1)`
     Nullifier prevents us from using the burn-key again.
-- Coin: Poseidon2(burnKey, amount)
+- Coin: `Poseidon2(burnKey, amount)`
     A "coin" is an encrypted amount which can be partially withdrawn, resulting in a new coin.
 
 The burn-address hash, which is present in the Merkle-Patricia-Trie leaf key for which we provide a proof, is calculated using the following formula:
@@ -24,8 +24,9 @@ The burn-address hash, which is present in the Merkle-Patricia-Trie leaf key for
 
 Since the smallest output space among these functions is 160 bits (due to `f₂`), the overall security of this scheme is limited by that step. By the ***pigeonhole principle***, compressing a 508-bit input space into a 160-bit output space necessarily implies that many different inputs will map to the same output. As a result, an attacker attempting to find a valid `(burnKey, receiverAddress)` pair that maps to a specific leaf would, in the worst case, need to try approximately 2^160 combinations.
 
-
 Thus, we consider the Merkle-Patricia-Trie leaves in this scheme to provide 160-bit preimage resistance, which corresponds to 160-bit security against such brute-force attacks.
+
+While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage resistance due to the truncation to a 160-bit Ethereum address, this may not be sufficient for long-term or high-assurance applications. To strengthen the scheme, we add an additional constraint: the Keccak256 hash of `burnKey || receiverAddress || "EIP-7503"` must begin with three zero bytes. Since each zero byte contributes 8 bits of difficulty, this adds 24 bits of security, raising the effective brute-force cost from 2^160 to 2^184. This constraint filters out the vast majority of candidate inputs, ensuring that only those satisfying both the original hash chain and the prefix condition are considered valid, thereby increasing the overall security of the scheme.
 
 ## Test Locally
 
