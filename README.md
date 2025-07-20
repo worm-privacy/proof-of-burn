@@ -10,10 +10,10 @@ Finally it will return the keccak of last layer as the state_root. The account b
 
 Burn-key is a number you generate in order to start the burn/mint process. It somehow is your "private-key" to the world of EIP-7503.
 
-- Burn-address: `Poseidon2(burnKey, receiverAddress)`
-    The amount can only be minted for the given receiver-address.
+- Burn-address: `Truncate160(Poseidon2(burnKey, receiverAddress))`
+    Is the 160 first bits of the Poseidon2 hash of a random-number `burnKey` and a `receiverAddress`. The amount can only be minted for the given receiver-address.
 - PoW: `Keccak(burnKey | receiverAddress | "EIP-7503") < THRESHOLD`
-    Only burn-keys which fit in the equation can be used.
+    Only burn-keys which fit in the equation can be used. This is in order to increase the bit-security of the protocol.
 - Nullifier: `Poseidon2(burnKey, 1)`
     Nullifier prevents us from using the burn-key again.
 - Coin: `Poseidon2(burnKey, amount)`
