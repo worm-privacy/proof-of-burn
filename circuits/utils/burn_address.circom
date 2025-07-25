@@ -13,7 +13,7 @@ template BurnKeyAndReceiverToAddressHash() {
     signal input receiverAddress;
     signal output addressHashNibbles[64];
 
-    // Take the first 20-bytes of MiMC7(burnKey, receiverAddress) as a burn-address
+    // Take the first 20-bytes of Poseidon2(burnKey, receiverAddress) as a burn-address
     signal hash <== Hasher()(burnKey, receiverAddress);
     signal hashBytes[32] <== Num2BytesBigEndian(32)(hash);
     signal addressBytes[20] <== Fit(32, 20)(hashBytes);
