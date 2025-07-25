@@ -11,9 +11,9 @@ include "./proof_of_burn.circom";
 //
 // 8       -> maxHeaderBlocks (Average header len of the last 100 blocks as of July 2nd 2025 is 643 bytes ~ 4.72 blocks)
 //
-// 50      -> minLeafAddressNibbles (4 ^ 50 = 2 ^ 100 bits of security)
+// 50      -> minLeafAddressNibbles (4 * 50 = 200 bits of security (?!))
 //            Number of address-hash nibbles present in leaf among 100 richest addresses: Min: 54 Max: 60 Avg: 56.08
-//            Bitcoin's world record of lowest block-hash has only 23 zero bytes (46 zero nibbles)
+//            Bitcoin's world record of lowest block-hash has only 23 zero nibbles
 //
 // 31      -> amountBytes (248-bits to disallow field overflows)
 //
