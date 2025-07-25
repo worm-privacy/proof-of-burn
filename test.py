@@ -91,7 +91,7 @@ def field_to_be_bits(elem):
 
 
 run(
-    "Num2BytesBigEndian(32)",
+    "Num2BigEndianBytes(32)",
     [
         ({"in": 123}, field_to_be_bits(123)),
         ({"in": 0}, field_to_be_bits(0)),
@@ -398,7 +398,7 @@ run(
 )
 
 run(
-    "Num2Bytes(4)",
+    "Num2LittleEndianBytes(4)",
     [
         ({"in": [0x00]}, [0, 0, 0, 0]),
         ({"in": [0xDE]}, [0xDE, 0, 0, 0]),
@@ -588,7 +588,7 @@ run(
 )
 
 run(
-    "Bytes2NumBigEndian(2)",
+    "BigEndianBytes2Num(2)",
     [
         ({"in": [0, 0]}, [0]),
         ({"in": [0, 1]}, [1]),

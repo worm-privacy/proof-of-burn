@@ -119,11 +119,11 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     }
 
     // Calculate public commitment
-    signal nullifierBytes[32] <== Num2BytesBigEndian(32)(nullifier);
-    signal encryptedBalanceBytes[32] <== Num2BytesBigEndian(32)(encryptedBalance);
-    signal feeBytes[32] <== Num2BytesBigEndian(32)(fee);
-    signal spendBytes[32] <== Num2BytesBigEndian(32)(spend);
-    signal receiverAddressBytes[32] <== Num2BytesBigEndian(32)(receiverAddress);
+    signal nullifierBytes[32] <== Num2BigEndianBytes(32)(nullifier);
+    signal encryptedBalanceBytes[32] <== Num2BigEndianBytes(32)(encryptedBalance);
+    signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
+    signal spendBytes[32] <== Num2BigEndianBytes(32)(spend);
+    signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
     commitment <== PublicCommitment(6)(
         [blockRoot, nullifierBytes, encryptedBalanceBytes, feeBytes, spendBytes, receiverAddressBytes]
     );

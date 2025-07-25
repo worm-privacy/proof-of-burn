@@ -13,8 +13,8 @@ template ProofOfWorkChecker() {
     signal input receiverAddress;
     signal input minimumZeroBytes;
 
-    signal burnKeyBytes[32] <== Num2BytesBigEndian(32)(burnKey);
-    signal addressBytes[20] <== Num2BytesBigEndian(20)(receiverAddress);
+    signal burnKeyBytes[32] <== Num2BigEndianBytes(32)(burnKey);
+    signal addressBytes[20] <== Num2BigEndianBytes(20)(receiverAddress);
 
     signal hasherInput[60]; // 32 (burnKeyBytes) + 20 (addressBytes) + 8 (EIP-7503 postfix)
     for(var i = 0; i < 32; i++) {

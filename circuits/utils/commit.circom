@@ -30,5 +30,5 @@ template PublicCommitment(N) {
     
     // Ignore the least-significant byte while converting keccak to field element
     signal reducedHash[31] <== Fit(32, 31)(hash);
-    out <== Bytes2NumBigEndian(31)(reducedHash);
+    out <== BigEndianBytes2Num(31)(reducedHash);
 }

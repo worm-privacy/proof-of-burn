@@ -15,7 +15,7 @@ template BurnKeyAndReceiverToAddressHash() {
 
     // Take the first 20-bytes of Poseidon2(burnKey, receiverAddress) as a burn-address
     signal hash <== Hasher()(burnKey, receiverAddress);
-    signal hashBytes[32] <== Num2BytesBigEndian(32)(hash);
+    signal hashBytes[32] <== Num2BigEndianBytes(32)(hash);
     signal addressBytes[20] <== Fit(32, 20)(hashBytes);
 
     // Feed the address-bytes in the big-endian form to keccak in order to take the 

@@ -78,7 +78,7 @@ template RlpInteger(N) {
     assert(N <= 31);
 
     // Calculate the big-endian version of the balance without the leading zeros
-    signal bytes[N] <== Num2BytesBigEndian(N)(in);
+    signal bytes[N] <== Num2BigEndianBytes(N)(in);
     signal length <== CountBytes(N)(bytes);
     signal bigEndian[N] <== ShiftLeft(N)(bytes, N - length);
 

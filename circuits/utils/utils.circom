@@ -133,7 +133,7 @@ template Reverse(N) {
 // Reviewers:
 //   Keyvan: OK
 //
-template Bytes2Num(N) {
+template LittleEndianBytes2Num(N) {
     signal input in[N];
     signal output out;
 
@@ -154,12 +154,12 @@ template Bytes2Num(N) {
 // Reviewers:
 //   Keyvan: OK
 //
-template Bytes2NumBigEndian(N) {
+template BigEndianBytes2Num(N) {
     signal input in[N];
     signal output out;
 
     signal inReversed[N] <== Reverse(N)(in);
-    out <== Bytes2Num(N)(inReversed);
+    out <== LittleEndianBytes2Num(N)(inReversed);
 }
 
 // Decompose the input number into arbitrary number of bits. Uses Num2Bits_strict when necessary.
@@ -190,7 +190,7 @@ template Num2BitsSafe(N) {
 // Reviewers:
 //   Keyvan: OK
 //
-template Num2Bytes(N) { 
+template Num2LittleEndianBytes(N) { 
     signal input in;
     signal output out[N];
 
@@ -211,11 +211,11 @@ template Num2Bytes(N) {
 // Reviewers:
 //   Keyvan: OK
 //
-template Num2BytesBigEndian(N) {
+template Num2BigEndianBytes(N) {
     signal input in;
     signal output out[N];
 
-    signal littleEndian[N] <== Num2Bytes(N)(in);
+    signal littleEndian[N] <== Num2LittleEndianBytes(N)(in);
     out <== Reverse(N)(littleEndian);
 }
 

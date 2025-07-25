@@ -36,9 +36,9 @@ template Spend(maxAmountBytes) {
     signal coin <== Hasher()(burnKey, balance);
     signal remainingCoin <== Hasher()(burnKey, balance - withdrawnBalance);
 
-    signal coinBytes[32] <== Num2BytesBigEndian(32)(coin);
-    signal withdrawnBalanceBytes[32] <== Num2BytesBigEndian(32)(withdrawnBalance);
-    signal remainingCoinBytes[32] <== Num2BytesBigEndian(32)(remainingCoin);
+    signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
+    signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
+    signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
     commitment <== PublicCommitment(3)(
         [coinBytes, withdrawnBalanceBytes, remainingCoinBytes]
     );
