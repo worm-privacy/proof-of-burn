@@ -261,7 +261,7 @@ def burn_addr_calc(burn_key, recv_addr):
 
 
 run(
-    "BurnKeyAndReceiverToAddressHash()",
+    "BurnAddressHash()",
     [
         (
             {"burnKey": 123, "receiverAddress": 2345},

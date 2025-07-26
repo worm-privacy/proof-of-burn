@@ -2,13 +2,16 @@ pragma circom 2.2.2;
 
 include "./utils.circom";
 
-// Takes an burnKey input and generates a burn-address-hash represented as 64 4-bit nibbles 
-// using the Poseidon2 hash function, creating a unique address-hash with no known private-key
+
+// Returns Keccak of a burn-address as 64 4-bit nibbles, where burn-address is the 
+// first 20 bytes of Poseidon2(burnKey, receiverAddress)
+// Ethereum state-trie maps address-hashes to accounts, that's why we return the 
+// Keccak of address instead of the address itself.
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template BurnKeyAndReceiverToAddressHash() {
+template BurnAddressHash() {
     signal input burnKey;
     signal input receiverAddress;
     signal output addressHashNibbles[64];

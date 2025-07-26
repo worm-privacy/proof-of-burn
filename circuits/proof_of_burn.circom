@@ -106,8 +106,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Calculate nullifier
     signal nullifier <== Hasher()(burnKey, 1);
 
-    // Calculate burn-address
-    signal addressHashNibbles[64] <== BurnKeyAndReceiverToAddressHash()(burnKey, receiverAddress);
+    // Calculate keccak hash of a burn-address
+    signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress);
 
     // Fetch stateRoot and stateRoot from block-header
     signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
