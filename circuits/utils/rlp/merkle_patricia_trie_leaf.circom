@@ -87,7 +87,7 @@ template TruncatedAddressHash(addressHashBytes) {
 
 // Returns RLP(key, value)
 // Where:
-//   key:   addressHash
+//   key:   addressHash (Truncated to addressHashNibblesLen nibbles with certain encoding)
 //   value: RLP([NONCE, balance, STORAGE_HASH, CODE_HASH])
 //
 // Read: https://ethereum.org/de/developers/docs/data-structures-and-encoding/patricia-merkle-trie
