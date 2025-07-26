@@ -15,8 +15,9 @@ def run(main, test_cases):
         include "utils/commit.circom";
         include "utils/concat.circom";
         include "utils/hasher.circom";
-        include "utils/leaf_key.circom";
-        include "utils/rlp.circom";
+        include "utils/rlp/integer.circom";
+        include "utils/rlp/empty_account.circom";
+        include "utils/rlp/merkle_patricia_trie_leaf.circom";
         include "utils/selector.circom";
         include "utils/substring_check.circom";
         include "utils/utils.circom";
