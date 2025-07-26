@@ -13,6 +13,7 @@ include "./assert.circom";
 // Reviewers:
 //   Keyvan: OK
 //   Shahriar: The circuit is OK but why not use Decoder() from `multiplexer` in circomlib? I mean, for the sake of fewer lines of code. Also, why not use `var sum` instead of [n+1] signals?
+//      - Keyvan's response: Can't accumulate them inside a `var sum` because it makes it non-quadratic. Also I thought the current version is easier to understand than using Decoder gadgets.
 //
 template Selector(n) {
     signal input vals[n];
