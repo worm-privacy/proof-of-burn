@@ -34,7 +34,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /* START OF IN/OUT SIGNALS */
     /***************************/
 
-    // Public commitment: Keccak(blockRoot, nullifier, encryptedBalance, fee, spend, receiverAddress)
+    // Public commitment: Keccak(blockRoot, nullifier, remainingCoin, fee, spend, receiverAddress)
     signal output commitment;
 
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
@@ -106,10 +106,12 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /****************************/
 
     // Check if PoW has been done in order to find burnKey
+    // The user can increase the PoW zero-bytes through `byteSecurityRelax` and relax 
+    // the minimum number of leaf-key bytes needed.
     ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
 
-    // Calculate encrypted-balance
-    signal encryptedBalance <== Hasher()(burnKey, balance - fee - spend);
+    // Calculate encrypted-balance of the remaining-coin
+    signal remainingCoin <== Hasher()(burnKey, balance - fee - spend);
 
     // Calculate nullifier
     signal nullifier <== Hasher()(burnKey, 1);
@@ -126,12 +128,12 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate public commitment
     signal nullifierBytes[32] <== Num2BigEndianBytes(32)(nullifier);
-    signal encryptedBalanceBytes[32] <== Num2BigEndianBytes(32)(encryptedBalance);
+    signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
     signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal spendBytes[32] <== Num2BigEndianBytes(32)(spend);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
     commitment <== PublicCommitment(6)(
-        [blockRoot, nullifierBytes, encryptedBalanceBytes, feeBytes, spendBytes, receiverAddressBytes]
+        [blockRoot, nullifierBytes, remainingCoinBytes, feeBytes, spendBytes, receiverAddressBytes]
     );
     
     // layers[numLayers - 1]
