@@ -3,6 +3,7 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/bitify.circom";
 include "./keccak.circom";
 include "./utils.circom";
+include "./assert.circom";
 
 // Calculate keccak(abi.encodePacked(in[0], in[1], ..., in[N-1]))
 // Where inputs are 32-byte data
@@ -12,10 +13,16 @@ include "./utils.circom";
 //   Keyvan: OK
 //   Shahriar: OK
 //      - Comment: Since it is being used indirectly by the spend.circom, there is no need to check that `in[n][32]` values are indeed `bytes`. This must always be eforced by the wrapper circuit that calls this.
+//          - Keyvan's response: Added AssertByteString to ensure all inputs are bytes, just in case :)
 //
 template PublicCommitment(N) {
     signal input in[N][32];
     signal output out;
+
+    // Check if all inputs are byte-strings
+    for(var i = 0; i < N; i++) {
+        AssertByteString(32)(in[i]);
+    }
 
     // Number of keccak-blocks needed to store N 32-byte elements
     // numBlocks = Ceil(N * 32 / 136)
