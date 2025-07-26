@@ -12,7 +12,7 @@ def run(main, test_cases):
         pragma circom 2.2.2;
         
         include "utils/shift.circom";
-        include "utils/commit.circom";
+        include "utils/public_commitment.circom";
         include "utils/concat.circom";
         include "utils/hasher.circom";
         include "utils/rlp/integer.circom";

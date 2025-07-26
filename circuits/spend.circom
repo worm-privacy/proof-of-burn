@@ -10,7 +10,7 @@ pragma circom 2.2.2;
 include "./utils/assert.circom";
 include "./utils/hasher.circom";
 include "./utils/utils.circom";
-include "./utils/commit.circom";
+include "./utils/public_commitment.circom";
 
 // Computes the encrypted balance (coin) using the Poseidon2 hash function 
 // with the given `balance` and `salt`. It then checks if the sum of 
