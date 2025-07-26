@@ -109,7 +109,7 @@ template Divide(N) {
     // Check if `rem` and `b` are at most N-bits long and `rem < b`
     AssertLessThan(N)(rem, b);
 
-    // Check if `out` and `a` are at most N-bits long and `out < a`
+    // Check if `out` and `a` are at most N-bits long and `out <= a`
     AssertLessEqThan(N)(out, a);
 
     out * b + rem === a;
