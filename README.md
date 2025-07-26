@@ -46,7 +46,7 @@ While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage res
 4. Install Python dependencies
     - `python -m venv .venv`
     - `source .venv/bin/activate`
-    - `pip install -r requirements.txt`
+    - `pip install -r tests/requirements.txt`
 5. Start Ganache *or* Anvil (Foundry) server
     - `ganache -d`
     - `anvil --mnemonic "myth like bonus scare over problem client lizard pioneer submit female collect"`
