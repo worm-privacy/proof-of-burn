@@ -37,7 +37,7 @@ template SubstringCheck(maxMainLen, subLen) {
     AssertLessEqThan(16)(subLen, mainLen);
 
     // Convert the sub-input into a field-element
-    signal subInputNum <== Bytes2Num(subLen)(subInput);
+    signal subInputNum <== LittleEndianBytes2Num(subLen)(subInput);
 
     // M[i] = Number representation of the first i bytes
     // If i = 0 --> M[i] = 0
