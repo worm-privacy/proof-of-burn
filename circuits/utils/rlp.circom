@@ -4,6 +4,7 @@ include "../circomlib/circuits/comparators.circom";
 include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
 include "./concat.circom";
+include "./leaf_key.circom";
 
 // Counts the number of bytes required to store the big-endian number (i.e., ignores leading zeros).
 //
