@@ -41,8 +41,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal input balance; // Balance of the burn-address
 
     // In case there is a 1:1 token to be minted:
-    signal input fee; // To be paid to the relayer who actually submits the proof
-    signal input spend; // You can spend part of minted amount upon creation
+    signal input fee; // To be paid to the relayer who actually submits the proof (Could be the burner himself)
+    signal input spend; // You can reveal part of minted amount upon creation
     signal input receiverAddress; // The address which can receive the minted 1:1 token (160-bit number)
     // The rest of the balance (balance - spend - fee) is revealed as an encrypted-coin which can later be minted
     // through the spend.circom circuit
@@ -105,11 +105,6 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /* END OF INPUT VALIDATIONS */
     /****************************/
 
-    // Check if PoW has been done in order to find burnKey
-    // The user can increase the PoW zero-bytes through `byteSecurityRelax` and relax 
-    // the minimum number of leaf-key bytes needed.
-    ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
-
     // Calculate encrypted-balance of the remaining-coin
     signal remainingCoin <== Hasher()(burnKey, balance - fee - spend);
 
@@ -119,11 +114,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Calculate keccak hash of a burn-address
     signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress);
 
-    // Fetch stateRoot and stateRoot from block-header
+    // Calculate the block-root 
     signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
+
+    // Fetch the stateRoot from the block-header
+    var stateRootOffset = 91; // stateRoot starts from byte 91 of the block-header
     signal stateRoot[32];
     for(var i = 0; i < 32; i++) {
-        stateRoot[i] <== blockHeader[91 + i];
+        stateRoot[i] <== blockHeader[stateRootOffset + i];
     }
 
     // Calculate public commitment
@@ -189,4 +187,9 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         leaf[i] === lastLayer[i];
     }
     leafLen === lastLayerLen;
+
+    // Check if PoW has been done in order to find burnKey
+    // The user can increase the PoW zero-bytes through `byteSecurityRelax` and relax 
+    // the minimum number of leaf-key bytes needed.
+    ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
 }
