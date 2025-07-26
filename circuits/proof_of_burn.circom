@@ -108,7 +108,6 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate burn-address
     signal addressHashNibbles[64] <== BurnKeyAndReceiverToAddressHash()(burnKey, receiverAddress);
-    signal addressHashBytes[32] <== Nibbles2Bytes(32)(addressHashNibbles);
 
     // Fetch stateRoot and stateRoot from block-header
     signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
