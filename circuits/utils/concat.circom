@@ -2,6 +2,7 @@ pragma circom 2.2.2;
 
 include "./utils.circom";
 include "./assert.circom";
+include "./shift.circom";
 
 // Outputs an array where only the first `ind` elements of `in` are kept,
 // and the rest are zeroed out.
@@ -26,46 +27,6 @@ template Mask(n) {
     // Apply filter
     for(var i = 0; i < n; i++) {
         out[i] <== in[i] * filter[i];
-    }
-}
-
-// Shifts the input array `in` to the right by `count` positions,
-// filling the leftmost `count` positions with zeros.
-//
-// Example:
-//   maxShift: 5 
-//   count: 3
-//   in:    [1, 2, 3, 4, 5, 6, 7, 8]
-//   output:[0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0]
-//
-// Reviewers:
-//   Keyvan: OK
-//   Sarah: OK
-//
-template ShiftRight(n, maxShift) {
-    signal input in[n];
-    signal input count;
-    signal output out[n + maxShift];
-
-    AssertLessEqThan(16)(count, maxShift);
-
-    var outVars[n + maxShift];
-
-    // Shift by `i` only when `i == count`
-    // out[i + j] <== (i == count) * in[j]
-    // I.e out[i + j] <== in[j] when `i == count`
-    signal isEq[maxShift + 1];
-    signal temps[maxShift + 1][n];
-    for(var i = 0; i <= maxShift; i++) {
-        isEq[i] <== IsEqual()([i, count]);
-        for(var j = 0; j < n; j++) {
-            temps[i][j] <== isEq[i] * in[j];
-            outVars[i + j] += temps[i][j];
-        }
-    }
-
-    for(var i = 0; i < n + maxShift; i++) {
-        out[i] <== outVars[i];
     }
 }
 

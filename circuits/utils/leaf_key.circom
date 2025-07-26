@@ -2,39 +2,7 @@ pragma circom 2.2.2;
 
 include "../circomlib/circuits/mux1.circom";
 include "./utils.circom";
-include "./assert.circom";
-
-// Shifts the `in` array to the left by the given `count` times, filling the end with zeros.
-//
-// Example:
-//   in:    [1, 2, 3, 4, 5]
-//   count: 2
-//   out:   [3, 4, 5, 0, 0]
-//
-// Reviewers:
-//   Keyvan: OK
-//   Shahriar: OK
-//
-template ShiftLeft(n) {
-    signal input in[n];
-    signal input count;
-    signal output out[n];
-
-    AssertLessEqThan(16)(count, n);
-
-    var outVars[n];
-    signal isEq[n][n];
-    signal temp[n][n];
-    // out[i] <== sum_j(in[j] * (i == j - count))
-    for(var i = 0; i < n; i++) {
-        for(var j = 0; j < n; j++) {
-            isEq[i][j] <== IsEqual()([i, j - count]) ;
-            temp[i][j] <== isEq[i][j] * in[j];
-            outVars[i] += temp[i][j];
-        }
-        out[i] <== outVars[i];
-    }
-}
+include "./shift.circom";
 
 // Takes `N` nibbles and shifts them left by `count` with this pattern:
 //

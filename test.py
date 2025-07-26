@@ -11,10 +11,11 @@ def run(main, test_cases):
         imports = """
         pragma circom 2.2.2;
         
+        include "utils/shift.circom";
         include "utils/commit.circom";
         include "utils/concat.circom";
         include "utils/hasher.circom";
-        include "utils/leaf.circom";
+        include "utils/leaf_key.circom";
         include "utils/rlp.circom";
         include "utils/selector.circom";
         include "utils/substring_check.circom";
