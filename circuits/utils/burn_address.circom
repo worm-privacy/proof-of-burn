@@ -3,7 +3,7 @@ pragma circom 2.2.2;
 include "./utils.circom";
 
 // Takes an burnKey input and generates a burn-address-hash represented as 64 4-bit nibbles 
-// using the MiMC hash function, creating a unique address-hash with no known private-key
+// using the Poseidon2 hash function, creating a unique address-hash with no known private-key
 //
 // Reviewers:
 //   Keyvan: OK
