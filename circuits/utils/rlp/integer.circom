@@ -72,6 +72,7 @@ template RlpInteger(N) {
     //   [0x80 + num_value_bytes]
     // Instead of:
     //   [0xb7 + num_len_bytes] (Which is the case where length is above 55 bytes)
+    //   (Since the amounts are never more than 31 bytes we'll never need this scenario)
     // Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
     assert(N <= 31);
 
