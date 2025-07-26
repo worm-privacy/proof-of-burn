@@ -22,4 +22,4 @@ jobs:
 
       - name: Run test script in Docker container
         run: |
-          docker run --rm my-app python3 test.py
+          docker run --rm my-app python3 tests/test.py

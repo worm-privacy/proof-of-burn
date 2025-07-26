@@ -120,7 +120,7 @@ def expected_commitment(vals):
     )
 
 
-with io.open("test_pob_input.json") as f:
+with io.open("tests/test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
 burn_key = 21035303386439287829942036907482139051955357549905982701836682443911172083388
