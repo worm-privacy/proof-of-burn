@@ -135,21 +135,19 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate keccaks of all layers and check if the keccak of each
     // layer is substring of the upper layer
-    signal existingLayer[maxNumLayers];
+    signal layerExists[maxNumLayers] <== Filter(maxNumLayers)(numLayers); // layerExists[i] <== i < numLayers
     signal substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][32];
     signal reducedLayerKeccaks[maxNumLayers][31];
 
     for(var i = 0; i < maxNumLayers; i++) {
-        // Layer exists if: i < numLayers
-        existingLayer[i] <== LessThan(16)([i, numLayers]);
-
         // Calculate keccak of this layer
         layerKeccaks[i] <== KeccakBytes(maxNodeBlocks)(layers[i], layerLens[i]);
 
         // Ignore the last byte of keccak so that the bytes fit in a field element
         reducedLayerKeccaks[i] <== Fit(32, 31)(layerKeccaks[i]);
 
+        // Check if keccak(layers[i]) is substring of layers[i - 1]
         if(i > 0) {
             substringCheckers[i - 1] <== SubstringCheck(maxNodeBlocks * 136, 31)(
                 subInput <== reducedLayerKeccaks[i],
@@ -160,7 +158,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
             // Check substring-ness only when the layer exists
             // - When layer doesn't exist: (1 - substringChecker) *  0 === 0 (Correct)
             // - When layer exists: (1 - substringChecker) * 1 === 0 -> substringChecker === 1 (Correct)
-            (1 - substringCheckers[i - 1]) * existingLayer[i] === 0;
+            (1 - substringCheckers[i - 1]) * layerExists[i] === 0;
         }
     }
 
