@@ -12,7 +12,6 @@ include "./utils/substring_check.circom";
 include "./utils/concat.circom";
 include "./utils/hasher.circom";
 include "./utils/rlp.circom";
-include "./utils/leaf.circom";
 include "./utils/commit.circom";
 include "./utils/proof_of_work.circom";
 include "./utils/burn_address.circom";
