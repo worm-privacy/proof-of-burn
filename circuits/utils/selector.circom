@@ -15,25 +15,33 @@ include "./assert.circom";
 //   Shahriar: The circuit is OK but why not use Decoder() from `multiplexer` in circomlib? I mean, for the sake of fewer lines of code. Also, why not use `var sum` instead of [n+1] signals?
 //      - Keyvan's response: Can't accumulate them inside a `var sum` because it makes it non-quadratic. Also I thought the current version is easier to understand than using Decoder gadgets.
 //
+// Update 26 July 2025: The AssertLessThan(select, n) check is removed and a better check is placed.
+// Reviewers:
+//   Keyvan: OK
+//
 template Selector(n) {
     signal input vals[n];
     signal input select;
     signal output out;
 
-    AssertLessThan(16)(select, n);
-
     // isEq is the filter: [0, ..., 0, 1, 0, ..., 0]
     // Where the ith index is 1 and the rest are 0
     signal isEq[n];
+
+    var sumIsEq = 0;
 
     signal sum[n + 1];
     sum[0] <== 0;
     for(var i = 0; i < n; i++) {
         isEq[i] <== IsEqual()([select, i]);
 
+        sumIsEq += isEq[i];
+
         // Keep the vals[i] only when i == select
         sum[i + 1] <== sum[i] + isEq[i] * vals[i];
     }
+
+    sumIsEq === 1; // Ensure at least one element is selected!
 
     out <== sum[n];
 }
