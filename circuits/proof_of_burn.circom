@@ -70,14 +70,15 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /* END OF IN/OUT SIGNALS */
     /*************************/
 
+    /******************************/
+    /* START OF INPUT VALIDATIONS */
+    /******************************/
+
     assert(amountBytes <= 31);
 
     AssertLessEqThan(amountBytes * 8)(balance, maxBalance);
 
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
-
-    // Check if PoW has been done in order to find burnKey
-    ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
 
     // At least `minLeafAddressNibbles` nibbles should be present in the leaf node
     // The prover can relax the security by doing more PoW
@@ -99,6 +100,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Check block-header len is less than maximum length
     AssertLessThan(16)(blockHeaderLen, maxHeaderBlocks * 136 * 8);
     AssertByteString(maxHeaderBlocks * 136)(blockHeader);
+
+    /****************************/
+    /* END OF INPUT VALIDATIONS */
+    /****************************/
+
+    // Check if PoW has been done in order to find burnKey
+    ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
 
     // Calculate encrypted-balance
     signal encryptedBalance <== Hasher()(burnKey, balance - fee - spend);
