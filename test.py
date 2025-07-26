@@ -414,7 +414,7 @@ run(
 )
 
 run(
-    "LeafKey(3)",
+    "TruncatedAddressHash(3)",
     [
         (
             {
