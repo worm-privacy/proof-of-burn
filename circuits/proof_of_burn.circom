@@ -127,7 +127,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     );
     
     // layers[numLayers - 1]
-    signal lastLayer[maxNodeBlocks * 136] <== ArraySelector(
+    signal lastLayer[maxNodeBlocks * 136] <== SelectorArray1D(
         maxNumLayers, maxNodeBlocks * 136)(layers, numLayers - 1);
     
     // layers[numLayer - 1]

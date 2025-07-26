@@ -366,7 +366,7 @@ run(
 )
 
 run(
-    "Array2DSelector(3, 2, 2)",
+    "SelectorArray2D(3, 2, 2)",
     [
         (
             {
@@ -773,7 +773,7 @@ run(
 
 
 run(
-    "ArraySelector(4, 5)",
+    "SelectorArray1D(4, 5)",
     [
         (
             {

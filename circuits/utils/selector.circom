@@ -39,7 +39,7 @@ template Selector(n) {
 }
 
 
-// Selects the array at the given index `select` from an MxN array of arrays `arrays`.
+// Selects the 1D-array at the given index `select` from an MxN array of 1D-arrays `arrays`.
 //
 // Example:
 // arrays: [[11, 21, 31, 41],
@@ -52,7 +52,7 @@ template Selector(n) {
 // Reviewers:
 //   Keyvan: OK
 //
-template ArraySelector(m, n) {
+template SelectorArray1D(m, n) {
     signal input arrays[m][n];
     signal input select;
     signal output out[n];
@@ -69,7 +69,7 @@ template ArraySelector(m, n) {
     }
 }
 
-// Selects the 2D array at the given index `select` from an MxPxQ array of arrays `arrays`.
+// Selects the 2D-array at the given index `select` from an MxPxQ array of 2D-arrays `arrays`.
 //
 // Example:
 // arrays: [[[1, 2],[3, 4]],
@@ -81,7 +81,7 @@ template ArraySelector(m, n) {
 // Reviewers:
 //   Keyvan: OK
 //
-template Array2DSelector(m, p, q) {
+template SelectorArray2D(m, p, q) {
     signal input arrays[m][p][q];
     signal input select;
     signal output out[p][q];

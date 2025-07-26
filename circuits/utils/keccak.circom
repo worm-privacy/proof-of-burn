@@ -345,7 +345,7 @@ template Final(nBlocksIn) {
     }
 
     // Return the state after applying `blocks` absorbs: s[blocks]
-    out <== Array2DSelector(nBlocksIn + 1, 25, 64)(s, blocks);
+    out <== SelectorArray2D(nBlocksIn + 1, 25, 64)(s, blocks);
 }
 
 // Apply 24 rounds of KeccakfRound
