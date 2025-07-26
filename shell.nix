@@ -23,9 +23,9 @@ pkgs.mkShell {
       python -m venv .venv
     fi
     source .venv/bin/activate
-    if [ -f requirements.txt ]; then
+    if [ -f tests/requirements.txt ]; then
       echo "Installing Python dependencies..."
-      pip install -r requirements.txt
+      pip install -r tests/requirements.txt
     fi
   '';
 }
