@@ -2,7 +2,6 @@ pragma circom 2.2.2;
 
 include "./assert.circom";
 
-
 // Selects the element at the given index `select` from the input array `vals`.
 //
 // Example:

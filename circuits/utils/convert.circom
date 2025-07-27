@@ -1,8 +1,8 @@
 pragma circom 2.2.2;
 
+include "../circomlib/circuits/bitify.circom";
 include "./array.circom";
 include "./assert.circom";
-include "../circomlib/circuits/bitify.circom";
 
 // Converts little-endian bytes to num
 //
