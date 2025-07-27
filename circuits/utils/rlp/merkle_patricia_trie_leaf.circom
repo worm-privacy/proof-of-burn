@@ -53,6 +53,9 @@ template TruncatedAddressHash(addressHashBytes) {
     signal output outLen;
 
     // addressHash is at most 32 bytes (64 nibbles) so 6 bits
+    AssertLessEqThan(6)(addressHashNibblesLen, 2 * addressHashBytes);
+
+    // Check odd/even-ness
     signal (div, rem) <== Divide(6)(addressHashNibblesLen, 2);
 
     // Shift left (2 * addressHashBytes - addressHashNibblesLen) times so that
