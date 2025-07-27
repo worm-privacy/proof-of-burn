@@ -145,13 +145,43 @@ pob_expected_commitment = expected_commitment(
     ]
 )[1][0]
 
+import copy
+
+proof_of_burn_corrupted_layer_0 = copy.deepcopy(proof_of_burn_inp)
+proof_of_burn_corrupted_layer_0["layers"][0][0] += 1
+
+proof_of_burn_corrupted_layer_1 = copy.deepcopy(proof_of_burn_inp)
+proof_of_burn_corrupted_layer_1["layers"][1][0] += 1
+
+proof_of_burn_corrupted_layer_2 = copy.deepcopy(proof_of_burn_inp)
+proof_of_burn_corrupted_layer_2["layers"][2][0] += 1
+
+proof_of_burn_corrupted_layer_3 = copy.deepcopy(proof_of_burn_inp)
+proof_of_burn_corrupted_layer_3["layers"][3][0] += 1
+
 run(
     "ProofOfBurn(4, 4, 5, 20, 31, 2, 10 ** 18)",
     [
         (
             proof_of_burn_inp,
             [pob_expected_commitment],
-        )
+        ),
+        (
+            proof_of_burn_corrupted_layer_0,
+            None,
+        ),
+        (
+            proof_of_burn_corrupted_layer_1,
+            None,
+        ),
+        (
+            proof_of_burn_corrupted_layer_2,
+            None,
+        ),
+        (
+            proof_of_burn_corrupted_layer_3,
+            [pob_expected_commitment],  # layer[3] is unused so doesn't matter!
+        ),
     ],
 )
 
