@@ -1,7 +1,6 @@
 pragma circom 2.2.2;
 
-include "./utils.circom";
-include "./assert.circom";
+include "./array.circom";
 include "./shift.circom";
 
 // Outputs an array where only the first `ind` elements of `in` are kept,

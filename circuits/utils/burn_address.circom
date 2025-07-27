@@ -1,6 +1,7 @@
 pragma circom 2.2.2;
 
-include "./utils.circom";
+include "./convert.circom";
+include "./array.circom";
 
 // The burn-address is the first 20 bytes of Poseidon2(burnKey, receiverAddress)
 // The burn-address is bound to both a random salt and the address which has the

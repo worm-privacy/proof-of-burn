@@ -1,6 +1,5 @@
 pragma circom 2.2.2;
 
-include "../utils.circom";
 include "../concat.circom";
 include "./integer.circom";
 

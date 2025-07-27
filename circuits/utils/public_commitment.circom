@@ -2,7 +2,7 @@ pragma circom 2.2.2;
 
 include "../circomlib/circuits/bitify.circom";
 include "./keccak.circom";
-include "./utils.circom";
+include "./array.circom";
 include "./assert.circom";
 
 // Calculate keccak(abi.encodePacked(in[0], in[1], ..., in[N-1]))

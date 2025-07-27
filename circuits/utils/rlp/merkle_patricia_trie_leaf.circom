@@ -2,7 +2,8 @@ pragma circom 2.2.2;
 
 include "../../circomlib/circuits/comparators.circom";
 include "../../circomlib/circuits/mux1.circom";
-include "../utils.circom";
+include "../convert.circom";
+include "../shift.circom";
 include "../concat.circom";
 include "./empty_account.circom";
 

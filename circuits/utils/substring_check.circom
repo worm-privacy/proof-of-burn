@@ -1,6 +1,7 @@
 pragma circom 2.2.2;
 
-include "./utils.circom";
+include "../circomlib/circuits/comparators.circom";
+include "./convert.circom";
 include "./assert.circom";
 
 // Checks whether the byte-string `subInput` is a contiguous substring of `mainInput`.

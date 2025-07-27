@@ -4,8 +4,10 @@
 pragma circom 2.2.2;
 
 include "../circomlib/circuits/gates.circom";
-include "selector.circom";
-include "utils.circom";
+include "../circomlib/circuits/comparators.circom";
+include "./selector.circom";
+include "./array.circom";
+include "./divide.circom";
 
 // Example:
 //   in: [1, 2, 3, 4, 5], n: 3

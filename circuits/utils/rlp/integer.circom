@@ -1,7 +1,7 @@
 pragma circom 2.2.2;
 
 include "../../circomlib/circuits/comparators.circom";
-include "../utils.circom";
+include "../convert.circom";
 
 // Counts the number of bytes required to store the big-endian number (i.e., ignores leading zeros).
 //

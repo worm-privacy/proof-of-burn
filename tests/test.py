@@ -20,7 +20,9 @@ def run(main, test_cases):
         include "utils/rlp/merkle_patricia_trie_leaf.circom";
         include "utils/selector.circom";
         include "utils/substring_check.circom";
-        include "utils/utils.circom";
+        include "utils/array.circom";
+        include "utils/divide.circom";
+        include "utils/convert.circom";
         include "utils/keccak.circom";
         include "proof_of_burn.circom";
         include "spend.circom";
