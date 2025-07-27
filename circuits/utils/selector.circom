@@ -47,7 +47,7 @@ template Selector(n) {
 }
 
 
-// Selects the 1D-array at the given index `select` from an MxN array of 1D-arrays `arrays`.
+// Selects the 1D-array at the given index `select` from an NxP array of 1D-arrays `arrays`.
 //
 // Example:
 // arrays: [[11, 21, 31, 41],
@@ -60,24 +60,24 @@ template Selector(n) {
 // Reviewers:
 //   Keyvan: OK
 //
-template SelectorArray1D(m, n) {
-    signal input arrays[m][n];
+template SelectorArray1D(n, p) {
+    signal input arrays[n][p];
     signal input select;
-    signal output out[n];
+    signal output out[p];
 
-    signal arraysT[n][m]; // Transposed
-    for(var i = 0; i < m; i++) {
-        for(var j = 0; j < n; j++) {
+    signal arraysT[p][n]; // Transposed
+    for(var i = 0; i < n; i++) {
+        for(var j = 0; j < p; j++) {
             arraysT[j][i] <== arrays[i][j];
         }
     }
 
-    for(var i = 0; i < n; i++) {
-        out[i] <== Selector(m)(arraysT[i], select);
+    for(var i = 0; i < p; i++) {
+        out[i] <== Selector(n)(arraysT[i], select);
     }
 }
 
-// Selects the 2D-array at the given index `select` from an MxPxQ array of 2D-arrays `arrays`.
+// Selects the 2D-array at the given index `select` from an NxPxQ array of 2D-arrays `arrays`.
 //
 // Example:
 // arrays: [[[1, 2],[3, 4]],
@@ -89,13 +89,13 @@ template SelectorArray1D(m, n) {
 // Reviewers:
 //   Keyvan: OK
 //
-template SelectorArray2D(m, p, q) {
-    signal input arrays[m][p][q];
+template SelectorArray2D(n, p, q) {
+    signal input arrays[n][p][q];
     signal input select;
     signal output out[p][q];
 
-    signal arraysT[p][q][m]; // Transposed
-    for(var i = 0; i < m; i++) {
+    signal arraysT[p][q][n]; // Transposed
+    for(var i = 0; i < n; i++) {
         for(var j = 0; j < p; j++) {
             for(var k = 0; k < q; k++) {
                 arraysT[j][k][i] <== arrays[i][j][k];
@@ -105,7 +105,7 @@ template SelectorArray2D(m, p, q) {
 
     for(var i = 0; i < p; i++) {
         for(var j = 0; j < q; j++) {
-            out[i][j] <== Selector(m)(arraysT[i][j], select);
+            out[i][j] <== Selector(n)(arraysT[i][j], select);
         }
     }
 }
