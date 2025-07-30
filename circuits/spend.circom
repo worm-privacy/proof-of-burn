@@ -7,8 +7,8 @@
 
 pragma circom 2.2.2;
 
+include "./circomlib/circuits/poseidon.circom";
 include "./utils/assert.circom";
-include "./utils/hasher.circom";
 include "./utils/convert.circom";
 include "./utils/public_commitment.circom";
 
@@ -33,8 +33,8 @@ template Spend(maxAmountBytes) {
 
     AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance);
 
-    signal coin <== Hasher()(burnKey, balance);
-    signal remainingCoin <== Hasher()(burnKey, balance - withdrawnBalance);
+    signal coin <== Poseidon(2)([burnKey, balance]);
+    signal remainingCoin <== Poseidon(2)([burnKey, balance - withdrawnBalance]);
 
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);

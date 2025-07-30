@@ -7,10 +7,10 @@
 
 pragma circom 2.2.2;
 
+include "./circomlib/circuits/poseidon.circom";
 include "./utils/keccak.circom";
 include "./utils/substring_check.circom";
 include "./utils/concat.circom";
-include "./utils/hasher.circom";
 include "./utils/rlp/merkle_patricia_trie_leaf.circom";
 include "./utils/public_commitment.circom";
 include "./utils/proof_of_work.circom";
@@ -106,10 +106,10 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /****************************/
 
     // Calculate encrypted-balance of the remaining-coin
-    signal remainingCoin <== Hasher()(burnKey, balance - fee - spend);
+    signal remainingCoin <== Poseidon(2)([burnKey, balance - fee - spend]);
 
     // Calculate nullifier
-    signal nullifier <== Hasher()(burnKey, 1);
+    signal nullifier <== Poseidon(1)([burnKey]);
 
     // Calculate keccak hash of a burn-address
     signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress);

@@ -336,13 +336,13 @@ run(
 )
 
 run(
-    "Hasher()",
+    "Poseidon(2)",
     [
-        ({"left": 1, "right": 2}, [poseidon2(Field(1), Field(2)).val]),
-        ({"left": 1, "right": 3}, [poseidon2(Field(1), Field(3)).val]),
-        ({"left": 2, "right": 3}, [poseidon2(Field(2), Field(3)).val]),
+        ({"in": [1, 2]}, [poseidon2(Field(1), Field(2)).val]),
+        ({"in": [1, 3]}, [poseidon2(Field(1), Field(3)).val]),
+        ({"in": [2, 3]}, [poseidon2(Field(2), Field(3)).val]),
         (
-            {"left": str(3**150), "right": str(7**40)},
+            {"in": [str(3**150), str(7**40)]},
             [poseidon2(Field(3**150), Field(7**40)).val],
         ),
     ],

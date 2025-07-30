@@ -1,5 +1,6 @@
 pragma circom 2.2.2;
 
+include "../circomlib/circuits/poseidon.circom";
 include "./convert.circom";
 include "./array.circom";
 
@@ -16,7 +17,7 @@ template BurnAddress() {
     signal output addressBytes[20];
 
     // Take the first 20-bytes of Poseidon2(burnKey, receiverAddress) as a burn-address
-    signal hash <== Hasher()(burnKey, receiverAddress);
+    signal hash <== Poseidon(2)([burnKey, receiverAddress]);
     signal hashBytes[32] <== Num2BigEndianBytes(32)(hash);
     addressBytes <== Fit(32, 20)(hashBytes);
 }
