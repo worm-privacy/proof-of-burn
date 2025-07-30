@@ -85,7 +85,7 @@ def bytes_to_bits(bytes):
 
 
 from eth_abi import packed
-from poseidon2 import poseidon1, poseidon2, Field, FIELD_SIZE
+from poseidon import poseidon1, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
 
@@ -285,9 +285,11 @@ run(
 )
 
 
-def burn_addr_calc(burn_key, recv_addr):
+def burn_addr_calc(burn_key, recv_addr, fee):
     res = web3.Web3.keccak(
-        int.to_bytes(poseidon2(Field(burn_key), Field(recv_addr)).val, 32, "big")[:20]
+        int.to_bytes(
+            poseidon3(Field(burn_key), Field(recv_addr), Field(fee)).val, 32, "big"
+        )[:20]
     ).hex()
     return [int(ch, base=16) for ch in res]
 
@@ -296,12 +298,16 @@ run(
     "BurnAddressHash()",
     [
         (
-            {"burnKey": 123, "receiverAddress": 2345},
-            burn_addr_calc(123, 2345),
+            {"burnKey": 123, "receiverAddress": 2345, "fee": 4567},
+            burn_addr_calc(123, 2345, 4567),
         ),
         (
-            {"burnKey": str(7**40), "receiverAddress": str(3**150)},
-            burn_addr_calc(7**40, 3**150),
+            {
+                "burnKey": str(7**40),
+                "receiverAddress": str(3**150),
+                "fee": str(7**43),
+            },
+            burn_addr_calc(7**40, 3**150, 7**43),
         ),
     ],
 )
