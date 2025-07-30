@@ -59,3 +59,4 @@ After running `make`, the `main.py` script will first initiate a transfer to a b
 
 - [ ] The Proof-of-Work mechanism may have vulenrability.
 - [ ] More reviewers needed for the circuits.
+- [ ] We should also commit to fee in burn-address generation

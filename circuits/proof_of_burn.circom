@@ -109,7 +109,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal remainingCoin <== Poseidon(2)([burnKey, balance - fee - spend]);
 
     // Calculate nullifier
-    signal nullifier <== Poseidon(1)([burnKey]);
+    signal nullifier <== Poseidon(2)([burnKey, 1]);
 
     // Calculate keccak hash of a burn-address
     signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress);
