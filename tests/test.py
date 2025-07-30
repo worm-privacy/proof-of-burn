@@ -11,6 +11,7 @@ def run(main, test_cases):
         imports = """
         pragma circom 2.2.2;
         
+        include "./circomlib/circuits/poseidon.circom";
         include "utils/shift.circom";
         include "utils/public_commitment.circom";
         include "utils/concat.circom";
@@ -337,11 +338,11 @@ run(
 run(
     "Poseidon(2)",
     [
-        ({"in": [1, 2]}, [poseidon2(Field(1), Field(2)).val]),
-        ({"in": [1, 3]}, [poseidon2(Field(1), Field(3)).val]),
-        ({"in": [2, 3]}, [poseidon2(Field(2), Field(3)).val]),
+        ({"inputs": [1, 2]}, [poseidon2(Field(1), Field(2)).val]),
+        ({"inputs": [1, 3]}, [poseidon2(Field(1), Field(3)).val]),
+        ({"inputs": [2, 3]}, [poseidon2(Field(2), Field(3)).val]),
         (
-            {"in": [str(3**150), str(7**40)]},
+            {"inputs": [str(3**150), str(7**40)]},
             [poseidon2(Field(3**150), Field(7**40)).val],
         ),
     ],
