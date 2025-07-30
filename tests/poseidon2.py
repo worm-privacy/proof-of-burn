@@ -789,6 +789,7 @@ def poseidon3(a, b, c):
     return poseidon([a, b, c])
 
 
-print(poseidon1(Field(5)))
-print(poseidon2(Field(5), Field(77)))
-print(poseidon([Field(5), Field(77), Field(198)]))
+if __name__ == "__main__":
+    print(poseidon1(Field(5)))
+    print(poseidon2(Field(5), Field(77)))
+    print(poseidon([Field(5), Field(77), Field(198)]))

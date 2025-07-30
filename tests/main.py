@@ -2,7 +2,7 @@ import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
-from poseidon2 import poseidon2, Field, FIELD_SIZE
+from poseidon2 import poseidon2, poseidon3, Field, FIELD_SIZE
 
 MAX_HEADER_BYTES = 5 * 136
 MAX_LAYER_BYTES = 4 * 136
@@ -13,12 +13,12 @@ POW_MIN_ZERO_BYTES = 2
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
 
 
-def burn(burn_key, receiver):
+def burn(burn_key, receiver, fee):
     recv = web3.Web3.to_int(hexstr=receiver)
     account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
-    hashed = w3.to_bytes(poseidon2(Field(burn_key), Field(recv)).val)
+    hashed = w3.to_bytes(poseidon3(Field(burn_key), Field(recv), Field(fee)).val)
     addr = list(hashed[:20])
     burn_addr = w3.to_checksum_address(bytes(addr))
     tx = {
@@ -37,21 +37,27 @@ def burn(burn_key, receiver):
 import random
 
 
-def find_burn_key(receiver_address, min_zero_bytes):
+def find_burn_key(receiver_address, fee, min_zero_bytes):
     receiver_address_bytes = int.to_bytes(receiver_address, 20, "big")
+    fee_bytes = int.to_bytes(fee, 32, "big")
     burn_key = random.randint(0, FIELD_SIZE - 1)
     while any(
         w3.keccak(
-            int.to_bytes(burn_key, 32, "big") + receiver_address_bytes + b"EIP-7503"
+            int.to_bytes(burn_key, 32, "big")
+            + receiver_address_bytes
+            + fee_bytes
+            + b"EIP-7503"
         )[:min_zero_bytes]
     ):
         burn_key += 1
     return burn_key
 
 
+fee = 123
+spend = 234
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
-burn_key = find_burn_key(int(receiver[2:], 16), POW_MIN_ZERO_BYTES)
-addr = burn(burn_key, receiver)
+burn_key = find_burn_key(int(receiver[2:], 16), fee, POW_MIN_ZERO_BYTES)
+addr = burn(burn_key, receiver, fee)
 
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
@@ -141,8 +147,6 @@ while len(layers) < MAX_NUM_LAYERS:
     layer_lens.append(256)
 import io
 
-fee = 123
-spend = 234
 with io.open("details.json", "w") as f:
     json.dump(
         [

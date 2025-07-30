@@ -10,19 +10,19 @@ Finally it will return the keccak of last layer as the state_root. The account b
 
 Burn-key is a number you generate in order to start the burn/mint process. It somehow is your "private-key" to the world of EIP-7503.
 
-- Burn-address: `Truncate160(Poseidon2(burnKey, receiverAddress))`
-    Is the 160 first bits of the Poseidon2 hash of a random-number `burnKey` and a `receiverAddress`. The amount can only be minted for the given receiver-address.
-- PoW: `Keccak(burnKey | receiverAddress | "EIP-7503") < THRESHOLD`
+- Burn-address: `Truncate160(Poseidon3(burnKey, receiverAddress, fee))`
+    Is the 160 first bits of the Poseidon2 hash of a random-number `burnKey`, a `receiverAddress` and a `fee`. The amount can only be minted for the given receiver-address, and the relayer may only collect `fee` amount of the minted value.
+- PoW: `Keccak(burnKey | receiverAddress | fee | "EIP-7503") < THRESHOLD`
     Only burn-keys which fit in the equation can be used. This is in order to increase the bit-security of the protocol.
-- Nullifier: `Poseidon2(burnKey, 1)`
+- Nullifier: `Poseidon1(burnKey)`
     Nullifier prevents us from using the burn-key again.
 - Coin: `Poseidon2(burnKey, amount)`
     A "coin" is an encrypted amount which can be partially withdrawn, resulting in a new coin.
 
 The burn-address hash, which is present in the Merkle-Patricia-Trie leaf key for which we provide a proof, is calculated using the following formula:
-`f₄(f₃(f₂(f₁(burnKey, receiverAddress))))`, where `burnKey` and `receiverAddress` are both 254-bit numbers (finite-field elements), resulting in a 254 × 2 = 508-bit input space. The function `f₁` is Poseidon2 with a 254-bit output space. The output is then passed to `f₂(x)`, which selects the first 160 bits to produce an Ethereum address, yielding a 160-bit output space. This is followed by `f₃`, which is Keccak with a 256-bit output space, and finally `f₄`, which truncates the result to at least 50 nibbles (200 bits), giving a 200-bit output space.
+`f₄(f₃(f₂(f₁(burnKey, receiverAddress))))`, where `burnKey` and `receiverAddress` are both 254-bit numbers (finite-field elements), resulting in a 254 × 3 = 762-bit input space. The function `f₁` is Poseidon2 with a 254-bit output space. The output is then passed to `f₂(x)`, which selects the first 160 bits to produce an Ethereum address, yielding a 160-bit output space. This is followed by `f₃`, which is Keccak with a 256-bit output space, and finally `f₄`, which truncates the result to at least 50 nibbles (200 bits), giving a 200-bit output space.
 
-Since the smallest output space among these functions is 160 bits (due to `f₂`), the overall security of this scheme is limited by that step. By the ***pigeonhole principle***, compressing a 508-bit input space into a 160-bit output space necessarily implies that many different inputs will map to the same output. As a result, an attacker attempting to find a valid `(burnKey, receiverAddress)` pair that maps to a specific leaf would, in the worst case, need to try approximately 2^160 combinations.
+Since the smallest output space among these functions is 160 bits (due to `f₂`), the overall security of this scheme is limited by that step. By the ***pigeonhole principle***, compressing a 762-bit input space into a 160-bit output space necessarily implies that many different inputs will map to the same output. As a result, an attacker attempting to find a valid `(burnKey, receiverAddress)` pair that maps to a specific leaf would, in the worst case, need to try approximately 2^160 combinations.
 
 Thus, we consider the Merkle-Patricia-Trie leaves in this scheme to provide 160-bit preimage resistance, which corresponds to 160-bit security against such brute-force attacks.
 

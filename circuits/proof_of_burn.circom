@@ -17,8 +17,8 @@ include "./utils/proof_of_work.circom";
 include "./utils/burn_address.circom";
 
 // Proves that there exists an account in a certain Ethereum block's state root, with a `balance` amount of ETH,
-// such that its address equals the first 20 bytes of Poseidon2(burnKey, receiverAddress). This is achieved by revealing
-// some publicly verifiable inputs through a *single* public input — the Keccak hash of 6 elements:
+// such that its address equals the first 20 bytes of Poseidon2(burnKey, receiverAddress, fee). This is achieved 
+// by revealing some publicly verifiable inputs through a *single* public input — the Keccak hash of 6 elements:
 //
 //   1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
 //   2. A `nullifier`: Poseidon2(burnKey, 1), used to prevent revealing the same burn address more than once.
@@ -109,10 +109,10 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal remainingCoin <== Poseidon(2)([burnKey, balance - fee - spend]);
 
     // Calculate nullifier
-    signal nullifier <== Poseidon(2)([burnKey, 1]);
+    signal nullifier <== Poseidon(1)([burnKey]);
 
     // Calculate keccak hash of a burn-address
-    signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress);
+    signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress, fee);
 
     // Calculate the block-root 
     signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
@@ -191,5 +191,5 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Check if PoW has been done in order to find burnKey
     // The user can increase the PoW zero-bytes through `byteSecurityRelax` and relax 
     // the minimum number of leaf-key bytes needed.
-    ProofOfWorkChecker()(burnKey, receiverAddress, powMinimumZeroBytes + byteSecurityRelax);
+    ProofOfWorkChecker()(burnKey, receiverAddress, fee, powMinimumZeroBytes + byteSecurityRelax);
 }

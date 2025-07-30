@@ -14,10 +14,11 @@ include "./array.circom";
 template BurnAddress() {
     signal input burnKey;
     signal input receiverAddress;
+    signal input fee;
     signal output addressBytes[20];
 
-    // Take the first 20-bytes of Poseidon2(burnKey, receiverAddress) as a burn-address
-    signal hash <== Poseidon(2)([burnKey, receiverAddress]);
+    // Take the first 20-bytes of Poseidon3(burnKey, receiverAddress, fee) as a burn-address
+    signal hash <== Poseidon(3)([burnKey, receiverAddress, fee]);
     signal hashBytes[32] <== Num2BigEndianBytes(32)(hash);
     addressBytes <== Fit(32, 20)(hashBytes);
 }
@@ -32,10 +33,11 @@ template BurnAddress() {
 template BurnAddressHash() {
     signal input burnKey;
     signal input receiverAddress;
+    signal input fee;
     signal output addressHashNibbles[64];
 
     // Calculate the address to which the burnt coins are sent
-    signal addressBytes[20] <== BurnAddress()(burnKey, receiverAddress);
+    signal addressBytes[20] <== BurnAddress()(burnKey, receiverAddress, fee);
 
     // Feed the address-bytes in the big-endian form to keccak in order to take the 
     // address-hash which will be used as the key of the MPT leaf
