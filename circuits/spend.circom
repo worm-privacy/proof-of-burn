@@ -26,6 +26,7 @@ template Spend(maxAmountBytes) {
     signal input burnKey;
     signal input balance;
     signal input withdrawnBalance;
+    signal input receiverAddress;
 
     signal output commitment;
 
@@ -39,7 +40,8 @@ template Spend(maxAmountBytes) {
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
-    commitment <== PublicCommitment(3)(
-        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes]
+    signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
+    commitment <== PublicCommitment(4)(
+        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, receiverAddressBytes]
     );
 }
