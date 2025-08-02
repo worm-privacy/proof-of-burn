@@ -17,11 +17,11 @@ include "./utils/proof_of_work.circom";
 include "./utils/burn_address.circom";
 
 // Proves that there exists an account in a certain Ethereum block's state root, with a `balance` amount of ETH,
-// such that its address equals the first 20 bytes of Poseidon2(burnKey, receiverAddress, fee). This is achieved 
+// such that its address equals the first 20 bytes of Poseidon3(burnKey, receiverAddress, fee). This is achieved 
 // by revealing some publicly verifiable inputs through a *single* public input — the Keccak hash of 6 elements:
 //
 //   1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
-//   2. A `nullifier`: Poseidon2(burnKey, 1), used to prevent revealing the same burn address more than once.
+//   2. A `nullifier`: Poseidon1(burnKey), used to prevent revealing the same burn address more than once.
 //   *** In the case of minting a 1:1 ERC-20 token in exchange for burnt ETH: ***
 //   3. An encrypted representation of the remaining balance: Poseidon2(burnKey, balance - fee - spend).
 //   4. A `fee`: so that the proof submitter (not necessarily the burner) receives part of the minted ERC-20 tokens as compensation.
