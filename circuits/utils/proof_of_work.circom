@@ -3,6 +3,49 @@ pragma circom 2.2.2;
 include "./keccak.circom";
 include "./assert.circom";
 
+// The "EIP-7503" string
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template EIP7503() {
+    signal output out[8];
+    out[0] <== 69; // 'E'
+    out[1] <== 73; // 'I'
+    out[2] <== 80; // 'P'
+    out[3] <== 45; // '-'
+    out[4] <== 55; // '7'
+    out[5] <== 53; // '5'
+    out[6] <== 48; // '0'
+    out[7] <== 51; // '3'
+}
+
+// Concat 4 fixed-size strings
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template ConcatFixed4(A, B, C, D) {
+    signal input a[A];
+    signal input b[B];
+    signal input c[C];
+    signal input d[D];
+    signal output out[A + B + C + D];
+
+    for(var i = 0; i < A; i++) {
+        out[i] <== a[i];
+    }
+    for(var i = 0; i < B; i++) {
+        out[i + A] <== b[i];
+    }
+    for(var i = 0; i < C; i++) {
+        out[i + A + B] <== c[i];
+    }
+    for(var i = 0; i < D; i++) {
+        out[i + A + B + C] <== d[i];
+    }
+}
+
 // Proof-of-Work: Assert keccak(burnKey | receiverAddress | fee | 'EIP-7503') < 2 ^ (256 - 8 * minimumZeroBytes)
 //
 // Reviewers:
@@ -15,32 +58,17 @@ template ProofOfWorkChecker() {
     signal input minimumZeroBytes;
 
     signal burnKeyBytes[32] <== Num2BigEndianBytes(32)(burnKey);
-    signal addressBytes[20] <== Num2BigEndianBytes(20)(receiverAddress);
+    signal receiverAddressBytes[20] <== Num2BigEndianBytes(20)(receiverAddress);
     signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
+    signal eip7503[8] <== EIP7503()();
 
-    signal hasherInput[92]; // 32 (burnKeyBytes) + 20 (addressBytes) + 32 (feeBytes) + 8 (EIP-7503 postfix)
-    for(var i = 0; i < 32; i++) {
-        hasherInput[i] <== burnKeyBytes[i];
-    }
-    for(var i = 0; i < 20; i++) {
-        hasherInput[32 + i] <== addressBytes[i];
-    }
-    for(var i = 0; i < 32; i++) {
-        hasherInput[32 + 20 + i] <== feeBytes[i];
-    }
+    var hasherInputLen = 92; // 32 + 20 + 32 + 8
+    signal hasherInput[hasherInputLen] <== ConcatFixed4(32, 20, 32, 8)(
+        burnKeyBytes, receiverAddressBytes, feeBytes, eip7503
+    );
 
-    // Postfix the burn-key with string "EIP-7503" to prevent rainbow tables
-    hasherInput[84] <== 69; // 'E'
-    hasherInput[85] <== 73; // 'I'
-    hasherInput[86] <== 80; // 'P'
-    hasherInput[87] <== 45; // '-'
-    hasherInput[88] <== 55; // '7'
-    hasherInput[89] <== 53; // '5'
-    hasherInput[90] <== 48; // '0'
-    hasherInput[91] <== 51; // '3'
-
-    signal burnKeyBlock[136] <== Fit(92, 136)(hasherInput);
-    signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, 92);
+    signal burnKeyBlock[136] <== Fit(hasherInputLen, 136)(hasherInput);
+    signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, hasherInputLen);
 
     signal shouldBeZero[32] <== Filter(32)(minimumZeroBytes);
 
