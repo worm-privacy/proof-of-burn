@@ -4,9 +4,19 @@ include "../circomlib/circuits/poseidon.circom";
 include "./convert.circom";
 include "./array.circom";
 
-// The burn-address is the first 20 bytes of Poseidon2(burnKey, receiverAddress)
-// The burn-address is bound to both a random salt and the address which has the
-// authority to claim the minted ERC-20 coins.
+// The burn-address is the first 20 bytes of Poseidon3(burnKey, receiverAddress, fee)
+//
+// The burn-address is bound to:
+//   1. A random salt (The burnKey)
+//   2. The address which has the authority to collect the minted ERC-20 coins
+//   3. The fee which can be collected by the proof submitter
+//
+// The bound ensures that the burner can simply send their ETH to a derived address and
+// delegate the responsibility of generating a proof and submitting it to the blockchain
+// to the relayer, without the risk of the relayer taking all the ERC-20 tokens for
+// themselves or charging more fees than specified by the burner. However, it is better
+// for the burner to generate the proof themselves; otherwise, the burner's identity will
+// be leaked to the relayer.
 //
 // Reviewers:
 //   Keyvan: OK
