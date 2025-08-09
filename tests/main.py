@@ -2,7 +2,7 @@ import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
-from poseidon2 import poseidon2, poseidon3, Field, FIELD_SIZE
+from .poseidon import poseidon2, poseidon3, Field, FIELD_SIZE
 
 MAX_HEADER_BYTES = 5 * 136
 MAX_LAYER_BYTES = 4 * 136
