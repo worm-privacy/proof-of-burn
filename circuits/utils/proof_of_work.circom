@@ -62,7 +62,7 @@ template ProofOfWorkChecker() {
     signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal eip7503[8] <== EIP7503()();
 
-    var hasherInputLen = 92; // 32 + 20 + 32 + 8
+    var hasherInputLen = 32 + 20 + 32 + 8;
     signal hasherInput[hasherInputLen] <== ConcatFixed4(32, 20, 32, 8)(
         burnKeyBytes, receiverAddressBytes, feeBytes, eip7503
     );

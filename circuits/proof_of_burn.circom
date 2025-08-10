@@ -138,7 +138,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal lastLayer[maxNodeBlocks * 136] <== SelectorArray1D(
         maxNumLayers, maxNodeBlocks * 136)(layers, numLayers - 1);
     
-    // layers[numLayer - 1]
+    // layerLens[numLayer - 1]
     signal lastLayerLen <== Selector(maxNumLayers)(layerLens, numLayers - 1);
 
     // Calculate keccaks of all layers and check if the keccak of each

@@ -7,10 +7,10 @@ include "../shift.circom";
 include "../concat.circom";
 include "./empty_account.circom";
 
-// Takes `N` nibbles and shifts them left by `count` with this pattern:
+// Takes `2 * addressHashBytes` nibbles and keeps `addressHashNibblesLen` of them with this pattern:
 //
-//   1. If even number of nibbles is remaining: [0x20, rest_of_the_nibbles_as_bytes]
-//   2. If odd number of nibbles is remaining:  [0x30 + first_nibble, rest_of_the_nibbles_as_bytes]
+//   1. If even number of nibbles: [0x20, rest_of_the_nibbles_as_bytes]
+//   2. If odd number of nibbles:  [0x30 + first_nibble, rest_of_the_nibbles_as_bytes]
 //
 // (Read more: https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/#specification)
 //
