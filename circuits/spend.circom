@@ -12,9 +12,10 @@ include "./utils/assert.circom";
 include "./utils/convert.circom";
 include "./utils/public_commitment.circom";
 
-// Computes the encrypted balance (coin) using the Poseidon2 hash function 
-// with the given `balance` and `salt`. It then checks if the sum of 
-// `withdrawnBalance` and `remainingCoin` matches the encrypted balance.
+// Computes the encrypted balance (coin) using the Poseidon2 hash function
+// with the given `balance` and `salt`. Verifies that `withdrawnBalance` plus 
+// `remainingCoin` equals the encrypted balance, and includes both `fee` and 
+// `receiverAddress` in the public commitment for added flexibility.
 //
 // Example:
 //   balance:           1000
@@ -22,6 +23,8 @@ include "./utils/public_commitment.circom";
 //   coin:              Poseidon2(123456, 1000)
 //   withdrawnBalance:  200
 //   remainingCoin:     Poseidon2(123456, 800)
+//   fee:               50
+//   receiverAddress:   0x1234567890abcdef1234567890abcdef
 template Spend(maxAmountBytes) {
     signal input burnKey;
     signal input balance;
