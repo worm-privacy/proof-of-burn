@@ -15,7 +15,7 @@ include "./utils/public_commitment.circom";
 // Computes the encrypted balance (coin) using the Poseidon2 hash function
 // with the given `balance` and `burnkey`. Verifies that `withdrawnBalance` plus 
 // `fee + remainingCoin` equals the encrypted balance, and includes both `fee` and 
-// `receiverAddress` in the public commitment for added flexibility.
+// `receiverAddress` in the public commitment to enforce them.
 //
 // Example:
 //   balance:           1000
