@@ -12,36 +12,41 @@ include "./utils/assert.circom";
 include "./utils/convert.circom";
 include "./utils/public_commitment.circom";
 
-// Computes the encrypted balance (coin) using the Poseidon2 hash function 
-// with the given `balance` and `salt`. It then checks if the sum of 
-// `withdrawnBalance` and `remainingCoin` matches the encrypted balance.
+// Computes the encrypted balance (coin) using the Poseidon2 hash function
+// with the given `balance` and `burnkey`. Verifies that `withdrawnBalance` plus 
+// `fee + remainingCoin` equals the encrypted balance, and includes both `fee` and 
+// `receiverAddress` in the public commitment to enforce them.
 //
 // Example:
 //   balance:           1000
 //   burnKey:           123456
 //   coin:              Poseidon2(123456, 1000)
 //   withdrawnBalance:  200
-//   remainingCoin:     Poseidon2(123456, 800)
+//   remainingCoin:     Poseidon2(123456, 750)
+//   fee:               50
+//   receiverAddress:   0x1234567890abcdef1234567890abcdef
 template Spend(maxAmountBytes) {
     signal input burnKey;
     signal input balance;
     signal input withdrawnBalance;
     signal input receiverAddress;
+    signal input fee;
 
     signal output commitment;
 
     assert(maxAmountBytes <= 31); // To avoid field overflows
-
-    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance);
-
+    AssertBits(maxAmountBytes * 8)(fee);
+    AssertBits(maxAmountBytes * 8)(withdrawnBalance);
+    AssertBits(160)(receiverAddress);
+    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance + fee);
     signal coin <== Poseidon(2)([burnKey, balance]);
-    signal remainingCoin <== Poseidon(2)([burnKey, balance - withdrawnBalance]);
-
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
+    signal remainingCoin <== Poseidon(2)([burnKey, balance - withdrawnBalance - fee]);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
+    signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
-    commitment <== PublicCommitment(4)(
-        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, receiverAddressBytes]
+    commitment <== PublicCommitment(5)(
+        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, feeBytes, receiverAddressBytes]
     );
 }
