@@ -56,7 +56,7 @@ template TruncatedAddressHash(addressHashBytes) {
     // addressHash is at most 32 bytes (64 nibbles) so 7 bits
     AssertLessEqThan(7)(addressHashNibblesLen, 2 * addressHashBytes);
 
-    // Check odd/even-ness
+    // Check odd/evenness
     signal (div, rem) <== Divide(7)(addressHashNibblesLen, 2);
 
     // Shift left (2 * addressHashBytes - addressHashNibblesLen) times so that
@@ -94,7 +94,7 @@ template TruncatedAddressHash(addressHashBytes) {
 //   key:   addressHash (Truncated to addressHashNibblesLen nibbles with certain encoding)
 //   value: RLP([NONCE, balance, STORAGE_HASH, CODE_HASH])
 //
-// Read: https://ethereum.org/de/developers/docs/data-structures-and-encoding/patricia-merkle-trie
+// Read: https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/
 //
 // Reviewers:
 //   Keyvan: OK
@@ -115,7 +115,7 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
 
     // Min length: 2 + 71 = 73
     // Max length: 2 + 101 = 103
-    // Byte-strings of length more than 55 bytes and less than 256 bytes are prefix with:
+    // Byte-strings of length more than 55 bytes and less than 256 bytes are prefixed with:
     // [0xb7 + 1, STRING_LEN]
     var maxValueRlpLen = 2 + maxRlpEmptyAccountLen; // Prefix: [0xb7 + 1, VALUE_LEN]
     assert(maxValueRlpLen <= 103);

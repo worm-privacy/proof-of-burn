@@ -4,7 +4,7 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/comparators.circom";
 include "./assert.circom";
 
-// Generates an array where first `in` elements are one and the rest are zero
+// Generates an array where the first `in` elements are 1 and the rest are 0
 //
 // Example Filter(5):
 //   in:  0
@@ -39,7 +39,7 @@ template Filter(N) {
     }
 }
 
-// Fits a M-element array in a N-element block
+// Fits an M-element array in an N-element block
 //
 // Reviewers:
 //   Keyvan: OK

@@ -6,7 +6,7 @@ include "../convert.circom";
 // Counts the number of bytes required to store the big-endian number (i.e., ignores leading zeros).
 //
 // Example:
-//   bytes: [0, 0, 0, 3, 0, 1, 4, 2] (3 leading-zeros)
+//   bytes: [0, 0, 0, 3, 0, 1, 4, 2] (3 leading zeros)
 //   len:   5
 //
 // Reviewers:
@@ -18,31 +18,33 @@ template CountBytes(N) {
     signal output len;
 
     // Example:
-    // bytes: [0, 0, 0, 3, 0, 1, 4, 2]
+    // bytes: [0, 0, 0, 3, 0, 1, 4, 0]
 
-    // Checking zero-ness of each byte
-    // isZero:              [1, 1, 1, 0, 1, 0, 0, 0]
+    // Checking zeroness of each byte
+    // isZero:              [1, 1, 1, 0, 1, 0, 0, 1]
     signal isZero[N];
     for (var i = 0; i < N; i++) {
         isZero[i] <== IsZero()(bytes[i]);
     }
 
     // Accumulating 1s until we reach a zero
-    // stillZero: [*, 1, 1, 1, 0, 0, 0, 0, 0]
-    // (The first element is initially set to 1)
-    signal stillZero[N + 1];
-    stillZero[0] <== 1;
+    // stillZero: [1, 1, 1, 0, 0, 0, 0, 0]
+    signal stillZero[N];
     for (var i = 0; i < N; i++) {
-        stillZero[i + 1] <== isZero[i] * stillZero[i];
+        if(i == 0) {
+            stillZero[i] <== isZero[i];
+        } else {
+            stillZero[i] <== isZero[i] * stillZero[i - 1];
+        }
     }
     
-    // Number of leading-zeros = Sum of bits in stillZero
+    // Number of leading zeros = Sum of bits in stillZero
     var leadingZeros = 0;
-    for (var j = 1; j < N + 1; j++) {
+    for (var j = 0; j < N; j++) {
         leadingZeros = leadingZeros + stillZero[j];
     }
 
-    // Number of effective bytes = N - number of leading-zeros
+    // Number of effective bytes = N - number of leading zeros
     len <== N - leadingZeros;
 }
 
@@ -67,8 +69,9 @@ template RlpInteger(N) {
     signal output out[N + 1];
     signal output outLen;
 
-    // Avoid overflows.
-    // Also, RLP of all numbers up to 55-bytes start with:
+    // The assertion is for avoiding overflows.
+    // Also, the RLP of any number whose value is greater than or equal to 0x80 and whose 
+    // byte-length is less than or equal to 55 starts with:
     //   [0x80 + num_value_bytes]
     // Instead of:
     //   [0xb7 + num_len_bytes] (Which is the case where length is above 55 bytes)

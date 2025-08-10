@@ -119,7 +119,7 @@ template RlpEmptyAccount(maxBalanceBytes) {
     storageAndCodeHashRlp[64] <== 164;
     storageAndCodeHashRlp[65] <== 112;
 
-    prefixedNonceAndBalanceRlp[0] <== 0xf7 + 1; // + 1, because the next byte is number of total bytes
+    prefixedNonceAndBalanceRlp[0] <== 0xf7 + 1; // + 1, because the next byte is the number of total bytes
     prefixedNonceAndBalanceRlp[1] <== nonceAndBalanceRlpLen + storageAndCodeHashRlpLen;
 
     // Final result: RLP(0, balance, storageHash, codeHash)
