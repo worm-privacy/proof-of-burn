@@ -33,6 +33,8 @@ template Spend(maxAmountBytes) {
     signal input fee;
 
     signal output commitment;
+    signal input fee;
+
 
     assert(maxAmountBytes <= 31); // To avoid field overflows
     AssertBits(maxAmountBytes * 8)(fee);
