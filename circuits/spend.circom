@@ -29,19 +29,23 @@ template Spend(maxAmountBytes) {
     signal input receiverAddress;
 
     signal output commitment;
+    signal input fee;
+
 
     assert(maxAmountBytes <= 31); // To avoid field overflows
-
-    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance);
-
+    AssertBits(maxAmountBytes * 8)(fee);
+    AssertBits(maxAmountBytes * 8)(withdrawnBalance);
+    AssertBits(160)(receiverAddress);
+    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance + fee);
+    signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal coin <== Poseidon(2)([burnKey, balance]);
-    signal remainingCoin <== Poseidon(2)([burnKey, balance - withdrawnBalance]);
+    signal remainingCoin <== Poseidon(2)([burnKey, balance - withdrawnBalance - fee]);
 
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
-    commitment <== PublicCommitment(4)(
-        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, receiverAddressBytes]
+    commitment <== PublicCommitment(5)(
+        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, feeBytes, receiverAddressBytes]
     );
 }
