@@ -185,7 +185,7 @@ run(
         ),
         (
             proof_of_burn_corrupted_layer_2,
-            None,
+            [pob_expected_commitment],  # layer[2] is unused so doesn't matter!
         ),
         (
             proof_of_burn_corrupted_layer_3,
