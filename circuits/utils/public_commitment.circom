@@ -36,6 +36,7 @@ template PublicCommitment(N) {
     signal hash[32] <== KeccakBytes(numBlocks)(block, N * 32);
     
     // Ignore the least-significant byte while converting keccak to field element
+    // In Solidity: keccak(abi.encodePacked(...)) >> 8
     signal reducedHash[31] <== Fit(32, 31)(hash);
     out <== BigEndianBytes2Num(31)(reducedHash);
 }

@@ -468,6 +468,7 @@ template KeccakBytes(maxBlocks) {
 
     signal inBitsArray[maxBlocks * 136][8];
     for(var i = 0; i < maxBlocks * 136; i++) {
+        // This also checks if all input elements are 8-bit values
         inBitsArray[i] <== Num2Bits(8)(padded[i]);
     }
     signal inBits[maxBlocks * 136 * 8] <== Flatten(maxBlocks * 136, 8)(inBitsArray);
