@@ -128,7 +128,6 @@ with io.open("tests/test_pob_input.json") as f:
 burn_key = int(proof_of_burn_inp["burnKey"])
 
 from .constants import (
-    POSEIDON_BURN_ADDRESS_PREFIX,
     POSEIDON_COIN_PREFIX,
     POSEIDON_NULLIFIER_PREFIX,
 )
@@ -141,7 +140,7 @@ pob_expected_commitment = expected_commitment(
             ),
             "big",
         ),  # Block root
-        poseidon2(POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key)).val,  # Nullifier,
+        poseidon2(POSEIDON_NULLIFIER_PREFIX, Field(burn_key)).val,  # Nullifier,
         poseidon3(
             POSEIDON_COIN_PREFIX,
             Field(burn_key),
