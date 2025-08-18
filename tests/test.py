@@ -85,7 +85,7 @@ def bytes_to_bits(bytes):
 
 
 from eth_abi import packed
-from .poseidon import poseidon1, poseidon2, poseidon3, Field, FIELD_SIZE
+from .poseidon import poseidon4, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
 
@@ -130,6 +130,7 @@ burn_key = int(proof_of_burn_inp["burnKey"])
 from .constants import (
     POSEIDON_COIN_PREFIX,
     POSEIDON_NULLIFIER_PREFIX,
+    POSEIDON_BURN_ADDRESS_PREFIX,
 )
 
 pob_expected_commitment = expected_commitment(
@@ -295,7 +296,11 @@ run(
 def burn_addr_calc(burn_key, recv_addr, fee):
     res = web3.Web3.keccak(
         int.to_bytes(
-            poseidon3(Field(burn_key), Field(recv_addr), Field(fee)).val, 32, "big"
+            poseidon4(
+                POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key), Field(recv_addr), Field(fee)
+            ).val,
+            32,
+            "big",
         )[:20]
     ).hex()
     return [int(ch, base=16) for ch in res]
