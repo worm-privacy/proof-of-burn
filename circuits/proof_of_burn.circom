@@ -15,15 +15,18 @@ include "./utils/rlp/merkle_patricia_trie_leaf.circom";
 include "./utils/public_commitment.circom";
 include "./utils/proof_of_work.circom";
 include "./utils/burn_address.circom";
+include "./utils/constants.circom";
 
 // Proves that there exists an account in a certain Ethereum block's state root, with a `balance` amount of ETH,
-// such that its address equals the first 20 bytes of Poseidon3(burnKey, receiverAddress, fee). This is achieved 
-// by revealing some publicly verifiable inputs through a *single* public input — the Keccak hash of 6 elements:
+// such that its address equals the first 20 bytes of:
+//   Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, fee).
+// This is achieved by revealing some publicly verifiable inputs through a *single* public input — the Keccak hash 
+// of 6 elements:
 //
 //   1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
-//   2. A `nullifier`: Poseidon1(burnKey), used to prevent revealing the same burn address more than once.
+//   2. A `nullifier`: Poseidon2(POSEIDON_NULLIFIER_PREFIX, burnKey), used to prevent revealing the same burn address more than once.
 //   *** In the case of minting a 1:1 ERC-20 token in exchange for burnt ETH: ***
-//   3. An encrypted representation of the remaining balance: Poseidon2(burnKey, balance - fee - spend).
+//   3. An encrypted representation of the remaining balance: Poseidon3(POSEIDON_COIN_PREFIX, burnKey, balance - fee - spend).
 //   4. A `fee`: so that the proof submitter (not necessarily the burner) receives part of the minted ERC-20 tokens as compensation.
 //   5. A `spend`: an amount from the minted balance that is directly withdrawn to the `receiverAddress`.
 //   6. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
@@ -106,10 +109,10 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /****************************/
 
     // Calculate encrypted-balance of the remaining-coin
-    signal remainingCoin <== Poseidon(2)([burnKey, balance - fee - spend]);
+    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - fee - spend]);
 
     // Calculate nullifier
-    signal nullifier <== Poseidon(1)([burnKey]);
+    signal nullifier <== Poseidon(2)([POSEIDON_NULLIFIER_PREFIX(), burnKey]);
 
     // Calculate keccak hash of a burn-address
     signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress, fee);

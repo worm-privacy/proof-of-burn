@@ -10,13 +10,13 @@ Finally it will return the keccak of last layer as the state_root. The account b
 
 Burn-key is a number you generate in order to start the burn/mint process. It somehow is your "private-key" to the world of EIP-7503.
 
-- Burn-address: `Truncate160(Poseidon3(burnKey, receiverAddress, fee))`
+- Burn-address: `Truncate160(Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, fee))`
     Is the 160 first bits of the Poseidon3 hash of a random-number `burnKey`, a `receiverAddress` and a `fee`. The amount can only be minted for the given receiver-address, and the relayer may only collect `fee` amount of the minted value.
 - PoW: `Keccak(burnKey | receiverAddress | fee | "EIP-7503") < THRESHOLD`
     Only burn-keys which fit in the equation can be used. This is in order to increase the bit-security of the protocol.
-- Nullifier: `Poseidon1(burnKey)`
+- Nullifier: `Poseidon2(POSEIDON_NULLIFIER_PREFIX, burnKey)`
     Nullifier prevents us from using the burn-key again.
-- Coin: `Poseidon2(burnKey, amount)`
+- Coin: `Poseidon3(POSEIDON_COIN_PREFIX, burnKey, amount)`
     A "coin" is an encrypted amount which can be partially withdrawn, resulting in a new coin.
 
 The burn-address hash, which is present in the Merkle-Patricia-Trie leaf key for which we provide a proof, is calculated using the following formula:

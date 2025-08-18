@@ -2,13 +2,13 @@ import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
-from .poseidon import poseidon2, poseidon3, Field, FIELD_SIZE
+from .poseidon import poseidon4, Field, FIELD_SIZE
+from .constants import *
 
 MAX_HEADER_BYTES = 5 * 136
 MAX_LAYER_BYTES = 4 * 136
 MAX_NUM_LAYERS = 4
 POW_MIN_ZERO_BYTES = 2
-
 
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
 
@@ -18,7 +18,11 @@ def burn(burn_key, receiver, fee):
     account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
-    hashed = w3.to_bytes(poseidon3(Field(burn_key), Field(recv), Field(fee)).val)
+    hashed = w3.to_bytes(
+        poseidon4(
+            POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key), Field(recv), Field(fee)
+        ).val
+    )
     addr = list(hashed[:20])
     burn_addr = w3.to_checksum_address(bytes(addr))
     tx = {

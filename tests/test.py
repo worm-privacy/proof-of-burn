@@ -85,7 +85,7 @@ def bytes_to_bits(bytes):
 
 
 from eth_abi import packed
-from poseidon import poseidon1, poseidon2, poseidon3, Field, FIELD_SIZE
+from .poseidon import poseidon1, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
 
@@ -127,17 +127,25 @@ with io.open("tests/test_pob_input.json") as f:
 
 burn_key = int(proof_of_burn_inp["burnKey"])
 
+from .constants import (
+    POSEIDON_BURN_ADDRESS_PREFIX,
+    POSEIDON_COIN_PREFIX,
+    POSEIDON_NULLIFIER_PREFIX,
+)
+
 pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "0b59cb646a74b79f073eeea75253d2e237f1a2b88f07e0def2e8e152ccc4c410"
+                "50753f792b258ce00fcf5262822b6a8bd5ea3c465ea1c5f01a01aa8235ae56a1"
             ),
             "big",
         ),  # Block root
-        poseidon1(Field(burn_key)).val,  # Nullifier,
-        poseidon2(
-            Field(burn_key), Field(1000000000000000000 - 123 - 234)
+        poseidon2(POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key)).val,  # Nullifier,
+        poseidon3(
+            POSEIDON_COIN_PREFIX,
+            Field(burn_key),
+            Field(1000000000000000000 - 123 - 234),
         ).val,  # Encrypted balance
         123,  # Fee
         234,  # Spend

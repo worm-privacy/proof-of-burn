@@ -3,8 +3,10 @@ pragma circom 2.2.2;
 include "../circomlib/circuits/poseidon.circom";
 include "./convert.circom";
 include "./array.circom";
+include "./constants.circom";
 
-// The burn-address is the first 20 bytes of Poseidon3(burnKey, receiverAddress, fee)
+// The burn-address is the first 20 bytes of:
+//   Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, fee)
 //
 // The burn-address is bound to:
 //   1. A random salt (The burnKey)
@@ -27,8 +29,9 @@ template BurnAddress() {
     signal input fee;
     signal output addressBytes[20];
 
-    // Take the first 20-bytes of Poseidon3(burnKey, receiverAddress, fee) as a burn-address
-    signal hash <== Poseidon(3)([burnKey, receiverAddress, fee]);
+    // Take the first 20-bytes of
+    //   Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, fee) as a burn-address
+    signal hash <== Poseidon(4)([POSEIDON_BURN_ADDRESS_PREFIX(), burnKey, receiverAddress, fee]);
     signal hashBytes[32] <== Num2BigEndianBytes(32)(hash);
     addressBytes <== Fit(32, 20)(hashBytes);
 }
