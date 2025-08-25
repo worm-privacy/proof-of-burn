@@ -22,4 +22,4 @@ include "./proof_of_burn.circom";
 //
 // 10 ETH  -> maxBalance (To reduce the incentive to prove large amounts of ETH by performing address-hash collision attack)
 //
-component main = ProofOfBurn(16, 4, 8, 50, 31, 2, 10 * (10 ** 18));
+component main = ProofOfBurn(16, 4, 8, 50, 31, 2, 10000000000000000000);
