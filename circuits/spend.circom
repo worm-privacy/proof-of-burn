@@ -40,7 +40,7 @@ template Spend(maxAmountBytes) {
     AssertBits(maxAmountBytes * 8)(withdrawnBalance);
     AssertBits(160)(receiverAddress);
     AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance + fee);
-    signal coin <== Poseidon(3)([POSEIDON_COIN_PREFIX(),burnKey, balance]);
+    signal coin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance]);
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
     signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - withdrawnBalance - fee]);
