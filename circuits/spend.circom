@@ -33,7 +33,6 @@ template Spend(maxAmountBytes) {
     signal input fee;
 
     signal output commitment;
-    signal input fee;
 
 
     assert(maxAmountBytes <= 31); // To avoid field overflows
@@ -44,7 +43,7 @@ template Spend(maxAmountBytes) {
     signal coin <== Poseidon(3)([POSEIDON_COIN_PREFIX(),burnKey, balance]);
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
-    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(),burnKey, balance - withdrawnBalance - fee]);
+    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - withdrawnBalance - fee]);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
     signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
