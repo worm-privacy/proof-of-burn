@@ -11,7 +11,7 @@ include "./circomlib/circuits/poseidon.circom";
 include "./utils/assert.circom";
 include "./utils/convert.circom";
 include "./utils/public_commitment.circom";
-
+include "./utils/constants.circom";
 // Computes the encrypted balance (coin) using the Poseidon2 hash function
 // with the given `balance` and `burnKey`. Verifies that `withdrawnBalance` plus 
 // `fee + remainingCoin` equals the encrypted balance, and includes both `fee` and 
@@ -41,10 +41,10 @@ template Spend(maxAmountBytes) {
     AssertBits(maxAmountBytes * 8)(withdrawnBalance);
     AssertBits(160)(receiverAddress);
     AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance + fee);
-    signal coin <== Poseidon(2)([burnKey, balance]);
+    signal coin <== Poseidon(3)([POSEIDON_COIN_PREFIX(),burnKey, balance]);
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
-    signal remainingCoin <== Poseidon(2)([burnKey, balance - withdrawnBalance - fee]);
+    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(),burnKey, balance - withdrawnBalance - fee]);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
     signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
