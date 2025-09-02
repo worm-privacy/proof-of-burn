@@ -1,0 +1,30 @@
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.stark
+*.commitment
+*.bin
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Examples are kept for reference
+!/examples/**/*.stark
+!/examples/**/*.commitment
+!/examples/**/*.json

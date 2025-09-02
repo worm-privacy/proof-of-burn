@@ -1,0 +1,121 @@
+[package]
+name = "proof-of-burn-stark"
+version = "0.1.0"
+edition = "2021"
+authors = ["WORM Privacy Team"]
+description = "WORM Proof-of-Burn implementation using Circle STARKs - High-performance alternative to Circom"
+homepage = "https://github.com/worm-privacy/proof-of-burn"
+repository = "https://github.com/worm-privacy/proof-of-burn"
+license = "MIT"
+readme = "README.md"
+keywords = ["zero-knowledge", "stark", "ethereum", "proof-of-burn", "privacy"]
+categories = ["cryptography", "blockchain", "mathematics"]
+rust-version = "1.75.0"
+
+[lib]
+name = "proof_of_burn_stark"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pob-stark"
+path = "src/bin/pob_stark.rs"
+
+[[bin]]
+name = "find-pow-key"
+path = "src/bin/find_pow_key.rs"
+
+[[bin]]
+name = "generate-test-data"
+path = "src/bin/generate_test_data.rs"
+
+[dependencies]
+# Zero-Knowledge Framework (Stwo - Circle STARKs) - Local dependency from Zyrkom
+stwo = { path = "../../zyrkom/external/stwo/crates/stwo", default-features = false, features = ["prover"] }
+
+# Cryptographic Primitives
+poseidon-rs = "0.0.10"
+ff_ce = "0.11"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+
+# Ethereum Integration
+web3 = "0.19"
+ethers = "2.0"
+rlp = "0.5"
+
+# Serialization and Data Handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde-big-array = "0.5"
+bincode = "1.3"
+hex = "0.4"
+
+# Error Handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Mathematical Operations
+num-bigint = "0.4"
+num-traits = "0.2"
+rand = "0.8"
+
+# Performance and Parallelization
+rayon = { version = "1.10", optional = true }
+crossbeam = { version = "0.8", optional = true }
+
+# Compression
+flate2 = { version = "1.0", optional = true }
+
+# CLI and User Interface
+clap = { version = "4.0", features = ["derive", "color"], optional = true }
+colored = { version = "2.0", optional = true }
+indicatif = { version = "0.17", optional = true }
+
+# Time and Versioning
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1.0", features = ["full"] }
+
+# Memory Optimization
+bytemuck = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+quickcheck = "1.0"
+quickcheck_macros = "1.0"
+proptest = "1.0"
+tokio-test = "0.4"
+
+[features]
+default = ["compression", "cli", "parallel"]
+
+# Core features
+compression = ["flate2"]
+cli = ["clap", "colored", "indicatif"]
+parallel = ["rayon", "crossbeam"]
+
+# Performance optimizations
+simd = []
+gpu = []
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+overflow-checks = false
+
+[profile.bench]
+debug = true
+opt-level = 3
+
+[profile.dev]
+opt-level = 0
+debug = true
+overflow-checks = true
+
+[[bench]]
+name = "proof_generation"
+harness = false
+
+[[bench]]
+name = "verification"
+harness = false
