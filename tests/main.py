@@ -173,6 +173,7 @@ print(
             "blockHeader": header_bytes,
             "blockHeaderLen": header_bytes_len,
             "byteSecurityRelax": 0,
+            "_extraCommitment": 0
         },
     )
 )

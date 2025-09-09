@@ -69,6 +69,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     signal input byteSecurityRelax; // Relax the minLeafAddressNibbles by increasing PoW zero bytes
 
+    signal input _extraCommitment; // Commit to some extra arbitrary input
+
     /*************************/
     /* END OF IN/OUT SIGNALS */
     /*************************/
@@ -133,8 +135,9 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
     signal spendBytes[32] <== Num2BigEndianBytes(32)(spend);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
-    commitment <== PublicCommitment(6)(
-        [blockRoot, nullifierBytes, remainingCoinBytes, feeBytes, spendBytes, receiverAddressBytes]
+    signal extraCommitmentBytes[32] <== Num2BigEndianBytes(32)(_extraCommitment);
+    commitment <== PublicCommitment(7)(
+        [blockRoot, nullifierBytes, remainingCoinBytes, feeBytes, spendBytes, receiverAddressBytes, extraCommitmentBytes]
     );
     
     // layers[numLayers - 1]

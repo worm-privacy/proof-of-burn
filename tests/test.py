@@ -137,7 +137,7 @@ pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "50753f792b258ce00fcf5262822b6a8bd5ea3c465ea1c5f01a01aa8235ae56a1"
+                "1de9c482bb6450c04a593b5f353921dd680ff57685188ba36026ca9a74f46a57"
             ),
             "big",
         ),  # Block root
@@ -152,6 +152,7 @@ pob_expected_commitment = expected_commitment(
         web3.Web3.to_int(
             hexstr="0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
         ),  # Receiver
+        0,  # Extra commitment
     ]
 )[1][0]
 
@@ -186,7 +187,7 @@ run(
         ),
         (
             proof_of_burn_corrupted_layer_2,
-            [pob_expected_commitment],  # layer[2] is unused so doesn't matter!
+            None,
         ),
         (
             proof_of_burn_corrupted_layer_3,
@@ -297,7 +298,10 @@ def burn_addr_calc(burn_key, recv_addr, fee):
     res = web3.Web3.keccak(
         int.to_bytes(
             poseidon4(
-                POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key), Field(recv_addr), Field(fee)
+                POSEIDON_BURN_ADDRESS_PREFIX,
+                Field(burn_key),
+                Field(recv_addr),
+                Field(fee),
             ).val,
             32,
             "big",
