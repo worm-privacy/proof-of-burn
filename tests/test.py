@@ -85,7 +85,7 @@ def bytes_to_bits(bytes):
 
 
 from eth_abi import packed
-from .poseidon import poseidon4, poseidon2, poseidon3, Field, FIELD_SIZE
+from .poseidon import poseidon5, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
 
@@ -137,7 +137,7 @@ pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "1de9c482bb6450c04a593b5f353921dd680ff57685188ba36026ca9a74f46a57"
+                "eb8cb82ba2ce8e0cffb069f6136a5b1806f4f3899cdd67ea396384337582d7aa"
             ),
             "big",
         ),  # Block root
@@ -294,14 +294,15 @@ run(
 )
 
 
-def burn_addr_calc(burn_key, recv_addr, fee):
+def burn_addr_calc(burn_key, recv_addr, fee_amount, reveal_amount):
     res = web3.Web3.keccak(
         int.to_bytes(
-            poseidon4(
+            poseidon5(
                 POSEIDON_BURN_ADDRESS_PREFIX,
                 Field(burn_key),
                 Field(recv_addr),
-                Field(fee),
+                Field(fee_amount),
+                Field(reveal_amount)
             ).val,
             32,
             "big",
@@ -314,16 +315,22 @@ run(
     "BurnAddressHash()",
     [
         (
-            {"burnKey": 123, "receiverAddress": 2345, "fee": 4567},
-            burn_addr_calc(123, 2345, 4567),
+            {
+                "burnKey": 123,
+                "receiverAddress": 2345,
+                "feeAmount": 4567,
+                "revealAmount": 98765,
+            },
+            burn_addr_calc(123, 2345, 4567, 98765),
         ),
         (
             {
                 "burnKey": str(7**40),
                 "receiverAddress": str(3**150),
-                "fee": str(7**43),
+                "feeAmount": str(7**43),
+                "revealAmount": str(9**41),
             },
-            burn_addr_calc(7**40, 3**150, 7**43),
+            burn_addr_calc(7**40, 3**150, 7**43, 9**41),
         ),
     ],
 )
