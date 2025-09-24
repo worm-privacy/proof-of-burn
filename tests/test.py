@@ -85,7 +85,7 @@ def bytes_to_bits(bytes):
 
 
 from eth_abi import packed
-from .poseidon import poseidon5, poseidon2, poseidon3, Field, FIELD_SIZE
+from .poseidon import poseidon6, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
 
@@ -137,7 +137,7 @@ pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "9135c81d0b4bfe165f89b574b5fd99f3faa6a6ce5beb95a2b226b90a57b93c1f"
+                "b9bdbc015a16ed4092c089d6124502c4a5a30ff9e508f40d27deb75942c929b5"
             ),
             "big",
         ),  # Block root
@@ -145,9 +145,10 @@ pob_expected_commitment = expected_commitment(
         poseidon3(
             POSEIDON_COIN_PREFIX,
             Field(burn_key),
-            Field(1000000000000000000 - 123 - 234),
+            Field(1000000000000000000 - 123 - 234 - 23),
         ).val,  # Encrypted balance
-        123,  # Fee
+        123,  # Prover fee
+        23,   # Broadcaster fee
         234,  # Spend
         web3.Web3.to_int(
             hexstr="0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
@@ -294,14 +295,15 @@ run(
 )
 
 
-def burn_addr_calc(burn_key, recv_addr, fee_amount, reveal_amount):
+def burn_addr_calc(burn_key, recv_addr, prover_fee_amount, broadcaster_fee_amount, reveal_amount):
     res = web3.Web3.keccak(
         int.to_bytes(
-            poseidon5(
+            poseidon6(
                 POSEIDON_BURN_ADDRESS_PREFIX,
                 Field(burn_key),
                 Field(recv_addr),
-                Field(fee_amount),
+                Field(prover_fee_amount),
+                Field(broadcaster_fee_amount),
                 Field(reveal_amount)
             ).val,
             32,
@@ -318,19 +320,21 @@ run(
             {
                 "burnKey": 123,
                 "receiverAddress": 2345,
-                "feeAmount": 4567,
+                "proverFeeAmount": 4567,
+                "broadcasterFeeAmount": 5678,
                 "revealAmount": 98765,
             },
-            burn_addr_calc(123, 2345, 4567, 98765),
+            burn_addr_calc(123, 2345, 4567, 5678, 98765),
         ),
         (
             {
                 "burnKey": str(7**40),
                 "receiverAddress": str(3**150),
-                "feeAmount": str(7**43),
+                "proverFeeAmount": str(7**43),
+                "broadcasterFeeAmount": str(6**41),
                 "revealAmount": str(9**41),
             },
-            burn_addr_calc(7**40, 3**150, 7**43, 9**41),
+            burn_addr_calc(7**40, 3**150, 7**43, 6**41, 9**41),
         ),
     ],
 )

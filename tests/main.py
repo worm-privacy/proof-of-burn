@@ -2,7 +2,7 @@ import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
-from .poseidon import poseidon5, Field, FIELD_SIZE
+from .poseidon import poseidon6, Field, FIELD_SIZE
 from .constants import *
 
 MAX_HEADER_BYTES = 5 * 136
@@ -13,14 +13,14 @@ POW_MIN_ZERO_BYTES = 2
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
 
 
-def burn(burn_key, receiver, fee, reveal):
+def burn(burn_key, receiver, prover_fee, broadcaster_fee, reveal):
     recv = web3.Web3.to_int(hexstr=receiver)
     account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
     hashed = w3.to_bytes(
-        poseidon5(
-            POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key), Field(recv), Field(fee), Field(reveal)
+        poseidon6(
+            POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key), Field(recv), Field(prover_fee), Field(broadcaster_fee), Field(reveal)
         ).val
     )
     addr = list(hashed[:20])
@@ -41,9 +41,9 @@ def burn(burn_key, receiver, fee, reveal):
 import random
 
 
-def find_burn_key(receiver_address, fee, reveal, min_zero_bytes):
+def find_burn_key(receiver_address, prover_fee, broadcaster_fee, reveal, min_zero_bytes):
     receiver_address_bytes = int.to_bytes(receiver_address, 20, "big")
-    fee_reveal_bytes = int.to_bytes(fee, 32, "big") + int.to_bytes(reveal, 32, "big")
+    fee_reveal_bytes = int.to_bytes(prover_fee, 32, "big") + int.to_bytes(broadcaster_fee, 32, "big") + int.to_bytes(reveal, 32, "big")
     burn_key = random.randint(0, FIELD_SIZE - 1)
     while any(
         w3.keccak(
@@ -57,11 +57,12 @@ def find_burn_key(receiver_address, fee, reveal, min_zero_bytes):
     return burn_key
 
 
-fee = 123
+prover_fee = 123
+broadcaster_fee = 23
 spend = 234
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
-burn_key = find_burn_key(int(receiver[2:], 16), fee, spend, POW_MIN_ZERO_BYTES)
-addr = burn(burn_key, receiver, fee, spend)
+burn_key = find_burn_key(int(receiver[2:], 16), prover_fee, broadcaster_fee, spend, POW_MIN_ZERO_BYTES)
+addr = burn(burn_key, receiver, prover_fee, broadcaster_fee, spend)
 
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
@@ -164,7 +165,8 @@ print(
             "receiverAddress": str(web3.Web3.to_int(hexstr=receiver)),
             "numLeafAddressNibbles": str(addr_term_len),
             "burnKey": str(burn_key),
-            "feeAmount": str(fee),
+            "proverFeeAmount": str(prover_fee),
+            "broadcasterFeeAmount": str(broadcaster_fee),
             "balance": str(proof.balance),
             "revealAmount": str(spend),
             "numLayers": num_layers,
