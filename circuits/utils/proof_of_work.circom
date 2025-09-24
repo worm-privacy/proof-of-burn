@@ -25,13 +25,14 @@ template EIP7503() {
 // Reviewers:
 //   Keyvan: OK
 //
-template ConcatFixed5(A, B, C, D, E) {
+template ConcatFixed5(A, B, C, D, E, F) {
     signal input a[A];
     signal input b[B];
     signal input c[C];
     signal input d[D];
     signal input e[E];
-    signal output out[A + B + C + D + E];
+    signal input f[F];
+    signal output out[A + B + C + D + E + F];
 
     for(var i = 0; i < A; i++) {
         out[i] <== a[i];
@@ -48,9 +49,12 @@ template ConcatFixed5(A, B, C, D, E) {
     for(var i = 0; i < E; i++) {
         out[i + A + B + C + D] <== e[i];
     }
+    for(var i = 0; i < F; i++) {
+        out[i + A + B + C + D + E] <== f[i];
+    }
 }
 
-// Proof-of-Work: Assert keccak(burnKey | receiverAddress | feeAmount | revealAmount | 'EIP-7503') < 2 ^ (256 - 8 * minimumZeroBytes)
+// Proof-of-Work: Assert keccak(burnKey | receiverAddress | proverFeeAmount | broadcasterFeeAmount | revealAmount | 'EIP-7503') < 2 ^ (256 - 8 * minimumZeroBytes)
 //
 // Reviewers:
 //   Keyvan: OK
@@ -58,19 +62,22 @@ template ConcatFixed5(A, B, C, D, E) {
 template ProofOfWorkChecker() {
     signal input burnKey;
     signal input receiverAddress;
-    signal input feeAmount;
+    signal input proverFeeAmount;
+    signal input broadcasterFeeAmount;
     signal input revealAmount;
     signal input minimumZeroBytes;
 
     signal burnKeyBytes[32] <== Num2BigEndianBytes(32)(burnKey);
     signal receiverAddressBytes[20] <== Num2BigEndianBytes(20)(receiverAddress);
-    signal feeAmountBytes[32] <== Num2BigEndianBytes(32)(feeAmount);
+    signal proverFeeAmountBytes[32] <== Num2BigEndianBytes(32)(proverFeeAmount);
+    signal broadcasterFeeAmountBytes[32] <== Num2BigEndianBytes(32)(broadcasterFeeAmount);
     signal revealAmountBytes[32] <== Num2BigEndianBytes(32)(revealAmount);
     signal eip7503[8] <== EIP7503()();
 
-    var hasherInputLen = 32 + 20 + 32 + 32 + 8;
-    signal hasherInput[hasherInputLen] <== ConcatFixed5(32, 20, 32, 32, 8)(
-        burnKeyBytes, receiverAddressBytes, feeAmountBytes, revealAmountBytes, eip7503
+    var hasherInputLen = 32 + 20 + 32 + 32 + 32 + 8;
+    signal hasherInput[hasherInputLen] <== ConcatFixed5(32, 20, 32, 32, 32, 8)(
+        burnKeyBytes, receiverAddressBytes, proverFeeAmountBytes,
+        broadcasterFeeAmountBytes, revealAmountBytes, eip7503
     );
 
     signal burnKeyBlock[136] <== Fit(hasherInputLen, 136)(hasherInput);
