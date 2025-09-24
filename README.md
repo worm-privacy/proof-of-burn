@@ -1,6 +1,9 @@
 # 🔥 Proof-of-Burn circuits in Circom 🔥
 
 [![Test circuits](https://github.com/worm-privacy/proof-of-burn/actions/workflows/test.yml/badge.svg)](https://github.com/worm-privacy/proof-of-burn/actions/workflows/test.yml)
+[![Discord](https://img.shields.io/discord/1213528108796350484)](https://discord.gg/EIP7503)
+[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/EIP7503)](https://x.com/EIP7503)
+
 
 The circuit calculates the account-rlp of a burn address and then generate the leaf-trie-node accordingly.
 
