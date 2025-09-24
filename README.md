@@ -1,5 +1,7 @@
 # 🔥 Proof-of-Burn circuits in Circom 🔥
 
+[![Test circuits](https://github.com/worm-privacy/proof-of-burn/actions/workflows/test.yml/badge.svg)](https://github.com/worm-privacy/proof-of-burn/actions/workflows/test.yml)
+
 The circuit calculates the account-rlp of a burn address and then generate the leaf-trie-node accordingly.
 
 It will then iterate through trie nodes and check whether `keccak(layer[i])` is within `keccak(layer[i+1])`.
