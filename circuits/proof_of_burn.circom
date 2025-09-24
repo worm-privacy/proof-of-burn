@@ -19,17 +19,23 @@ include "./utils/constants.circom";
 
 // Proves that there exists an account in a certain Ethereum block's state root, with a `balance` amount of ETH,
 // such that its address equals the first 20 bytes of:
-//   Poseidon5(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, feeAmount, revealAmount).
+//   Poseidon2(
+//      POSEIDON_BURN_ADDRESS_PREFIX,
+//      keccak(burnKey | receiverAddress | proverFeeAmount | broadcasterFeeAmount | revealAmount)
+//   )
+//
 // This is achieved by revealing some publicly verifiable inputs through a *single* public input — the Keccak hash 
-// of 6 elements:
+// of 8 elements:
 //
 //   1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
 //   2. A `nullifier`: Poseidon2(POSEIDON_NULLIFIER_PREFIX, burnKey), used to prevent revealing the same burn address more than once.
 //   *** In the case of minting a 1:1 BETH token in exchange for burnt ETH: ***
-//   3. An encrypted representation of the remaining balance: Poseidon3(POSEIDON_COIN_PREFIX, burnKey, balance - feeAmount - revealAmount).
-//   4. A `feeAmount`: so that the proof submitter (not necessarily the burner) receives part of the minted BETH tokens as compensation.
-//   5. A `revealAmount`: an amount from the minted balance that is directly withdrawn to the `receiverAddress`.
-//   6. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
+//   3. An encrypted representation of the remaining balance: Poseidon3(POSEIDON_COIN_PREFIX, burnKey, balance - proverFeeAmount - broadcasterFeeAmount - revealAmount).
+//   4. A `proverFeeAmount`: so that the process of proof generation can be delegated to someone else and he can collect part of the minted BETH as compensation.
+//   5. A `broadcasterFeeAmount`: so that the broadcaster of mint tx (not necessarily the burner) receives part of the minted BETH tokens as compensation.
+//   6. A `revealAmount`: an amount from the minted balance that is directly withdrawn to the `receiverAddress`.
+//   7. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
+//   8. Ad `_extraCommitment`: To glue more information to the proof (E.g the prover address) that do not necessarily need to be processed in the circuit.
 //
 template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMinimumZeroBytes, maxBalance) {
 
@@ -37,18 +43,24 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /* START OF IN/OUT SIGNALS */
     /***************************/
 
-    // Public commitment: Keccak(blockRoot, nullifier, remainingCoin, feeAmount, revealAmount, receiverAddress)
+    // Public commitment:
+    //   Keccak(
+    //     blockRoot | nullifier | remainingCoin | proverFeeAmount | 
+    //     broadcasterFeeAmount | revealAmount | receiverAddress |
+    //     _extraCommitment
+    //   )
     signal output commitment;
 
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
     signal input balance; // Balance of the burn-address
 
     // In case there is a 1:1 token to be minted:
-    signal input feeAmount; // To be paid to the relayer who actually submits the proof (Could be the burner himself)
+    signal input proverFeeAmount; // To be paid to the one who makes the ZK proof (Could be the burner himself)
+    signal input broadcasterFeeAmount; // To be paid to the relayer who broadcasts the mint transaction (Could be the burner himself)
     signal input revealAmount; // You can reveal part of minted amount upon creation
     signal input receiverAddress; // The address which can receive the minted 1:1 BETH token (160-bit number)
-    // The rest of the balance (balance - revealAmount - feeAmount) is revealed as an encrypted-coin which can later be minted
-    // through the spend.circom circuit
+    // The rest of the balance (balance - revealAmount - proverFeeAmount -broadcasterFeeAmount) is revealed as an encrypted-coin which 
+    // can later be minted through the spend.circom circuit
 
     signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node (< 64)
 
@@ -90,12 +102,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertLessEqThan(16)(byteSecurityRelax * 2, minLeafAddressNibbles);
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles - byteSecurityRelax * 2);
 
-    // (feeAmount + revealAmount) should be less than the amount being minted
-    // (feeAmount + revealAmount) will NOT overflow since balance/feeAmount/revealAmount amounts are limited
+    // (proverFeeAmount + broadcasterFeeAmount + revealAmount) should be less than the amount being minted
+    // (proverFeeAmount + broadcasterFeeAmount + revealAmount) will NOT overflow since balance, proverFeeAmount,
+    // broadcasterFeeAmount/revealAmount amounts are limited
     // to `amountBytes` bytes which is <= 31.
-    AssertBits(amountBytes * 8)(feeAmount);
+    AssertBits(amountBytes * 8)(proverFeeAmount);
+    AssertBits(amountBytes * 8)(broadcasterFeeAmount);
     AssertBits(amountBytes * 8)(revealAmount);
-    AssertLessEqThan(amountBytes * 8)(feeAmount + revealAmount, balance);
+    AssertLessEqThan(amountBytes * 8)(proverFeeAmount + broadcasterFeeAmount + revealAmount, balance);
     
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
@@ -111,13 +125,23 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /****************************/
 
     // Calculate encrypted-balance of the remaining-coin
-    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - feeAmount - revealAmount]);
+    signal remainingCoin <== Poseidon(3)([
+        POSEIDON_COIN_PREFIX(),
+        burnKey,
+        balance - proverFeeAmount - broadcasterFeeAmount - revealAmount
+    ]);
 
     // Calculate nullifier
     signal nullifier <== Poseidon(2)([POSEIDON_NULLIFIER_PREFIX(), burnKey]);
 
     // Calculate keccak hash of a burn-address
-    signal addressHashNibbles[64] <== BurnAddressHash()(burnKey, receiverAddress, feeAmount, revealAmount);
+    // Also check if PoW has been done in order to find burnKey
+    //   - The user can increase the PoW zero-bytes through `byteSecurityRelax` and relax 
+    //   - the minimum number of leaf-key bytes needed.
+    signal addressHashNibbles[64] <== BurnAddressHash()(
+        burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount,
+        revealAmount, powMinimumZeroBytes + byteSecurityRelax
+    );
 
     // Calculate the block-root 
     signal blockRoot[32] <== KeccakBytes(maxHeaderBlocks)(blockHeader, blockHeaderLen);
@@ -132,12 +156,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     // Calculate public commitment
     signal nullifierBytes[32] <== Num2BigEndianBytes(32)(nullifier);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
-    signal feeAmountBytes[32] <== Num2BigEndianBytes(32)(feeAmount);
+    signal proverFeeAmountBytes[32] <== Num2BigEndianBytes(32)(proverFeeAmount);
+    signal broadcasterFeeAmountBytes[32] <== Num2BigEndianBytes(32)(broadcasterFeeAmount);
     signal revealAmountBytes[32] <== Num2BigEndianBytes(32)(revealAmount);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
     signal extraCommitmentBytes[32] <== Num2BigEndianBytes(32)(_extraCommitment);
-    commitment <== PublicCommitment(7)(
-        [blockRoot, nullifierBytes, remainingCoinBytes, feeAmountBytes, revealAmountBytes, receiverAddressBytes, extraCommitmentBytes]
+    commitment <== PublicCommitment(8)(
+        [blockRoot, nullifierBytes, remainingCoinBytes, proverFeeAmountBytes, broadcasterFeeAmountBytes, revealAmountBytes, receiverAddressBytes, extraCommitmentBytes]
     );
     
     // layers[numLayers - 1]
@@ -193,9 +218,4 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
         leaf[i] === lastLayer[i];
     }
     leafLen === lastLayerLen;
-
-    // Check if PoW has been done in order to find burnKey
-    // The user can increase the PoW zero-bytes through `byteSecurityRelax` and relax 
-    // the minimum number of leaf-key bytes needed.
-    ProofOfWorkChecker()(burnKey, receiverAddress, feeAmount, revealAmount, powMinimumZeroBytes + byteSecurityRelax);
 }
