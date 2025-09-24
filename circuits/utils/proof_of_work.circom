@@ -20,12 +20,12 @@ template EIP7503() {
     out[7] <== 51; // '3'
 }
 
-// Concat 4 fixed-size strings
+// Concat 6 fixed-size strings
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template ConcatFixed5(A, B, C, D, E, F) {
+template ConcatFixed6(A, B, C, D, E, F) {
     signal input a[A];
     signal input b[B];
     signal input c[C];
@@ -75,13 +75,13 @@ template ProofOfWorkChecker() {
     signal eip7503[8] <== EIP7503()();
 
     var hasherInputLen = 32 + 20 + 32 + 32 + 32 + 8;
-    signal hasherInput[hasherInputLen] <== ConcatFixed5(32, 20, 32, 32, 32, 8)(
+    signal hasherInput[hasherInputLen] <== ConcatFixed6(32, 20, 32, 32, 32, 8)(
         burnKeyBytes, receiverAddressBytes, proverFeeAmountBytes,
         broadcasterFeeAmountBytes, revealAmountBytes, eip7503
     );
 
-    signal burnKeyBlock[136] <== Fit(hasherInputLen, 136)(hasherInput);
-    signal burnKeyKeccak[32] <== KeccakBytes(1)(burnKeyBlock, hasherInputLen);
+    signal burnKeyBlock[272] <== Fit(hasherInputLen, 272)(hasherInput);
+    signal burnKeyKeccak[32] <== KeccakBytes(2)(burnKeyBlock, hasherInputLen);
 
     signal shouldBeZero[32] <== Filter(32)(minimumZeroBytes);
 
