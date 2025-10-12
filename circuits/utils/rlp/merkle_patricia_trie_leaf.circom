@@ -131,7 +131,7 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
     // Min length: 3
     // Max length: 34
     var maxKeyRlpLen = 1 + maxKeyLen; // Prefix: [0x80 + KEY_LEN]
-    assert(maxKeyLen <= 34);
+    assert(maxKeyRlpLen <= 34);
 
     // KEY_RLP_LEN + VALUE_RLP_LEN is minimum (3 + 73 = 76) and maximum (34 + 103 = 137) bytes
     // So the correct prefix is always: [0xf7 + 1, KEY_RLP_LEN + VALUE_RLP_LEN]
