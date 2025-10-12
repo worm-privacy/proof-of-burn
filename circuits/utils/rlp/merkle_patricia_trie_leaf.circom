@@ -107,13 +107,13 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
     assert(maxAddressHashBytes <= 32);
     assert(maxBalanceBytes <= 31);
 
-    // Min length: 4 + 1 + 66 = 71
+    // Min length: 4 + 0 + 66 = 70
     // Max length: 4 + 31 + 66 = 101
     // The "value" in a leaf node is RLP of an account
     var maxRlpEmptyAccountLen = 4 + maxBalanceBytes + 66; // More info in RlpEmptyAccount gadget
     assert(maxRlpEmptyAccountLen <= 101);
 
-    // Min length: 2 + 71 = 73
+    // Min length: 2 + 70 = 72
     // Max length: 2 + 101 = 103
     // Byte-strings of length more than 55 bytes and less than 256 bytes are prefixed with:
     // [0xb7 + 1, STRING_LEN]
