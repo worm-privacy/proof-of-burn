@@ -127,20 +127,18 @@ template AndArray(n) {
     }
 }
 
-// d = b[0..64] ^ (a[0..64] << shl | a[0..64] >> shr)
+// d = b ^ (a << 1 | a >> 63)
 //
 // Reviewers:
 //   Keyvan: OK
 //
-template D(n, shl, shr) {
-    signal input a[n];
-    signal input b[n];
-    signal output out[n];
+template D() {
+    signal input a[64];
+    signal input b[64];
+    signal output out[64];
 
-    signal a64[64] <== Fit(n, 64)(a);
-    signal b64[64] <== Fit(n, 64)(b);
-    signal aux0[64] <== ShR(64, shr)(a);
-    signal aux1[64] <== ShL(64, shl)(a);
+    signal aux0[64] <== ShL(64, 1)(a);
+    signal aux1[64] <== ShR(64, 63)(a);
     signal aux2[64] <== OrArray(64)(aux0, aux1);
     out <== XorArray(64)(b, aux2);
 }
@@ -161,7 +159,7 @@ template Theta() {
 
     signal d[5][64];
     for(var i = 0; i < 5; i++) {
-        d[i] <== D(64, 1, 64 - 1)(c[(i + 1) % 5], c[(i + 4) % 5]);
+        d[i] <== D()(c[(i + 1) % 5], c[(i + 4) % 5]);
     }
 
     for(var i = 0; i < 5; i++) {
