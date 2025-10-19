@@ -423,7 +423,7 @@ template Pad(maxBlocks, blockSize) {
     AssertLessEqThan(16)(numBlocks, maxBlocks);
 
     // Create a 1, 1, ..., 1, 1, 0, 0, ..., 0, 0 filter
-    // Where the first `inLen` elements are 1
+    // Where the first `inLen` elements are 1 (Excluding filter[0] which is always 1)
     signal filter[maxBytes + 1];
     filter[0] <== 1;
     signal isEq[maxBytes];
