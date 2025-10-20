@@ -33,7 +33,7 @@ include "./utils/constants.circom";
 //   7. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
 //   8. An `_extraCommitment`: to glue information to the proof that aren't necessarily processed in the circuit.
 //
-template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMinimumZeroBytes, maxBalance) {
+template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMinimumZeroBytes, maxIntendedBalance, maxActualBalance) {
 
     /***************************/
     /* START OF IN/OUT SIGNALS */
@@ -43,15 +43,16 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal output commitment;
 
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
-    signal input balance; // Balance of the burn-address
+    signal input actualBalance; // Actual balance of the burn-address (May contain dust coming from attackers)
+    signal input intendedBalance; // Intended balance of the burn-address (Without dust)
 
     // In case there is a 1:1 token to be minted:
     signal input proverFeeAmount; // To be paid to the one who generates the zk proof (Could be the burner himself)
     signal input broadcasterFeeAmount; // To be paid to the relayer who actually submits the proof (Could be the burner himself)
     signal input revealAmount; // You can reveal part of minted amount upon creation
     signal input receiverAddress; // The address which can receive the minted 1:1 BETH token (160-bit number)
-    // The rest of the balance (balance - revealAmount - feeAmount) is revealed as an encrypted-coin which can later be minted
-    // through the spend.circom circuit
+    // The rest of the balance (intendedBalance - revealAmount - proverFeeAmount - broadcasterFeeAmount) is revealed as 
+    // an encrypted-coin which can later be minted through the spend.circom circuit
 
     signal input numLeafAddressNibbles; // Number of address nibbles in the leaf node (< 64)
 
@@ -60,7 +61,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     //   2. layers[numLayers - 1] ===
     //        Rlp(
     //          addressHashNibbles[-numLeafAddressNibble:],
-    //          Rlp(NONCE, balance, EMPTY_STORAGE_HASH, EMPTY_CODE_HASH)
+    //          Rlp(NONCE, actualBalance, EMPTY_STORAGE_HASH, EMPTY_CODE_HASH)
     //        )
     signal input layers[maxNumLayers][maxNodeBlocks * 136]; // MPT nodes in bytes
     signal input layerLens[maxNumLayers]; // Byte length of MPT nodes
@@ -84,7 +85,9 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     assert(amountBytes <= 31);
 
-    AssertLessEqThan(amountBytes * 8)(balance, maxBalance);
+    AssertLessEqThan(amountBytes * 8)(intendedBalance, maxIntendedBalance);
+    AssertLessEqThan(amountBytes * 8)(actualBalance, maxActualBalance);
+    AssertLessEqThan(amountBytes * 8)(intendedBalance, actualBalance);
 
     AssertBits(160)(receiverAddress); // Make sure receiver is a 160-bit number
 
@@ -94,12 +97,12 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     AssertGreaterEqThan(16)(numLeafAddressNibbles, minLeafAddressNibbles - byteSecurityRelax * 2);
 
     // (proverFeeAmount + broadcasterFeeAmount + revealAmount) should be less than the amount being minted
-    // (proverFeeAmount + broadcasterFeeAmount + revealAmount) will NOT overflow since balance/proverFeeAmount/
+    // (proverFeeAmount + broadcasterFeeAmount + revealAmount) will NOT overflow since intendedBalance/proverFeeAmount/
     // broadcasterFeeAmount/revealAmount amounts are limited to `amountBytes` bytes which is <= 31.
     AssertBits(amountBytes * 8)(proverFeeAmount);
     AssertBits(amountBytes * 8)(broadcasterFeeAmount);
     AssertBits(amountBytes * 8)(revealAmount);
-    AssertLessEqThan(amountBytes * 8)(proverFeeAmount + broadcasterFeeAmount + revealAmount, balance);
+    AssertLessEqThan(amountBytes * 8)(proverFeeAmount + broadcasterFeeAmount + revealAmount, intendedBalance);
     
     for(var i = 0; i < maxNumLayers; i++) {
         // Check layer lens are less than maximum length
@@ -115,7 +118,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /****************************/
 
     // Calculate encrypted-balance of the remaining-coin
-    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - proverFeeAmount - broadcasterFeeAmount - revealAmount]);
+    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, intendedBalance - proverFeeAmount - broadcasterFeeAmount - revealAmount]);
 
     // Calculate nullifier
     signal nullifier <== Poseidon(2)([POSEIDON_NULLIFIER_PREFIX(), burnKey]);
@@ -190,7 +193,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // Calculate leaf-layer through address-hash and its balance
     signal (leaf[maxLeafLen], leafLen) <== RlpMerklePatriciaTrieLeaf(32, amountBytes)(
-        addressHashNibbles, numLeafAddressNibbles, balance
+        addressHashNibbles, numLeafAddressNibbles, actualBalance
     );
     
     // Make sure the calculated leaf-layer is equal with the last-layer
