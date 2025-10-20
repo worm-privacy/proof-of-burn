@@ -137,7 +137,7 @@ pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "b9bdbc015a16ed4092c089d6124502c4a5a30ff9e508f40d27deb75942c929b5"
+                "01393d97db416e378fc2605c4f143c31ada5610d41e4fbfd276da0f476d0347a"
             ),
             "big",
         ),  # Block root
@@ -172,7 +172,7 @@ proof_of_burn_corrupted_layer_3 = copy.deepcopy(proof_of_burn_inp)
 proof_of_burn_corrupted_layer_3["layers"][3][0] += 1
 
 run(
-    "ProofOfBurn(4, 4, 5, 20, 31, 2, 10 ** 18)",
+    "ProofOfBurn(4, 4, 5, 20, 31, 2, 10 ** 18, 10 ** 19)",
     [
         (
             proof_of_burn_inp,
