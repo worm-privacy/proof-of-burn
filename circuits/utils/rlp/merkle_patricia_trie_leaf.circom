@@ -187,3 +187,63 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
         bLen <== valueRlpLen
     );
 }
+
+// Checks if lower <= value <= upper
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template IsInRange(B) {
+    signal input lower;
+    signal input value;
+    signal input upper;
+    signal output out;
+    AssertBits(B)(lower);
+    AssertBits(B)(value);
+    AssertBits(B)(upper);
+    signal lowerLteValue <== LessEqThan(B)([lower, value]); // lower <= value
+    signal valueLteUpper <== LessEqThan(B)([value, upper]); // value <= upper
+    out <== lowerLteValue * valueLteUpper; // lowerLteValue && valueLteUpper (lower <= value <= upper)
+}
+
+// Checks if the input layer looks like a MPT leaf
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template LeafDetector(N) {
+    signal input layer[N];
+    signal input layerLen;
+    signal output isLeaf;
+
+    // Leaves all start with 0xf8 because of their min/max size
+    signal leafPrefixIsF8 <== IsEqual()([layer[0], 0xf8]);
+    signal totalLength <== layer[1];
+    signal isConsistentWithLayerLen <== IsEqual()([totalLength + 2, layerLen]); // 2 prefix bytes
+    signal keyLenEncoded <== layer[2];
+
+    // Make sure 0x81 <= keyLenEncoded <= 0xb7
+    signal keyLenIsInRange <== IsInRange(16)(0x81, keyLenEncoded, 0xb7);
+
+    // Make keyLen zero in case keyLen is not in range in order to prevent Selector 
+    // components from panicking because of out-of-range assertions.
+    signal keyLen <== keyLenIsInRange * (keyLenEncoded - 0x80);
+
+    // Value comes right after the key
+    // Value is wrapped in an outer RLP [0xf7 + 1, valueLen + 2, 0xf7 + 1, valueLen] + value
+    signal valueWrapperPrefix <== Selector(N)(layer, 3 + keyLen + 0);
+    signal valueWrapperPrefixIsB8 <== IsEqual()([valueWrapperPrefix, 0xb8]);
+    signal valueWrapperLen <== Selector(N)(layer, 3 + keyLen + 1);
+
+    signal valueLenEncoded <== Selector(N)(layer, 3 + keyLen + 2);
+    signal valueLenEncodedIsF8 <== IsEqual()([valueLenEncoded, 0xf8]);
+    signal valueLen <== Selector(N)(layer, 3 + keyLen + 2 + 1);
+    signal isValueWrapperLenConsistent <== IsEqual()([valueWrapperLen, valueLen + 2]);
+    signal isKeyValueLenEqualWithLayerLen <== IsEqual()([keyLen + valueLen + 7, layerLen]);
+
+    isLeaf <== MultiAND(7)([
+        leafPrefixIsF8, isConsistentWithLayerLen, keyLenIsInRange, 
+        valueWrapperPrefixIsB8, isValueWrapperLenConsistent, 
+        valueLenEncodedIsF8, isKeyValueLenEqualWithLayerLen
+    ]);
+}
