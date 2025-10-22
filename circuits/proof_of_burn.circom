@@ -161,8 +161,14 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     signal substringCheckers[maxNumLayers - 1];
     signal layerKeccaks[maxNumLayers][32];
     signal reducedLayerKeccaks[maxNumLayers][31];
+    signal isLeaf[maxNumLayers];
 
+    var numDetectedLeaves = 0;
     for(var i = 0; i < maxNumLayers; i++) {
+        // Check if layers[i] is a MPT leaf
+        isLeaf[i] <== LeafDetector(maxNodeBlocks * 136)(layers[i], layerLens[i]);
+        numDetectedLeaves += isLeaf[i];
+
         // Calculate keccak of this layer
         layerKeccaks[i] <== KeccakBytes(maxNodeBlocks)(layers[i], layerLens[i]);
 
@@ -183,6 +189,13 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
             (1 - substringCheckers[i - 1]) * layerExists[i] === 0;
         }
     }
+
+    // Only the last layer of the trie proof should look like a leaf! Otherwise
+    // attackers may fake proofs by putting arbitrary strings in codeHash/storageHash
+    // fields of an account.
+    numDetectedLeaves === 1;
+    signal isLastLayerLeaf <== LeafDetector(maxNodeBlocks * 136)(lastLayer, lastLayerLen);
+    isLastLayerLeaf === 1;
 
     // Keccak of the top layer should be equal with the claimed state-root
     for(var i = 0; i < 32; i++) {
