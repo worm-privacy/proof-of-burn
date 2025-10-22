@@ -126,6 +126,36 @@ run(
     ],
 )
 
+shortest = list(
+    bytes.fromhex(
+        "f84980b846f8448080a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+)
+longest = list(
+    bytes.fromhex(
+        "f8a9a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb886f884a0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+)
+run(
+    "LeafDetector(544)",
+    [
+        (
+            {
+                "layer": shortest + [0] * (544 - len(shortest)),
+                "layerLen": len(shortest),
+            },
+            [1],
+        ),
+        (
+            {
+                "layer": longest + [0] * (544 - len(longest)),
+                "layerLen": len(longest),
+            },
+            [1],
+        ),
+    ],
+)
+
 
 # Number to 256-bit little-endian list
 def field_to_be_bits(elem):

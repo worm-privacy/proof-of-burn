@@ -211,6 +211,36 @@ template IsInRange(B) {
 // Pattern of a leaf node:
 // [0xf8, keyLen + valueLen + 5, 0x80 + keyLen] + key + [0xb8, valueLen + 2, 0xf8, valueLen] + value
 //
+// Here are the smallest and largest possible leaves as samples:
+//
+// Smallest:
+//   rlp.encode(
+//       [
+//           b"",
+//           rlp.encode([0, 0, b"\xff" * 32, b"\xff" * 32]),
+//       ]
+//   )
+//   f84980b846f8448080a0ffffffffffffffffffffffffffffff
+//   ffffffffffffffffffffffffffffffffffa0ffffffffffffff
+//   ffffffffffffffffffffffffffffffffffffffffffffffffff
+//   (75 bytes)
+//
+// Largest:
+//   rlp.encode(
+//       [
+//           b"\xff" * 32,
+//           rlp.encode([2**256 - 1, 2**256 - 1, b"\xff" * 32, b"\xff" * 32]),
+//       ]
+//   )
+//   f8a9a0ffffffffffffffffffffffffffffffffffffffffffff
+//   ffffffffffffffffffffb886f884a0ffffffffffffffffffff
+//   ffffffffffffffffffffffffffffffffffffffffffffa0ffff
+//   ffffffffffffffffffffffffffffffffffffffffffffffffff
+//   ffffffffffa0ffffffffffffffffffffffffffffffffffffff
+//   ffffffffffffffffffffffffffa0ffffffffffffffffffffff
+//   ffffffffffffffffffffffffffffffffffffffffff
+//   (171 bytes)
+//
 // Reviewers:
 //   Keyvan: OK
 //
@@ -227,8 +257,8 @@ template LeafDetector(N) {
     signal isConsistentWithLayerLen <== IsEqual()([totalLength + 2, layerLen]); // 2 prefix bytes
     signal keyLenEncoded <== layer[2];
 
-    // Make sure 0x81 <= keyLenEncoded <= 0xb7
-    signal keyLenIsInRange <== IsInRange(16)(0x81, keyLenEncoded, 0xb7);
+    // Make sure 0x80 <= keyLenEncoded <= 0xb7
+    signal keyLenIsInRange <== IsInRange(16)(0x80, keyLenEncoded, 0xb7);
 
     // Make keyLen zero in case keyLen is not in range in order to prevent Selector 
     // components from panicking because of out-of-range assertions.
