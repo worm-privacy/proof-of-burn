@@ -88,6 +88,19 @@ from eth_abi import packed
 from .poseidon import poseidon6, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
+run(
+    "IsInRange(16)",
+    [
+        ({"lower": 10, "value": 10, "upper": 10}, [1]),
+        ({"lower": 10, "value": 10, "upper": 30}, [1]),
+        ({"lower": 10, "value": 20, "upper": 30}, [1]),
+        ({"lower": 10, "value": 20, "upper": 19}, [0]),
+        ({"lower": 21, "value": 20, "upper": 30}, [0]),
+        ({"lower": 19, "value": 20, "upper": 21}, [1]),
+        ({"lower": 21, "value": 20, "upper": 19}, [0]),
+    ],
+)
+
 l1 = [0xF8, 12] + [0x83, 1, 2, 3] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0]
 l2 = [0xF8, 12] + [0x82, 1, 2, 3] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0]
 l3 = [0xF8, 12] + [0x82, 1, 2] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0, 0]
@@ -112,7 +125,6 @@ run(
         ({"layer": l8, "layerLen": 14}, [0]),  # isKeyValueLenEqualWithLayerLen
     ],
 )
-exit(0)
 
 
 # Number to 256-bit little-endian list
