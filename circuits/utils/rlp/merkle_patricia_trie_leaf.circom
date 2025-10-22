@@ -208,6 +208,9 @@ template IsInRange(B) {
 
 // Checks if the input layer looks like a MPT leaf
 //
+// Pattern of a leaf node:
+// [0xf8, keyLen + valueLen + 5, 0x80 + keyLen] + key + [0xb8, valueLen + 2, 0xf8, valueLen] + value
+//
 // Reviewers:
 //   Keyvan: OK
 //
@@ -215,6 +218,8 @@ template LeafDetector(N) {
     signal input layer[N];
     signal input layerLen;
     signal output isLeaf;
+
+    AssertLessEqThan(16)(layerLen, N);
 
     // Leaves all start with 0xf8 because of their min/max size
     signal leafPrefixIsF8 <== IsEqual()([layer[0], 0xf8]);
@@ -230,13 +235,13 @@ template LeafDetector(N) {
     signal keyLen <== keyLenIsInRange * (keyLenEncoded - 0x80);
 
     // Value comes right after the key
-    // Value is wrapped in an outer RLP [0xf7 + 1, valueLen + 2, 0xf7 + 1, valueLen] + value
+    // Value is wrapped in an outer RLP [0xb7 + 1, valueLen + 2, 0xf7 + 1, valueLen] + value
     signal valueWrapperPrefix <== Selector(N)(layer, 3 + keyLen + 0);
     signal valueWrapperPrefixIsB8 <== IsEqual()([valueWrapperPrefix, 0xb8]);
     signal valueWrapperLen <== Selector(N)(layer, 3 + keyLen + 1);
 
-    signal valueLenEncoded <== Selector(N)(layer, 3 + keyLen + 2);
-    signal valueLenEncodedIsF8 <== IsEqual()([valueLenEncoded, 0xf8]);
+    signal valuePrefix <== Selector(N)(layer, 3 + keyLen + 2);
+    signal valuePrefixIsF8 <== IsEqual()([valuePrefix, 0xf8]);
     signal valueLen <== Selector(N)(layer, 3 + keyLen + 2 + 1);
     signal isValueWrapperLenConsistent <== IsEqual()([valueWrapperLen, valueLen + 2]);
     signal isKeyValueLenEqualWithLayerLen <== IsEqual()([keyLen + valueLen + 7, layerLen]);
@@ -244,6 +249,6 @@ template LeafDetector(N) {
     isLeaf <== MultiAND(7)([
         leafPrefixIsF8, isConsistentWithLayerLen, keyLenIsInRange, 
         valueWrapperPrefixIsB8, isValueWrapperLenConsistent, 
-        valueLenEncodedIsF8, isKeyValueLenEqualWithLayerLen
+        valuePrefixIsF8, isKeyValueLenEqualWithLayerLen
     ]);
 }

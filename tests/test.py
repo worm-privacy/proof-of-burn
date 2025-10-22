@@ -88,6 +88,32 @@ from eth_abi import packed
 from .poseidon import poseidon6, poseidon2, poseidon3, Field, FIELD_SIZE
 import rlp, web3
 
+l1 = [0xF8, 12] + [0x83, 1, 2, 3] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0]
+l2 = [0xF8, 12] + [0x82, 1, 2, 3] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0]
+l3 = [0xF8, 12] + [0x82, 1, 2] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0, 0]
+l4 = [0xF8, 11] + [0x82, 1, 2] + [0xB8, 6] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0, 0]
+l5 = [0xF8, 12] + [0x83, 1, 2, 3] + [0xB8, 7] + [0xF8, 4] + [1, 2, 3, 4] + [0, 0]
+l6 = [0xF8, 12] + [0x83, 1, 2, 3] + [0xB8, 7] + [0xF8, 5] + [1, 2, 3, 4] + [0, 0]
+l7 = [0xF8, 13] + [0x83, 1, 2, 3] + [0xB8, 7] + [0xF8, 5] + [1, 2, 3, 4, 5] + [0]
+l8 = [0xF8, 12] + [0x83, 1, 2, 3] + [0xB8, 7] + [0xF8, 5] + [1, 2, 3, 4, 5] + [0]
+
+run(
+    "LeafDetector(16)",
+    [
+        ({"layer": l1, "layerLen": 14}, [1]),
+        ({"layer": l1, "layerLen": 13}, [0]),
+        ({"layer": l2, "layerLen": 13}, [0]),
+        ({"layer": l3, "layerLen": 13}, [0]),
+        ({"layer": l4, "layerLen": 13}, [1]),
+        ({"layer": l5, "layerLen": 14}, [0]),
+        ({"layer": l5, "layerLen": 15}, [0]),
+        ({"layer": l6, "layerLen": 15}, [0]),
+        ({"layer": l7, "layerLen": 15}, [1]),
+        ({"layer": l8, "layerLen": 14}, [0]),  # isKeyValueLenEqualWithLayerLen
+    ],
+)
+exit(0)
+
 
 # Number to 256-bit little-endian list
 def field_to_be_bits(elem):
@@ -148,7 +174,7 @@ pob_expected_commitment = expected_commitment(
             Field(1000000000000000000 - 123 - 234 - 23),
         ).val,  # Encrypted balance
         123,  # Prover fee
-        23,   # Broadcaster fee
+        23,  # Broadcaster fee
         234,  # Spend
         web3.Web3.to_int(
             hexstr="0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
@@ -295,7 +321,9 @@ run(
 )
 
 
-def burn_addr_calc(burn_key, recv_addr, prover_fee_amount, broadcaster_fee_amount, reveal_amount):
+def burn_addr_calc(
+    burn_key, recv_addr, prover_fee_amount, broadcaster_fee_amount, reveal_amount
+):
     res = web3.Web3.keccak(
         int.to_bytes(
             poseidon6(
@@ -304,7 +332,7 @@ def burn_addr_calc(burn_key, recv_addr, prover_fee_amount, broadcaster_fee_amoun
                 Field(recv_addr),
                 Field(prover_fee_amount),
                 Field(broadcaster_fee_amount),
-                Field(reveal_amount)
+                Field(reveal_amount),
             ).val,
             32,
             "big",
