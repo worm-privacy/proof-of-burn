@@ -260,14 +260,14 @@ template LeafDetector(N) {
     // Key prefix is never above 0xb7 since key has maximum of 33 bytes (Less than 55 bytes)
     signal keyPrefixIsValid <== LessEqThan(16)([keyPrefix, 0xb7]);
 
-    // If 0x81 <= keyLenEncoded <= 0xb7 then key has more than a single byte.
+    // If 0x81 <= keyPrefix <= 0xb7 then key has more than a single byte.
     signal keyIsMultiByte <== IsInRange(16)(0x81, keyPrefix, 0xb7);
 
     // keyExtraLen is the extra number of bytes that come after (0x80 + len) prefix.
     //
-    //  - In case keyLenEncoded is less than 0x80, there won't be any extra bytes,
+    //  - In case keyPrefix is less than 0x80, there won't be any extra bytes,
     //    so 0.
-    //  - In case keyLenEncoded is more than 0xb7, then we make it 0 just to prevent 
+    //  - In case keyPrefix is more than 0xb7, then we make it 0 just to prevent 
     //    the Selector components from panicking because of out-of-range assertions.
     //
     signal keyExtraLen <== keyIsMultiByte * (keyPrefix - 0x80);
