@@ -187,3 +187,108 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
         bLen <== valueRlpLen
     );
 }
+
+// Checks if lower <= value <= upper
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template IsInRange(B) {
+    signal input lower;
+    signal input value;
+    signal input upper;
+    signal output out;
+    AssertBits(B)(lower);
+    AssertBits(B)(value);
+    AssertBits(B)(upper);
+    signal lowerLteValue <== LessEqThan(B)([lower, value]); // lower <= value
+    signal valueLteUpper <== LessEqThan(B)([value, upper]); // value <= upper
+    out <== lowerLteValue * valueLteUpper; // lowerLteValue && valueLteUpper (lower <= value <= upper)
+}
+
+// Checks if the input layer looks like a MPT leaf
+//
+// Pattern of a leaf node:
+// [0xf8, keyLen + valueLen + 5, 0x80 + keyLen] + key + [0xb8, valueLen + 2, 0xf8, valueLen] + value
+//
+// Here are the smallest and largest possible leaves as samples:
+//
+// Smallest:
+//   rlp.encode(
+//       [
+//           b"\x20",  # Zero nibbles (Total 1 bytes)
+//           rlp.encode([0, 0, b"\xff" * 32, b"\xff" * 32]),
+//       ]
+//   )
+//   f84920b846f8448080a0ffffffffffffffffffffffffffffff
+//   ffffffffffffffffffffffffffffffffffa0ffffffffffffff
+//   ffffffffffffffffffffffffffffffffffffffffffffffffff
+//   (75 bytes)
+//
+// Largest:
+//   rlp.encode(
+//       [
+//           b"\x20" + b"\xff" * 32,  # 0x20 + 32 bytes (64 nibbles) hash (Total 33 bytes)
+//           rlp.encode([2**256 - 1, 2**256 - 1, b"\xff" * 32, b"\xff" * 32]),
+//       ]
+//   )
+//   f8aaa120ffffffffffffffffffffffffffffffffffffffffff
+//   ffffffffffffffffffffffb886f884a0ffffffffffffffffff
+//   ffffffffffffffffffffffffffffffffffffffffffffffa0ff
+//   ffffffffffffffffffffffffffffffffffffffffffffffffff
+//   ffffffffffffa0ffffffffffffffffffffffffffffffffffff
+//   ffffffffffffffffffffffffffffa0ffffffffffffffffffff
+//   ffffffffffffffffffffffffffffffffffffffffffff
+//   (172 bytes)
+//
+// Reviewers:
+//   Keyvan: OK
+//
+template LeafDetector(N) {
+    signal input layer[N];
+    signal input layerLen;
+    signal output isLeaf;
+
+    AssertLessEqThan(16)(layerLen, N);
+
+    // Leaves all start with 0xf8 because of their min/max size (75 bytes / 172 bytes, more than 55 bytes)
+    signal leafPrefixIsF8 <== IsEqual()([layer[0], 0xf8]);
+    signal totalLength <== layer[1];
+    signal isConsistentWithLayerLen <== IsEqual()([totalLength + 2, layerLen]); // 2 prefix bytes
+    signal keyPrefix <== layer[2];
+
+    // Key prefix is never above 0xb7 since key has maximum of 33 bytes (Less than 55 bytes)
+    signal keyPrefixIsValid <== LessEqThan(16)([keyPrefix, 0xb7]);
+
+    // If 0x81 <= keyLenEncoded <= 0xb7 then key has more than a single byte.
+    signal keyIsMultiByte <== IsInRange(16)(0x81, keyPrefix, 0xb7);
+
+    // keyExtraLen is the extra number of bytes that come after (0x80 + len) prefix.
+    //
+    //  - In case keyLenEncoded is less than 0x80, there won't be any extra bytes,
+    //    so 0.
+    //  - In case keyLenEncoded is more than 0xb7, then we make it 0 just to prevent 
+    //    the Selector components from panicking because of out-of-range assertions.
+    //
+    signal keyExtraLen <== keyIsMultiByte * (keyPrefix - 0x80);
+    signal keyLen <== 1 + keyExtraLen;
+
+    // Value comes right after the key
+    // Value is between 70-134 bytes (More than 55 bytes)
+    // Value is wrapped in an outer RLP [0xb7 + 1, valueLen + 2, 0xf7 + 1, valueLen] + value
+    signal valueWrapperPrefix <== Selector(N)(layer, 2 + keyLen + 0);
+    signal valueWrapperPrefixIsB8 <== IsEqual()([valueWrapperPrefix, 0xb8]);
+    signal valueWrapperLen <== Selector(N)(layer, 2 + keyLen + 1);
+
+    signal valuePrefix <== Selector(N)(layer, 2 + keyLen + 2);
+    signal valuePrefixIsF8 <== IsEqual()([valuePrefix, 0xf8]);
+    signal valueLen <== Selector(N)(layer, 2 + keyLen + 2 + 1);
+    signal isValueWrapperLenConsistent <== IsEqual()([valueWrapperLen, valueLen + 2]);
+    signal isKeyValueLenEqualWithLayerLen <== IsEqual()([keyLen + valueLen + 6, layerLen]);
+
+    isLeaf <== MultiAND(7)([
+        leafPrefixIsF8, isConsistentWithLayerLen, keyPrefixIsValid,
+        valueWrapperPrefixIsB8, isValueWrapperLenConsistent, 
+        valuePrefixIsF8, isKeyValueLenEqualWithLayerLen
+    ]);
+}
