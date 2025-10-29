@@ -2351,8 +2351,10 @@ def poseidon4(a, b, c, d):
 def poseidon5(a, b, c, d, e):
     return poseidon([a, b, c, d, e])
 
+
 def poseidon6(a, b, c, d, e, f):
     return poseidon([a, b, c, d, e, f])
+
 
 if __name__ == "__main__":
     print(poseidon1(Field(5)))

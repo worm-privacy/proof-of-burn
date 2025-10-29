@@ -1,4 +1,3 @@
-
 test_divide = (
     "Divide(16)",
     [
