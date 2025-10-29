@@ -20,7 +20,12 @@ def burn(burn_key, receiver, prover_fee, broadcaster_fee, reveal):
     nonce = w3.eth.get_transaction_count(account_1)
     hashed = w3.to_bytes(
         poseidon6(
-            POSEIDON_BURN_ADDRESS_PREFIX, Field(burn_key), Field(recv), Field(prover_fee), Field(broadcaster_fee), Field(reveal)
+            POSEIDON_BURN_ADDRESS_PREFIX,
+            Field(burn_key),
+            Field(recv),
+            Field(prover_fee),
+            Field(broadcaster_fee),
+            Field(reveal),
         ).val
     )
     addr = list(hashed[:20])
@@ -41,9 +46,15 @@ def burn(burn_key, receiver, prover_fee, broadcaster_fee, reveal):
 import random
 
 
-def find_burn_key(receiver_address, prover_fee, broadcaster_fee, reveal, min_zero_bytes):
+def find_burn_key(
+    receiver_address, prover_fee, broadcaster_fee, reveal, min_zero_bytes
+):
     receiver_address_bytes = int.to_bytes(receiver_address, 20, "big")
-    fee_reveal_bytes = int.to_bytes(prover_fee, 32, "big") + int.to_bytes(broadcaster_fee, 32, "big") + int.to_bytes(reveal, 32, "big")
+    fee_reveal_bytes = (
+        int.to_bytes(prover_fee, 32, "big")
+        + int.to_bytes(broadcaster_fee, 32, "big")
+        + int.to_bytes(reveal, 32, "big")
+    )
     burn_key = random.randint(0, FIELD_SIZE - 1)
     while any(
         w3.keccak(
@@ -61,7 +72,9 @@ prover_fee = 123
 broadcaster_fee = 23
 spend = 234
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
-burn_key = find_burn_key(int(receiver[2:], 16), prover_fee, broadcaster_fee, spend, POW_MIN_ZERO_BYTES)
+burn_key = find_burn_key(
+    int(receiver[2:], 16), prover_fee, broadcaster_fee, spend, POW_MIN_ZERO_BYTES
+)
 addr = burn(burn_key, receiver, prover_fee, broadcaster_fee, spend)
 
 blknum = w3.eth.block_number
@@ -176,7 +189,7 @@ print(
             "blockHeader": header_bytes,
             "blockHeaderLen": header_bytes_len,
             "byteSecurityRelax": 0,
-            "_extraCommitment": 0
+            "_extraCommitment": 0,
         },
     )
 )
