@@ -145,7 +145,7 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
     signal output outLen;
 
     // Calculate the MPT leaf key based on the address-hash nibbles
-    signal (key[maxKeyLen], keyLen) <== TruncatedAddressHash(32)(addressHashNibbles, addressHashNibblesLen);    
+    signal (key[maxKeyLen], keyLen) <== TruncatedAddressHash(maxAddressHashBytes)(addressHashNibbles, addressHashNibblesLen);
 
     // A minimum of 2 bytes so that the prefix of key is always [0x80 + len]
     AssertGreaterEqThan(16)(keyLen, 2);
@@ -175,7 +175,7 @@ template RlpMerklePatriciaTrieLeaf(maxAddressHashBytes, maxBalanceBytes) {
     prefixedKeyRlp[1] <== (keyLen + 1) + valueRlpLen; // (keyLen + 1) is keyRlpLen
 
     prefixedKeyRlp[2] <== 0x80 + keyLen;
-    for(var i = 0; i < 33; i++) {
+    for(var i = 0; i < maxKeyLen; i++) {
         prefixedKeyRlp[i + 3] <== key[i];
     }
     prefixedKeyRlpLen <== 3 + keyLen;

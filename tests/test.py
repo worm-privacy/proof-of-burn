@@ -94,6 +94,7 @@ from .testcases.rlp.merkle_patricia_trie_leaf import (
     test_is_in_range,
     test_leaf_detector_1,
     test_leaf_detector_2,
+    test_rlp_merkle_patricia_trie_leaf,
 )
 from .testcases.divide import test_divide
 from .testcases.poseidon import test_poseidon
@@ -185,3 +186,4 @@ run(*test_truncated_address_hash)
 run(*test_is_in_range)
 run(*test_leaf_detector_1)
 run(*test_leaf_detector_2)
+run(*test_rlp_merkle_patricia_trie_leaf)

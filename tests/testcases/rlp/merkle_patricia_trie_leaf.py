@@ -127,3 +127,57 @@ test_leaf_detector_2 = (
         ),
     ],
 )
+
+from .empty_account import rlp_empty_account
+
+empty = rlp_empty_account(123, 3)
+empty_len = empty[-1]
+empty = empty[:empty_len]
+
+test_rlp_merkle_patricia_trie_leaf = (
+    "RlpMerklePatriciaTrieLeaf(3, 3)",
+    [
+        (
+            {
+                "addressHashNibbles": [0xA, 0xB, 0xC, 0xD, 0xE, 0xF],
+                "addressHashNibblesLen": 0,  # 0x20
+                "balance": 123,
+            },
+            None,  # (Assertion fails since keyLen should always be >= 2 bytes)
+        ),
+        (
+            {
+                "addressHashNibbles": [0xA, 0xB, 0xC, 0xD, 0xE, 0xF],
+                "addressHashNibblesLen": 1,  # 0x3a
+                "balance": 123,
+            },
+            None,  # (Assertion fails since keyLen should always be >= 2 bytes)
+        ),
+        (
+            {
+                "addressHashNibbles": [0xA, 0xB, 0xC, 0xD, 0xE, 0xF],
+                "addressHashNibblesLen": 2,  # 0x20 0xef
+                "balance": 123,
+            },
+            [0xF8, 75, 0x82, 0x20, 0xEF, 0xB8, empty_len] + empty + [0, 0, 0, 0, 0, 77],
+        ),
+        (
+            {
+                "addressHashNibbles": [0xA, 0xB, 0xC, 0xD, 0xE, 0xF],
+                "addressHashNibblesLen": 3,  # 0x3d 0xef
+                "balance": 123,
+            },
+            [0xF8, 75, 0x82, 0x3D, 0xEF, 0xB8, empty_len] + empty + [0, 0, 0, 0, 0, 77],
+        ),
+        (
+            {
+                "addressHashNibbles": [0xA, 0xB, 0xC, 0xD, 0xE, 0xF],
+                "addressHashNibblesLen": 4,  # 0x20 0xcd 0xef
+                "balance": 123,
+            },
+            [0xF8, 76, 0x83, 0x20, 0xCD, 0xEF, 0xB8, empty_len]
+            + empty
+            + [0, 0, 0, 0, 78],
+        ),
+    ],
+)
