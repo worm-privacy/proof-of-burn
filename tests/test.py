@@ -75,15 +75,6 @@ def run(main, test_cases):
     return outputs
 
 
-def bytes_to_bits(bytes):
-    out = []
-    for byte in bytes:
-        lst = [int(a) for a in list(reversed(bin(byte)[2:]))]
-        for i in range(8):
-            out.append(lst[i] if i < len(lst) else 0)
-    return out
-
-
 from .testcases.public_commitment import (
     test_public_commitment_1,
     test_public_commitment_2,
