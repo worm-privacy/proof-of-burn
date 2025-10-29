@@ -1,3 +1,5 @@
+import web3
+
 test_pad = (
     "Pad(3, 4)",
     [
