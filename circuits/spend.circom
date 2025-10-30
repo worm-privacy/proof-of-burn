@@ -12,7 +12,8 @@ include "./utils/assert.circom";
 include "./utils/convert.circom";
 include "./utils/public_commitment.circom";
 include "./utils/constants.circom";
-// Computes the encrypted balance (coin) using the Poseidon2 hash function
+
+// Computes the encrypted balance (coin) using the Poseidon3 hash function
 // with the given `balance` and `burnKey`. Verifies that `withdrawnBalance` plus 
 // `fee + remainingCoin` equals the encrypted balance, and includes both `fee` and 
 // `receiverAddress` in the public commitment to enforce them.
@@ -20,34 +21,39 @@ include "./utils/constants.circom";
 // Example:
 //   balance:           1000
 //   withdrawnBalance:  200
-//   fee:               50
+//   broadcasterFeeFee: 50
 //   burnKey:           123456
-//   coin:              Poseidon2(123456, 1000)
-//   remainingCoin:     Poseidon2(123456, 750)
+//   coin:              Poseidon3(POSEIDON_COIN_PREFIX, 123456, 1000)
+//   remainingCoin:     Poseidon3(POSEIDON_COIN_PREFIX, 123456, 750)
 //   receiverAddress:   0x1234567890abcdef1234567890abcdef
+//
+// Reviewers:
+//   Keyvan: Ok
+//
 template Spend(maxAmountBytes) {
     signal input burnKey;
     signal input balance;
     signal input withdrawnBalance;
     signal input receiverAddress;
-    signal input fee;
+    signal input broadcasterFee;
 
     signal output commitment;
 
-
     assert(maxAmountBytes <= 31); // To avoid field overflows
-    AssertBits(maxAmountBytes * 8)(fee);
+    AssertBits(maxAmountBytes * 8)(broadcasterFee);
     AssertBits(maxAmountBytes * 8)(withdrawnBalance);
     AssertBits(160)(receiverAddress);
-    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance + fee);
-    signal coin <== Poseidon(3)([POSEIDON_COIN_PREFIX(),burnKey, balance]);
+    AssertGreaterEqThan(maxAmountBytes * 8)(balance, withdrawnBalance + broadcasterFee);
+
+    signal coin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance]);
+    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - withdrawnBalance - broadcasterFee]);
+
     signal coinBytes[32] <== Num2BigEndianBytes(32)(coin);
     signal withdrawnBalanceBytes[32] <== Num2BigEndianBytes(32)(withdrawnBalance);
-    signal remainingCoin <== Poseidon(3)([POSEIDON_COIN_PREFIX(), burnKey, balance - withdrawnBalance - fee]);
     signal remainingCoinBytes[32] <== Num2BigEndianBytes(32)(remainingCoin);
-    signal feeBytes[32] <== Num2BigEndianBytes(32)(fee);
+    signal broadcasterFeeBytes[32] <== Num2BigEndianBytes(32)(broadcasterFee);
     signal receiverAddressBytes[32] <== Num2BigEndianBytes(32)(receiverAddress);
     commitment <== PublicCommitment(5)(
-        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, feeBytes, receiverAddressBytes]
+        [coinBytes, withdrawnBalanceBytes, remainingCoinBytes, broadcasterFeeBytes, receiverAddressBytes]
     );
 }
