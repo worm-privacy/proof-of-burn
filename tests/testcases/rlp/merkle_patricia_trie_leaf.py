@@ -179,5 +179,15 @@ test_rlp_merkle_patricia_trie_leaf = (
             + empty
             + [0, 0, 0, 0, 78],
         ),
+        (
+            {
+                "addressHashNibbles": [0xA, 0xB, 0xC, 0xD, 0xE, 0xF],
+                "addressHashNibblesLen": 6,  # 0x20 0xab 0xcd 0xef
+                "balance": 123,
+            },
+            [0xF8, 77, 0x84, 0x20, 0xAB, 0xCD, 0xEF, 0xB8, empty_len]
+            + empty
+            + [0, 0, 0, 79],
+        ),
     ],
 )
