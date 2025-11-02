@@ -13,12 +13,13 @@ with io.open("tests/test_pob_input.json") as f:
     proof_of_burn_inp = json.load(f)
 
 burn_key = int(proof_of_burn_inp["burnKey"])
+burn_extra_commit = int(proof_of_burn_inp["burnExtraCommitment"])
 
 pob_expected_commitment = expected_commitment(
     [
         int.from_bytes(
             bytes.fromhex(
-                "01393d97db416e378fc2605c4f143c31ada5610d41e4fbfd276da0f476d0347a"
+                "e36499b50da290131c3fa32d4f60717c8c529ae1bc3a216f32d05c05fe80368d"
             ),
             "big",
         ),  # Block root
@@ -26,14 +27,10 @@ pob_expected_commitment = expected_commitment(
         poseidon3(
             POSEIDON_COIN_PREFIX,
             Field(burn_key),
-            Field(1000000000000000000 - 123 - 234 - 23),
+            Field(1000000000000000000 - 234),
         ).val,  # Encrypted balance
-        123,  # Prover fee
-        23,  # Broadcaster fee
         234,  # Spend
-        web3.Web3.to_int(
-            hexstr="0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
-        ),  # Receiver
+        burn_extra_commit,
         0,  # Extra commitment
     ]
 )[1][0]
@@ -69,7 +66,7 @@ test_proof_of_burn = (
         ),
         (
             proof_of_burn_corrupted_layer_2,
-            None,
+            [pob_expected_commitment],  # layer[2] is unused so doesn't matter!
         ),
         (
             proof_of_burn_corrupted_layer_3,

@@ -2,7 +2,7 @@ import json
 import web3
 import rlp
 from hexbytes.main import HexBytes
-from .poseidon import poseidon6, Field, FIELD_SIZE
+from .poseidon import poseidon4, Field, FIELD_SIZE
 from .constants import *
 
 MAX_HEADER_BYTES = 5 * 136
@@ -13,19 +13,17 @@ POW_MIN_ZERO_BYTES = 2
 w3 = web3.Web3(provider=web3.Web3.HTTPProvider("http://127.0.0.1:8545"))
 
 
-def burn(burn_key, receiver, prover_fee, broadcaster_fee, reveal):
+def burn(burn_key, burn_extra_commit, reveal):
     recv = web3.Web3.to_int(hexstr=receiver)
     account_1 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
     private_key = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d"
     nonce = w3.eth.get_transaction_count(account_1)
     hashed = w3.to_bytes(
-        poseidon6(
+        poseidon4(
             POSEIDON_BURN_ADDRESS_PREFIX,
             Field(burn_key),
-            Field(recv),
-            Field(prover_fee),
-            Field(broadcaster_fee),
             Field(reveal),
+            Field(burn_extra_commit),
         ).val
     )
     addr = list(hashed[:20])
@@ -46,36 +44,23 @@ def burn(burn_key, receiver, prover_fee, broadcaster_fee, reveal):
 import random
 
 
-def find_burn_key(
-    receiver_address, prover_fee, broadcaster_fee, reveal, min_zero_bytes
-):
-    receiver_address_bytes = int.to_bytes(receiver_address, 20, "big")
-    fee_reveal_bytes = (
-        int.to_bytes(prover_fee, 32, "big")
-        + int.to_bytes(broadcaster_fee, 32, "big")
-        + int.to_bytes(reveal, 32, "big")
+def find_burn_key(burn_extra_commit, reveal, min_zero_bytes):
+    postfix = (
+        int.to_bytes(reveal, 32, "big")
+        + int.to_bytes(burn_extra_commit, 32, "big")
+        + b"EIP-7503"
     )
     burn_key = random.randint(0, FIELD_SIZE - 1)
-    while any(
-        w3.keccak(
-            int.to_bytes(burn_key, 32, "big")
-            + receiver_address_bytes
-            + fee_reveal_bytes
-            + b"EIP-7503"
-        )[:min_zero_bytes]
-    ):
+    while any(w3.keccak(int.to_bytes(burn_key, 32, "big") + postfix)[:min_zero_bytes]):
         burn_key += 1
     return burn_key
 
 
-prover_fee = 123
-broadcaster_fee = 23
+burn_extra_commit = 43287974328
 spend = 234
 receiver = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"
-burn_key = find_burn_key(
-    int(receiver[2:], 16), prover_fee, broadcaster_fee, spend, POW_MIN_ZERO_BYTES
-)
-addr = burn(burn_key, receiver, prover_fee, broadcaster_fee, spend)
+burn_key = find_burn_key(burn_extra_commit, spend, POW_MIN_ZERO_BYTES)
+addr = burn(burn_key, burn_extra_commit, spend)
 
 blknum = w3.eth.block_number
 proof = w3.eth.get_proof(addr, [], blknum)
@@ -175,11 +160,9 @@ with io.open("details.json", "w") as f:
 print(
     json.dumps(
         {
-            "receiverAddress": str(web3.Web3.to_int(hexstr=receiver)),
             "numLeafAddressNibbles": str(addr_term_len),
             "burnKey": str(burn_key),
-            "proverFeeAmount": str(prover_fee),
-            "broadcasterFeeAmount": str(broadcaster_fee),
+            "burnExtraCommitment": burn_extra_commit,
             "actualBalance": str(proof.balance),
             "intendedBalance": str(proof.balance),
             "revealAmount": str(spend),
@@ -189,7 +172,7 @@ print(
             "blockHeader": header_bytes,
             "blockHeaderLen": header_bytes_len,
             "byteSecurityRelax": 0,
-            "_extraCommitment": 0,
+            "_proofExtraCommitment": 0,
         },
     )
 )
