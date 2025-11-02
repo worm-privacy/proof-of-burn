@@ -13,24 +13,20 @@ As a public input, it will expect a single public commitment which itself is Kec
 
 1. The `blockRoot`: the state root of the block being referenced, passed by a Solidity contract.
 2. A `nullifier`: `Poseidon2(POSEIDON_NULLIFIER_PREFIX, burnKey)`, used to prevent revealing the same burn address more than once.
-3. An encrypted representation of the remaining balance: `Poseidon3(POSEIDON_COIN_PREFIX, burnKey, balance - feeAmount - revealAmount)`.
-4. A `proverFeeAmount`: so that the proof submitter (not necessarily the burner) receives part of the minted BETH tokens as compensation.
-5. A `broadcasterFeeAmount`: so that the proof submitter (not necessarily the burner) receives part of the minted BETH tokens as compensation.
-6. A `revealAmount`: an amount from the minted balance that is directly withdrawn to the `receiverAddress`.
-7. The `receiverAddress`: commits to the address authorized to receive the 1:1 tokens (otherwise, anyone could submit the proof and claim the tokens).
-8. An `_extraCommitment`: to glue information to the proof that aren't necessarily processed in the circuit.
+3. An encrypted representation of the remaining balance: `Poseidon3(POSEIDON_COIN_PREFIX, burnKey, intendedBalance - revealAmount)`.
+4. A `revealAmount`: an amount from the minted balance that is directly revealed upon submission of the proof.
+5. A `burnExtraCommitment`: commits to the way the revealed amount should be distributed by the contract.
+6. A `_proofExtraCommitment`: to glue information to the proof that aren't necessarily processed in the circuit.
 
 ## Burn-key
 
 Burn-key is a number you generate in order to start the burn/mint process. It somehow is your "private-key" to the world of EIP-7503.
 
-- Burn-address: `Truncate160(Poseidon6(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount, revealAmount))`
-  - Is the 160 first bits of the Poseidon6 hash of a random-number `burnKey`, and 4 other values we are commiting to:
-  - A `receiverAddress` which is the only address able to receive minted amount through the proof of this burn
-  - A `proverFee` to be paid to the one who generates the proof (Yes, a relayer may generate the proof for you, and you may want to pay him)
-  - A `broadcasterFeeAmount` to be paid to the one who submits the proof on-chain (So that you don't have to use a separate Ethereum account to pay for the gas-fees of function invocation)
-  - A `revealAmount` which specifies part of the BETH that the `receiverAddress` will get upon submission of the proof.
-- PoW: `Keccak(burnKey | receiverAddress | proverFeeAmount | broadcasterFeeAmount | revealAmount | 'EIP-7503') < THRESHOLD`
+- Burn-address: `Truncate160(Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, revealAmount, burnExtraCommitment))`
+  - Is the 160 first bits of the Poseidon4 hash of a random-number `burnKey`, and 2 other values we are commiting to:
+  - A `revealAmount` which specifies part of the BETH that will be minted upon submission of the proof.
+  - A `burnExtraCommitment` which commits on the way the minted amount should be distributed by the contract after being minted.
+- PoW: `Keccak(burnKey | revealAmount | burnExtraCommitment | 'EIP-7503') < THRESHOLD`
     Only burn-keys which fit in the equation can be used. This is in order to increase the bit-security of the protocol.
 - Nullifier: `Poseidon2(POSEIDON_NULLIFIER_PREFIX, burnKey)`
     Nullifier prevents us from using the burn-key again.
@@ -38,13 +34,13 @@ Burn-key is a number you generate in order to start the burn/mint process. It so
     A "coin" is an encrypted amount which can be partially withdrawn, resulting in a new coin.
 
 The burn-address hash, which is present in the Merkle-Patricia-Trie leaf key for which we provide a proof, is calculated using the following formula:
-`f₄(f₃(f₂(f₁(burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount, revealAmount))))`, where the inputs are all 254-bit numbers (finite-field elements), resulting in a 254 × 5 bit input space. The function `f₁` is Poseidon2 with a 254-bit output space. The output is then passed to `f₂(x)`, which selects the first 160 bits to produce an Ethereum address, yielding a 160-bit output space. This is followed by `f₃`, which is Keccak with a 256-bit output space, and finally `f₄`, which truncates the result to at least 50 nibbles (200 bits), giving a 200-bit output space.
+`f₄(f₃(f₂(f₁(burnKey, receiverAddress, burnExtraCommitment))))`, where the inputs are all 254-bit numbers (finite-field elements), resulting in a 254 × 3 bit input space. The function `f₁` is Poseidon2 with a 254-bit output space. The output is then passed to `f₂(x)`, which selects the first 160 bits to produce an Ethereum address, yielding a 160-bit output space. This is followed by `f₃`, which is Keccak with a 256-bit output space, and finally `f₄`, which truncates the result to at least 50 nibbles (200 bits), giving a 200-bit output space.
 
 Since the smallest output space among these functions is 160 bits (due to `f₂`), the overall security of this scheme is limited by that step.
 
 Thus, we consider the Merkle-Patricia-Trie leaves in this scheme to provide 160-bit preimage resistance, which corresponds to 160-bit security against such brute-force attacks.
 
-While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage resistance due to the truncation to a 160-bit Ethereum address, this may not be sufficient for long-term or high-assurance applications. To strengthen the scheme, we add an additional constraint: the Keccak256 hash of `burnKey | receiverAddress | proverFeeAmount | broadcasterFeeAmount | revealAmount | 'EIP-7503'` must begin with two zero bytes. Since each zero byte contributes 8 bits of difficulty, this adds 16 bits of security, raising the effective brute-force cost from 2^160 to 2^176. This constraint filters out the vast majority of candidate inputs, ensuring that only those satisfying both the original hash chain and the prefix condition are considered valid, thereby increasing the overall security of the scheme.
+While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage resistance due to the truncation to a 160-bit Ethereum address, this may not be sufficient for long-term or high-assurance applications. To strengthen the scheme, we add an additional constraint: the Keccak256 hash of `burnKey | revealAmount | burnExtraCommitment | 'EIP-7503'` must begin with two zero bytes. Since each zero byte contributes 8 bits of difficulty, this adds 16 bits of security, raising the effective brute-force cost from 2^160 to 2^176. This constraint filters out the vast majority of candidate inputs, ensuring that only those satisfying both the original hash chain and the prefix condition are considered valid, thereby increasing the overall security of the scheme.
 
 ## Test Locally
 

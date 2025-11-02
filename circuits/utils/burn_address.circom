@@ -6,15 +6,16 @@ include "./array.circom";
 include "./constants.circom";
 
 // The burn-address is the first 20 bytes of:
-//   Poseidon6(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount, revealAmount)
+//   Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, revealAmount, burnExtraCommitment)
 //
 // The burn-address is bound to:
 //   1. burnKey:              A random salt from which a nullifier is derived
-//   2. receiverAddress:      The address authorized to collect the minted BETH coins
-//   3. proverFeeAmount:      The amount of BETH that can be collected by the proof generator
-//   3. broadcasterFeeAmount: The amount of BETH that can be collected by the tx broadcaster
-//   4. revealAmount:         The amount of BETH to be minted upon proof submission to the receiverAddress
-//
+//   2. revealAmount:         The amount of BETH to be minted upon proof submission
+//   3. burnExtraCommitment:  Extra commitment on burn-address, useful to specify how the minted amount should be distributed
+//        * receiverAddress:      The address authorized to collect the minted BETH coins
+//        * proverFeeAmount:      The amount of BETH that can be collected by the proof generator
+//        * broadcasterFeeAmount: The amount of BETH that can be collected by the tx broadcaster
+//        * sellAmount:           The amount of BETH that can be sold 
 //      (NOTE: The remaining BETH amount is revealed as an encrypted coin,
 //       which can be partially revealed later through the Spend circuit)
 //
@@ -42,15 +43,13 @@ include "./constants.circom";
 //
 template BurnAddress() {
     signal input burnKey;
-    signal input receiverAddress;
-    signal input proverFeeAmount;
-    signal input broadcasterFeeAmount;
-    signal input revealAmount; // NOTE : Added later because of an attack scenario
+    signal input revealAmount;
+    signal input burnExtraCommitment;
     signal output addressBytes[20];
 
     // Take the first 20-bytes of
-    //   Poseidon6(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount, revealAmount) as a burn-address
-    signal hash <== Poseidon(6)([POSEIDON_BURN_ADDRESS_PREFIX(), burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount, revealAmount]);
+    //   Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, revealAmount, burnExtraCommitment) as a burn-address
+    signal hash <== Poseidon(4)([POSEIDON_BURN_ADDRESS_PREFIX(), burnKey, revealAmount, burnExtraCommitment]);
     signal hashBytes[32] <== Num2BigEndianBytes(32)(hash);
     addressBytes <== Fit(32, 20)(hashBytes);
 }
@@ -64,14 +63,12 @@ template BurnAddress() {
 //
 template BurnAddressHash() {
     signal input burnKey;
-    signal input receiverAddress;
-    signal input proverFeeAmount;
-    signal input broadcasterFeeAmount;
     signal input revealAmount;
+    signal input burnExtraCommitment;
     signal output addressHashNibbles[64];
 
     // Calculate the address to which the burnt coins are sent
-    signal addressBytes[20] <== BurnAddress()(burnKey, receiverAddress, proverFeeAmount, broadcasterFeeAmount, revealAmount);
+    signal addressBytes[20] <== BurnAddress()(burnKey, revealAmount, burnExtraCommitment);
 
     // Feed the address-bytes in the big-endian form to keccak in order to take the 
     // address-hash which will be used as the key of the MPT leaf
