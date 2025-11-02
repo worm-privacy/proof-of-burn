@@ -1,4 +1,4 @@
-# 🔥 Proof-of-Burn circuits in Circom 🔥
+# 🔥 Private-Proof-of-Burn circuits in Circom 🔥
 
 [![Test circuits](https://github.com/worm-privacy/proof-of-burn/actions/workflows/test.yml/badge.svg)](https://github.com/worm-privacy/proof-of-burn/actions/workflows/test.yml)
 [![Discord](https://img.shields.io/discord/1213528108796350484)](https://discord.gg/EIP7503)
@@ -44,11 +44,6 @@ While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage res
 
 ## Test Locally
 
-> [!NOTE]
-> Optionally, use `nix-shell` and then skip to step 5.
->
-> Or, use the Dockerfile
-
 1. Install Rust toolkit
     - `curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh`
 2. Install Circom
@@ -66,11 +61,7 @@ While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage res
     - `anvil --mnemonic "myth like bonus scare over problem client lizard pioneer submit female collect"`
 6. Run the Makefile
     - `make`
+7. Run the tests
+    - `python -m tests.test`
 
 After running `make`, the `main.py` script will first initiate a transfer to a burn-address and will then generate an input file for the circuit. Then it will try to generate a witness file through the Circom-generated C program.
-
-## TODO
-
-- [ ] The Proof-of-Work mechanism may have vulenrability.
-- [ ] More reviewers needed for the circuits.
-- [ ] We should also commit to fee in burn-address generation
