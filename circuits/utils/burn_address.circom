@@ -9,17 +9,19 @@ include "./constants.circom";
 //   Poseidon4(POSEIDON_BURN_ADDRESS_PREFIX, burnKey, revealAmount, burnExtraCommitment)
 //
 // The burn-address is bound to:
-//   1. burnKey:              A random salt from which a nullifier is derived
-//   2. revealAmount:         The amount of BETH to be minted upon proof submission
-//   3. burnExtraCommitment:  Extra commitment on burn-address, useful to specify how the minted amount should be distributed
-//        * receiverAddress:      The address authorized to collect the minted BETH coins
+//   1. burnKey:              A random secret from which the burn-address and the nullifier are derived
+//   2. revealAmount:         The amount of BETH to be revealed and minted upon proof submission
+//   3. burnExtraCommitment:  Extra commitment on burn-address, useful to enforce how the revealed amount 
+//                            should be distributed by the contract
+//      The commitment itself is hash of several values:
+//        * receiverAddress:      The address authorized to collect the revealed BETH coins
 //        * proverFeeAmount:      The amount of BETH that can be collected by the proof generator
 //        * broadcasterFeeAmount: The amount of BETH that can be collected by the tx broadcaster
-//        * sellAmount:           The amount of BETH that can be sold 
+//        * sellAmount:           The amount of BETH that can be sold in exchange of ETH (By the relayer)
 //      (NOTE: The remaining BETH amount is revealed as an encrypted coin,
 //       which can be partially revealed later through the Spend circuit)
 //
-// The bound ensures that the burner can simply send their ETH to a derived address and
+// The bounds ensure that the burner can simply send their ETH to a derived address and
 // delegate the responsibility of generating a proof and submitting it to the blockchain
 // to the relayer, without the risk of the relayer taking all the BETH tokens for
 // themselves or charging more fees than specified by the burner. However, it is better
@@ -40,6 +42,7 @@ include "./constants.circom";
 // Reviewers:
 //   Keyvan: OK
 //      (UPDATE 21st September 2025: Also committing to the reveal amount to prevent a potential attack scenario.)
+//      (UPDATE 3rd November 2025: Generalize commitment through a burnExtraCommitment signal.)
 //
 template BurnAddress() {
     signal input burnKey;

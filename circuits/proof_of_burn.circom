@@ -28,8 +28,8 @@ include "./utils/constants.circom";
 //   *** In the case of minting a 1:1 BETH token in exchange for burnt ETH: ***
 //   3. An encrypted representation of the remaining balance: Poseidon3(POSEIDON_COIN_PREFIX, burnKey, intendedBalance - revealAmount).
 //   4. A `revealAmount`: an amount from the minted balance that is directly revealed upon submission of the proof.
-//   5. A `burnExtraCommitment`: commits to the way the revealed amount should be distributed by the contract.
-//   6. A `_proofExtraCommitment`: to glue information to the proof that aren't necessarily processed in the circuit.
+//   5. A `burnExtraCommitment`: commits to the way the revealed amount should be distributed by the contract. (E.g the amounts of prover and broadcaster fees)
+//   6. A `_proofExtraCommitment`: to glue information to the proof that aren't necessarily processed in the circuit. (E.g prover address)
 //
 template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddressNibbles, amountBytes, powMinimumZeroBytes, maxIntendedBalance, maxActualBalance) {
 
@@ -46,7 +46,7 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
 
     // In case there is a 1:1 token to be minted:
     signal input revealAmount; // You can reveal part of minted amount upon creation
-    signal input burnExtraCommitment; // Commit to the way revealAmount is spent through a commitment
+    signal input burnExtraCommitment; // Commit to the way revealAmount is distributed by the contract through a commitment
     // The rest of the balance (intendedBalance - revealAmount) is revealed as 
     // an encrypted-coin which can later be minted through the spend.circom circuit
 

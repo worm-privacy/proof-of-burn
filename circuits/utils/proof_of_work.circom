@@ -20,7 +20,7 @@ template EIP7503() {
     out[7] <== 51; // '3'
 }
 
-// Concat 6 fixed-size strings
+// Concat 4 fixed-size strings
 //
 // Reviewers:
 //   Keyvan: OK
