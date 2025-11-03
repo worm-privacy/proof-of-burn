@@ -120,6 +120,7 @@ from .testcases.array import (
     test_reverse,
     test_flatten,
     test_filter,
+    test_reshape,
 )
 from .testcases.rlp.integer import (
     test_rlp_integer_1,
@@ -175,6 +176,7 @@ run(*test_fit_1)
 run(*test_fit_2)
 run(*test_reverse)
 run(*test_flatten)
+run(*test_reshape)
 run(*test_rlp_integer_1)
 run(*test_rlp_integer_2)
 run(*test_count_bytes)
