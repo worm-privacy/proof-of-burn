@@ -88,7 +88,7 @@ from .testcases.rlp.merkle_patricia_trie_leaf import (
     test_rlp_merkle_patricia_trie_leaf,
 )
 from .testcases.divide import test_divide
-from .testcases.poseidon import test_poseidon
+from .testcases.poseidon import test_poseidon_2, test_poseidon_3, test_poseidon_4
 from .testcases.substring_check import test_substring_check
 from .testcases.shift import test_shift_left, test_shift_right
 from .testcases.concat import test_concat, test_mask
@@ -145,7 +145,9 @@ run(*test_proof_of_work)
 run(*test_public_commitment_1)
 run(*test_public_commitment_2)
 run(*test_public_commitment_6)
-run(*test_poseidon)
+run(*test_poseidon_2)
+run(*test_poseidon_3)
+run(*test_poseidon_4)
 run(*test_divide)
 run(*test_substring_check)
 run(*test_shift_left)
