@@ -104,6 +104,9 @@ from .testcases.convert import (
     test_num_2_big_endian_bytes,
     test_num_2_little_endian_bytes,
     test_nibbles_2_bytes,
+    test_num_2_bits_safe_32,
+    test_num_2_bits_safe_254,
+    test_num_2_bits_safe_256,
 )
 from .testcases.keccak import test_pad, test_keccak_1, test_keccak_2
 from .testcases.burn_address import test_burn_address_hash
@@ -139,6 +142,7 @@ from .testcases.proof_of_work import (
     test_pow_eip7503_postfix,
 )
 
+
 run(*test_pow_eip7503_postfix)
 run(*test_concat_fixed_4)
 run(*test_proof_of_work)
@@ -163,6 +167,9 @@ run(*test_little_endian_bytes_2_num)
 run(*test_num_2_big_endian_bytes)
 run(*test_num_2_little_endian_bytes)
 run(*test_nibbles_2_bytes)
+run(*test_num_2_bits_safe_32)
+run(*test_num_2_bits_safe_254)
+run(*test_num_2_bits_safe_256)
 run(*test_pad)
 run(*test_keccak_1)
 run(*test_keccak_2)

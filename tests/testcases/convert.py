@@ -1,20 +1,62 @@
-from ..poseidon import FIELD_SIZE
+from ..poseidon import FIELD_SIZE, Field
 
 
 # Number to 256-bit little-endian list
-def field_to_be_bits(elem):
+def field_to_be_bytes(elem):
     return list(int.to_bytes(elem, 32, "big"))
 
+
+def field_to_le_bits(elem, length):
+    binary = bin(elem)[2:]
+    binary = "0" * (length - len(binary)) + binary
+    return [1 if b == "1" else 0 for b in reversed(list(binary))]
+
+
+test_num_2_bits_safe_32 = (
+    "Num2BitsSafe(32)",
+    [
+        ({"in": 0}, field_to_le_bits(0, 32)),
+        ({"in": 123}, field_to_le_bits(123, 32)),
+        ({"in": 7**10}, field_to_le_bits(7**10, 32)),
+        ({"in": 2**32 - 1}, field_to_le_bits(2**32 - 1, 32)),
+        ({"in": 2**32}, None),
+        ({"in": 2**32 + 1}, None),
+    ],
+)
+
+test_num_2_bits_safe_254 = (
+    "Num2BitsSafe(254)",
+    [
+        ({"in": 0}, field_to_le_bits(0, 254)),
+        ({"in": 123}, field_to_le_bits(123, 254)),
+        ({"in": 7**10}, field_to_le_bits(7**10, 254)),
+        ({"in": 2**32 - 1}, field_to_le_bits(2**32 - 1, 254)),
+        ({"in": 2**32}, field_to_le_bits(2**32, 254)),
+        ({"in": 2**32 + 1}, field_to_le_bits(2**32 + 1, 254)),
+        ({"in": str(FIELD_SIZE - 1)}, field_to_le_bits(FIELD_SIZE - 1, 254)),
+    ],
+)
+
+
+test_num_2_bits_safe_256 = (
+    "Num2BitsSafe(256)",
+    [
+        ({"in": 0}, field_to_le_bits(0, 256)),
+        ({"in": 123}, field_to_le_bits(123, 256)),
+        ({"in": 7**10}, field_to_le_bits(7**10, 256)),
+        ({"in": str(FIELD_SIZE - 1)}, field_to_le_bits(FIELD_SIZE - 1, 256)),
+    ],
+)
 
 test_num_2_big_endian_bytes = (
     "Num2BigEndianBytes(32)",
     [
-        ({"in": 123}, field_to_be_bits(123)),
-        ({"in": 0}, field_to_be_bits(0)),
-        ({"in": 1}, field_to_be_bits(1)),
-        ({"in": str(3**150)}, field_to_be_bits(3**150)),
-        ({"in": str(FIELD_SIZE - 10)}, field_to_be_bits(FIELD_SIZE - 10)),
-        ({"in": str(FIELD_SIZE - 1)}, field_to_be_bits(FIELD_SIZE - 1)),
+        ({"in": 123}, field_to_be_bytes(123)),
+        ({"in": 0}, field_to_be_bytes(0)),
+        ({"in": 1}, field_to_be_bytes(1)),
+        ({"in": str(3**150)}, field_to_be_bytes(3**150)),
+        ({"in": str(FIELD_SIZE - 10)}, field_to_be_bytes(FIELD_SIZE - 10)),
+        ({"in": str(FIELD_SIZE - 1)}, field_to_be_bytes(FIELD_SIZE - 1)),
     ],
 )
 
