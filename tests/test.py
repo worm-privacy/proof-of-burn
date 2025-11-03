@@ -132,7 +132,15 @@ from .testcases.rlp.empty_account import (
     test_rlp_empty_account_2,
     test_rlp_empty_account_3,
 )
+from .testcases.proof_of_work import (
+    test_proof_of_work,
+    test_concat_fixed_4,
+    test_pow_eip7503_postfix,
+)
 
+run(*test_pow_eip7503_postfix)
+run(*test_concat_fixed_4)
+run(*test_proof_of_work)
 run(*test_public_commitment_1)
 run(*test_public_commitment_2)
 run(*test_public_commitment_6)
