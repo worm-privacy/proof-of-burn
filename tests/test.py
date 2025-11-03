@@ -141,7 +141,9 @@ from .testcases.proof_of_work import (
     test_concat_fixed_4,
     test_pow_eip7503_postfix,
 )
+from .testcases.spend import test_spend
 
+run(*test_spend)
 run(*test_pow_eip7503_postfix)
 run(*test_concat_fixed_4)
 run(*test_proof_of_work)

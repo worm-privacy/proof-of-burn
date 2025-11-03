@@ -157,8 +157,8 @@ with io.open("details.json", "w") as f:
         ],
         f,
     )
-print(
-    json.dumps(
+with io.open("circuits/main_proof_of_burn_cpp/input.json", "w") as f:
+    json.dump(
         {
             "numLeafAddressNibbles": str(addr_term_len),
             "burnKey": str(burn_key),
@@ -174,5 +174,19 @@ print(
             "byteSecurityRelax": 0,
             "_proofExtraCommitment": 0,
         },
+        f,
     )
-)
+
+spend_withdraw = 321
+spend_broadcaster_fee = 12
+with io.open("circuits/main_spend_cpp/input.json", "w") as f:
+    json.dump(
+        {
+            "burnKey": str(burn_key),
+            "withdrawnBalance": str(spend_withdraw),
+            "balance": str(proof.balance - spend),
+            "broadcasterFee": str(spend_broadcaster_fee),
+            "receiverAddress": str(int(str(receiver)[2:], 16)),
+        },
+        f,
+    )
