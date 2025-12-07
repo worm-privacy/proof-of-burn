@@ -66,3 +66,9 @@ While the Merkle-Patricia-Trie leaf key construction offers 160-bit preimage res
     - `python -m tests.test`
 
 After running `make`, the `main.py` script will first initiate a transfer to a burn-address and will then generate an input file for the circuit. Then it will try to generate a witness file through the Circom-generated C program.
+
+## License
+
+This project is licensed under the MIT License.
+
+The Circom implementation of the Keccak hash function is a refactored version of [`keccak256-circom`](https://github.com/vocdoni/keccak256-circom) developed by [@vocdoni](https://github.com/vocdoni), which is licensed under the GNU GPL v3.
