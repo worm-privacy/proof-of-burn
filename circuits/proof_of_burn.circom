@@ -36,8 +36,8 @@ template ProofOfBurn(maxNumLayers, maxNodeBlocks, maxHeaderBlocks, minLeafAddres
     /***************************/
     /* START OF IN/OUT SIGNALS */
     /***************************/
-
-    // Public commitment: Keccak(blockRoot, nullifier, remainingCoin, feeAmount, revealAmount, receiverAddress)
+    
+    // Public commitment: Keccak(blockRoot, nullifier, remainingCoin, revealAmount, burnExtraCommitment, proofExtraCommitment)
     signal output commitment;
 
     signal input burnKey; // Secret field number from which the burn address and nullifier are derived.
