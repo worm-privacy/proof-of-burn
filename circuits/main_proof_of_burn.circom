@@ -9,7 +9,7 @@ include "./proof_of_burn.circom";
 //            Length of MPT nodes in accounts proofs of 100 richest addresses as of July 7th 2025: Min: 35 Max: 532 Avg: 432.23
 //            Maximum lengths are for branch nodes with 16 non-empty slots: len(rlp.encode([keccak(...)] * 16 + [0])) == 532
 //
-// 8       -> maxHeaderBlocks (Average header len of the last 100 blocks as of July 2nd 2025 is 643 bytes ~ 4.72 blocks)
+// 16      -> maxHeaderBlocks (Average header len of the last 100 blocks as of July 2nd 2025 is 643 bytes ~ 4.72 blocks)
 //
 // 50      -> minLeafAddressNibbles (4 * 50 = 200 bits of security (?!))
 //            Number of address-hash nibbles present in leaf among 100 richest addresses: Min: 54 Max: 60 Avg: 56.08
@@ -24,4 +24,4 @@ include "./proof_of_burn.circom";
 //
 // 100 ETH -> maxActualBalance (Allows the burn address to be dusted by attackers up to a limited amount, while still keeping the burn address balance appearing realistic)
 //
-component main = ProofOfBurn(16, 4, 8, 50, 31, 2, 10 ** 19, 10 ** 20);
+component main = ProofOfBurn(16, 4, 16, 50, 31, 2, 10 ** 19, 10 ** 20);
